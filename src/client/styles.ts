@@ -61,7 +61,7 @@ export const PANEL_CSS = `
   padding: 0;
 }
 .dsh-fe-btn:hover { background: var(--fe-btn-hover); }
-.dsh-fe-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.dsh-fe-body { flex: 1; min-height: 0; overflow: auto; }
 .dsh-fe-pane { overflow: auto; min-width: 0; }
 .dsh-fe-pane--tree { flex-shrink: 0; border-right: none; }
 .dsh-fe-pane--preview { flex: 1; }

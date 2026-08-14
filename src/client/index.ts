@@ -142,13 +142,7 @@ export function FileExplorerApp({ sessionId, panelRef }: FileExplorerAppProps) {
     null,
     React.createElement(FileExplorerPanel, {
       ref: panelRef,
-      tree: React.createElement(FileTree, {
-        sessionId,
-        fetchList,
-        onSelectFile: handleSelectFile,
-        onContextMenu: handleContextMenu,
-      }),
-      preview: previewElement,
+      children: previewElement,
     }),
     contextMenu &&
       React.createElement(FileContextMenu, {

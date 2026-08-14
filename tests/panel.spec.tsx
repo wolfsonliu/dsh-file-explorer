@@ -58,7 +58,9 @@ function render(element: React.ReactElement): HTMLElement {
 describe('FileExplorerPanel', () => {
   test('renders null when visible is false (default)', () => {
     const container = render(
-      <FileExplorerPanel tree={<span>Tree</span>} preview={<span>Preview</span>} />,
+      <FileExplorerPanel>
+        <span>Preview</span>
+      </FileExplorerPanel>,
     )
     // The panel root should not exist in the DOM
     const panel = container.querySelector('[data-visible]')
@@ -67,24 +69,68 @@ describe('FileExplorerPanel', () => {
 
   test('renders panel when initialVisible is true', () => {
     const container = render(
-      <FileExplorerPanel
-        initialVisible
-        tree={<span>Tree</span>}
-        preview={<span>Preview</span>}
-      />,
+      <FileExplorerPanel initialVisible>
+        <span>Preview</span>
+      </FileExplorerPanel>,
     )
     const panel = container.querySelector('[data-visible]')
     expect(panel).not.toBeNull()
     expect(panel!.getAttribute('data-visible')).toBe('true')
   })
 
+  test('renders children content inside the body', () => {
+    const container = render(
+      <FileExplorerPanel initialVisible>
+        <span data-testid="preview-content">Preview Content</span>
+      </FileExplorerPanel>,
+    )
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    expect(panel).not.toBeNull()
+
+    expect(panel.textContent).toContain('Preview Content')
+  })
+
+  test('renders default title when title prop is not provided', () => {
+    const container = render(
+      <FileExplorerPanel initialVisible>
+        <span>Preview</span>
+      </FileExplorerPanel>,
+    )
+    const titleText = container.querySelector('.dsh-fe-title-text') as HTMLElement
+    expect(titleText).not.toBeNull()
+    expect(titleText.textContent).toBe('文件浏览器')
+  })
+
+  test('renders custom title when title prop is provided', () => {
+    const container = render(
+      <FileExplorerPanel initialVisible title="My Panel">
+        <span>Preview</span>
+      </FileExplorerPanel>,
+    )
+    const titleText = container.querySelector('.dsh-fe-title-text') as HTMLElement
+    expect(titleText).not.toBeNull()
+    expect(titleText.textContent).toBe('My Panel')
+  })
+
+  test('does not render a tree pane, divider, or preview pane', () => {
+    const container = render(
+      <FileExplorerPanel initialVisible>
+        <span data-testid="preview-content">Preview Content</span>
+      </FileExplorerPanel>,
+    )
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    expect(panel).not.toBeNull()
+
+    expect(panel.querySelector('[data-fe-pane="tree"]')).toBeNull()
+    expect(panel.querySelector('[data-fe-pane="preview"]')).toBeNull()
+    expect(panel.querySelector('[data-fe-divider]')).toBeNull()
+  })
+
   test('clicking close button sets data-visible to false', () => {
     const container = render(
-      <FileExplorerPanel
-        initialVisible
-        tree={<span>Tree</span>}
-        preview={<span>Preview</span>}
-      />,
+      <FileExplorerPanel initialVisible>
+        <span>Preview</span>
+      </FileExplorerPanel>,
     )
     const panel = container.querySelector('[data-visible]') as HTMLElement
     expect(panel).not.toBeNull()
@@ -103,11 +149,9 @@ describe('FileExplorerPanel', () => {
 
   test('clicking minimize toggles data-minimized attribute', () => {
     const container = render(
-      <FileExplorerPanel
-        initialVisible
-        tree={<span>Tree</span>}
-        preview={<span>Preview</span>}
-      />,
+      <FileExplorerPanel initialVisible>
+        <span>Preview</span>
+      </FileExplorerPanel>,
     )
     const panel = container.querySelector('[data-visible]') as HTMLElement
     expect(panel).not.toBeNull()
@@ -142,11 +186,9 @@ describe('FileExplorerPanel', () => {
 
   test('clicking maximize toggles data-maximized attribute', () => {
     const container = render(
-      <FileExplorerPanel
-        initialVisible
-        tree={<span>Tree</span>}
-        preview={<span>Preview</span>}
-      />,
+      <FileExplorerPanel initialVisible>
+        <span>Preview</span>
+      </FileExplorerPanel>,
     )
     const panel = container.querySelector('[data-visible]') as HTMLElement
     expect(panel).not.toBeNull()
@@ -169,33 +211,11 @@ describe('FileExplorerPanel', () => {
     expect(panel.getAttribute('data-maximized')).toBe('false')
   })
 
-  test('renders tree and preview ReactNodes inside the body', () => {
-    const container = render(
-      <FileExplorerPanel
-        initialVisible
-        tree={<span data-testid="tree-content">Tree Content</span>}
-        preview={<span data-testid="preview-content">Preview Content</span>}
-      />,
-    )
-    const panel = container.querySelector('[data-visible]') as HTMLElement
-    expect(panel).not.toBeNull()
-
-    const treePane = panel.querySelector('[data-fe-pane="tree"]')
-    expect(treePane).not.toBeNull()
-    expect(treePane!.textContent).toContain('Tree Content')
-
-    const previewPane = panel.querySelector('[data-fe-pane="preview"]')
-    expect(previewPane).not.toBeNull()
-    expect(previewPane!.textContent).toContain('Preview Content')
-  })
-
   test('title bar drag updates position via pointer events', () => {
     const container = render(
-      <FileExplorerPanel
-        initialVisible
-        tree={<span>Tree</span>}
-        preview={<span>Preview</span>}
-      />,
+      <FileExplorerPanel initialVisible>
+        <span>Preview</span>
+      </FileExplorerPanel>,
     )
     const panel = container.querySelector('[data-visible]') as HTMLElement
     expect(panel).not.toBeNull()
@@ -244,58 +264,5 @@ describe('FileExplorerPanel', () => {
     // The delta is (50, 30), so position should move from (80,80) to (130,110)
     expect(panel.style.left).not.toBe(initialLeft)
     expect(panel.style.top).not.toBe(initialTop)
-  })
-
-  test('divider drag resizes tree pane width', () => {
-    const container = render(
-      <FileExplorerPanel
-        initialVisible
-        tree={<span>Tree</span>}
-        preview={<span>Preview</span>}
-      />,
-    )
-    const panel = container.querySelector('[data-visible]') as HTMLElement
-    expect(panel).not.toBeNull()
-
-    const divider = panel.querySelector('[data-fe-divider]') as HTMLElement
-    expect(divider).not.toBeNull()
-
-    const treePane = panel.querySelector('[data-fe-pane="tree"]') as HTMLElement
-    expect(treePane).not.toBeNull()
-    const initialWidth = treePane.style.width
-
-    // Simulate divider drag
-    act(() => {
-      divider.dispatchEvent(
-        new PointerEvent('pointerdown', {
-          clientX: 300,
-          clientY: 200,
-          bubbles: true,
-        }),
-      )
-    })
-
-    act(() => {
-      document.dispatchEvent(
-        new PointerEvent('pointermove', {
-          clientX: 350,
-          clientY: 200,
-          bubbles: true,
-        }),
-      )
-    })
-
-    act(() => {
-      document.dispatchEvent(
-        new PointerEvent('pointerup', {
-          clientX: 350,
-          clientY: 200,
-          bubbles: true,
-        }),
-      )
-    })
-
-    // After divider drag, tree pane width should have changed
-    expect(treePane.style.width).not.toBe(initialWidth)
   })
 })

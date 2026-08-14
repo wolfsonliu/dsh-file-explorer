@@ -8,6 +8,7 @@ import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
 import { FileTree } from './file-tree.tsx'
 import { FileContextMenu, type FileContextMenuProps } from './context-menu.tsx'
 import { interceptFileLinks } from './intercept.ts'
+import { PANEL_CSS } from './styles.ts'
 
 // ---------------------------------------------------------------------------
 // Client context (the shape of the Cordis context the client plugin receives)
@@ -17,6 +18,7 @@ interface ClientContext {
   sessions: {
     list: {
       getSnapshot(): { current?: string; byId: Record<string, { id: string; cwd?: string }> }
+      subscribe(fn: () => void): () => void
     }
   }
   workspaces: { openPath(path: string): Promise<void> }
@@ -166,6 +168,12 @@ export function FileExplorerApp({ sessionId, panelRef }: FileExplorerAppProps) {
 export function apply(ctx: ClientContext): void {
   registerBuiltinPreviews()
 
+  // Inject panel styles (an external plugin cannot import a CSS module).
+  const styleEl = document.createElement('style')
+  styleEl.setAttribute('data-fe-style', '')
+  styleEl.textContent = PANEL_CSS
+  document.head.appendChild(styleEl)
+
   const host = document.createElement('div')
   host.setAttribute('data-fe-host', '')
   document.body.appendChild(host)
@@ -181,6 +189,13 @@ export function apply(ctx: ClientContext): void {
   }
 
   render()
+
+  // Re-render when the session list changes (the current session may be
+  // selected after this plugin loads, and switching sessions must refresh
+  // the tree).
+  const unsubscribeSessions = ctx.sessions.list.subscribe(() => {
+    render()
+  })
 
   // openFileInPanel: open the panel and trigger a preview fetch
   function openFileInPanel(filePath: string) {
@@ -212,10 +227,12 @@ export function apply(ctx: ClientContext): void {
 
   ctx.effect(() => {
     return () => {
+      unsubscribeSessions()
       document.removeEventListener('click', handleClick, true)
       document.removeEventListener('keydown', handleKeydown)
       root.unmount()
       host.remove()
+      styleEl.remove()
     }
   }, 'file-explorer: client')
 }

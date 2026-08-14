@@ -57,6 +57,7 @@ function createFakeCtx() {
           current: 's1',
           byId: { s1: { id: 's1', cwd: '/workspace' } },
         })),
+        subscribe: vi.fn(() => () => {}),
       },
     },
     workspaces: { openPath: vi.fn() },
@@ -88,6 +89,49 @@ describe('apply', () => {
 
     const host = document.body.querySelector('[data-fe-host]')
     expect(host).not.toBeNull()
+  })
+
+  test('injects a <style> element with the panel CSS', async () => {
+    const fakeCtx = createFakeCtx()
+
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    const style = document.head.querySelector('[data-fe-style]')
+    expect(style).not.toBeNull()
+    expect(style!.textContent).toContain('.dsh-fe-panel')
+    expect(style!.textContent).toContain('position: fixed')
+  })
+
+  test('subscribes to the sessions list and re-renders on change', async () => {
+    const fakeCtx = createFakeCtx()
+
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    const list = fakeCtx.sessions.list as unknown as {
+      getSnapshot: ReturnType<typeof vi.fn>
+      subscribe: ReturnType<typeof vi.fn>
+    }
+    expect(list.subscribe).toHaveBeenCalled()
+
+    // Capture the subscribe callback
+    const subscribeCb = list.subscribe.mock.calls[0][0] as () => void
+
+    // Change the current session and notify
+    ;(list.getSnapshot as ReturnType<typeof vi.fn>).mockReturnValue({
+      current: 's2',
+      byId: { s2: { id: 's2', cwd: '/other' } },
+    })
+
+    await act(async () => {
+      subscribeCb()
+    })
+
+    // The panel should still be mounted after re-render (no crash)
+    expect(document.body.querySelector('[data-fe-host]')).not.toBeNull()
   })
 
   test('effect disposer removes the host div from body', async () => {

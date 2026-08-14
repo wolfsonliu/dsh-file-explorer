@@ -10,6 +10,7 @@ interface ClientContext {
                     cwd?: string;
                 }>;
             };
+            subscribe(fn: () => void): () => void;
         };
     };
     workspaces: {

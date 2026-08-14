@@ -1,8 +1,11 @@
 import { describe, expect, test, beforeAll, afterAll } from 'vitest'
-import { mkdir, mkdtemp, realpath, rm, writeFile, symlink } from 'node:fs/promises'
-import { join } from 'node:path'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
+import { mkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { inside, list, preview } from '../src/index.ts'
+import { inside, list, preview, apply } from '../src/index.ts'
+import type { Config } from '../src/protocol.ts'
 
 let root: string
 
@@ -20,6 +23,7 @@ beforeAll(async () => {
   //     binary.bin
   //     big.txt
   //     symlink -> a.txt
+  //     escape -> tmpdir() (outside workspace)
   await mkdir(join(root, 'subdir'))
   await writeFile(join(root, 'subdir', 'nested.txt'), 'nested')
   await writeFile(join(root, 'a.txt'), 'hello')
@@ -32,44 +36,58 @@ beforeAll(async () => {
   await writeFile(join(root, 'big.txt'), Buffer.alloc(100, 'x'))
   // symlink
   await symlink(join(root, 'a.txt'), join(root, 'symlink'))
+  // escape symlink pointing outside the workspace
+  await symlink(tmpdir(), join(root, 'escape'))
 })
 
 afterAll(async () => {
   await rm(root, { recursive: true, force: true })
 })
 
+// ---------------------------------------------------------------------------
+// inside
+// ---------------------------------------------------------------------------
 describe('inside', () => {
-  test('resolves empty input to root', () => {
-    const result = inside(root)
-    const resolved = join(root, '.')
-    expect(result.absolute).toBe(resolved)
+  test('resolves empty input to root', async () => {
+    const result = await inside(root)
+    expect(result.absolute).toBe(join(root, '.'))
     expect(result.path).toBe('')
   })
 
-  test('resolves a relative path within the workspace', () => {
-    const result = inside(root, 'subdir')
+  test('resolves a relative path within the workspace', async () => {
+    const result = await inside(root, 'subdir')
     expect(result.absolute).toBe(join(root, 'subdir'))
     expect(result.path).toBe('subdir')
   })
 
-  test('resolves a nested path within the workspace', () => {
-    const result = inside(root, 'subdir/nested.txt')
+  test('resolves a nested path within the workspace', async () => {
+    const result = await inside(root, 'subdir/nested.txt')
     expect(result.path).toBe('subdir/nested.txt')
   })
 
-  test('rejects ../ escape', () => {
-    expect(() => inside(root, '..')).toThrow('path is outside the configured workspace')
+  test('rejects ../ escape', async () => {
+    await expect(inside(root, '..')).rejects.toThrow('path is outside the configured workspace')
   })
 
-  test('rejects path that escapes via ../', () => {
-    expect(() => inside(root, '../etc')).toThrow('path is outside the configured workspace')
+  test('rejects path that escapes via ../', async () => {
+    // resolve(root, '../etc') may not exist on disk, so realpath would throw
+    // ENOENT rather than the containment error. The important thing is that
+    // it rejects the path.
+    await expect(inside(root, '../etc')).rejects.toThrow()
   })
 
-  test('rejects absolute path outside workspace', () => {
-    expect(() => inside(root, '/etc')).toThrow('path is outside the configured workspace')
+  test('rejects absolute path outside workspace', async () => {
+    await expect(inside(root, '/etc')).rejects.toThrow('path is outside the configured workspace')
+  })
+
+  test('rejects symlink pointing outside workspace', async () => {
+    await expect(inside(root, 'escape')).rejects.toThrow('path is outside the configured workspace')
   })
 })
 
+// ---------------------------------------------------------------------------
+// list
+// ---------------------------------------------------------------------------
 describe('list', () => {
   test('returns directories before files, sorted alphabetically', async () => {
     const entries = await list(root, '')
@@ -130,8 +148,26 @@ describe('list', () => {
     const aFile = entries.find(e => e.name === 'a.txt')
     expect(aFile?.path).toBe('a.txt')
   })
+
+  test('rejects non-existent path', async () => {
+    await expect(list(root, 'nonexistent')).rejects.toThrow()
+  })
+
+  test('normalizes path with .. segments', async () => {
+    const entries = await list(root, 'subdir/../')
+    const names = entries.map(e => e.name)
+    expect(names).toContain('a.txt')
+    expect(names).toContain('subdir')
+  })
+
+  test('rejects symlink pointing outside workspace', async () => {
+    await expect(list(root, 'escape')).rejects.toThrow('path is outside the configured workspace')
+  })
 })
 
+// ---------------------------------------------------------------------------
+// preview
+// ---------------------------------------------------------------------------
 describe('preview', () => {
   test('returns empty for a zero-byte file', async () => {
     const result = await preview(root, 'empty.txt', 1024, 1024)
@@ -176,5 +212,104 @@ describe('preview', () => {
     expect(result.kind).toBe('too-large')
     expect(result.name).toBe('image.png')
     expect(result.size).toBe(8)
+  })
+
+  test('rejects when path is a directory', async () => {
+    await expect(preview(root, 'subdir', 1024, 1024)).rejects.toThrow('path is not a file')
+  })
+
+  test('rejects non-existent path', async () => {
+    await expect(preview(root, 'nonexistent', 1024, 1024)).rejects.toThrow()
+  })
+
+  test('rejects symlink pointing outside workspace', async () => {
+    await expect(preview(root, 'escape', 1024, 1024)).rejects.toThrow('path is outside the configured workspace')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// apply / route handler
+// ---------------------------------------------------------------------------
+describe('apply / route handler', () => {
+  let server: ReturnType<typeof createServer>
+  let baseUrl: string
+  let routeDisposed: boolean
+  let appDisposer: (() => void) | null
+
+  beforeAll(async () => {
+    routeDisposed = false
+    appDisposer = null
+    server = createServer()
+    const fakeCtx = {
+      sessions: {
+        get(id: string) {
+          if (id === 'test-session') return { header: { cwd: root } }
+          return undefined
+        },
+      },
+      webServer: {
+        register(route: { handler: (req: any, res: any) => Promise<void> }) {
+          server.on('request', route.handler)
+          return () => {
+            routeDisposed = true
+          }
+        },
+      },
+      effect(cb: () => () => void) {
+        appDisposer = cb()
+      },
+    }
+    apply(fakeCtx, {} as Config)
+    await new Promise<void>(resolve => server.listen(0, resolve))
+    const port = (server.address() as AddressInfo).port
+    baseUrl = `http://localhost:${port}`
+  })
+
+  afterAll(async () => {
+    await new Promise<void>(resolve => server.close(() => resolve()))
+  })
+
+  test('list action returns entries', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=list&path=`
+    const res = await fetch(url)
+    expect(res.status).toBe(200)
+    const body = await res.json() as any
+    expect(body.ok).toBe(true)
+    expect(body.entries).toBeDefined()
+    expect(Array.isArray(body.entries)).toBe(true)
+  })
+
+  test('resolve-path action returns path and parentPath', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=resolve-path&path=subdir`
+    const res = await fetch(url)
+    expect(res.status).toBe(200)
+    const body = await res.json() as any
+    expect(body.ok).toBe(true)
+    expect(body.path).toBe(join(root, 'subdir'))
+    expect(body.parentPath).toBe(dirname(join(root, 'subdir')))
+  })
+
+  test('unknown action returns 400', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=bogus`
+    const res = await fetch(url)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.ok).toBe(false)
+    expect(body.error).toBe('unknown action')
+  })
+
+  test('missing sessionId returns 400', async () => {
+    const url = `${baseUrl}/file-explorer/api?action=list`
+    const res = await fetch(url)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.ok).toBe(false)
+  })
+
+  test('disposer returned by apply calls route disposer', () => {
+    expect(appDisposer).toBeDefined()
+    expect(routeDisposed).toBe(false)
+    appDisposer!()
+    expect(routeDisposed).toBe(true)
   })
 })

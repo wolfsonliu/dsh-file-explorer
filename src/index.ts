@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readFile, readdir, stat } from 'node:fs/promises'
+import { readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { dirname, extname, relative, resolve, sep } from 'node:path'
 import {
   FILE_EXPLORER_ROUTE,
@@ -54,8 +54,8 @@ const HIDDEN = new Set(['.git', 'node_modules'])
 // inside — resolve a workspace-relative input to an absolute path, rejecting
 // any path that escapes the workspace.
 // ---------------------------------------------------------------------------
-function inside(root: string, input = ''): { absolute: string; path: string } {
-  const absolute = resolve(root, input || '.')
+async function inside(root: string, input = ''): Promise<{ absolute: string; path: string }> {
+  const absolute = await realpath(resolve(root, input || '.'))
   const path = relative(root, absolute)
   if (path === '..' || path.startsWith(`..${sep}`) || resolve(path) === path) {
     throw new Error('path is outside the configured workspace')
@@ -68,7 +68,7 @@ function inside(root: string, input = ''): { absolute: string; path: string } {
 // alphabetically by name; skip symlinks and hidden entries.
 // ---------------------------------------------------------------------------
 async function list(root: string, input: string): Promise<BrowserEntry[]> {
-  const target = inside(root, input)
+  const target = await inside(root, input)
   const children = await readdir(target.absolute, { withFileTypes: true })
   const entries = await Promise.all(
     children
@@ -96,7 +96,7 @@ async function preview(
   maxText: number,
   maxImage: number,
 ): Promise<FilePreview> {
-  const target = inside(root, input)
+  const target = await inside(root, input)
   const info = await stat(target.absolute)
   if (!info.isFile()) throw new Error('path is not a file')
   const name = target.path.split('/').at(-1) ?? target.path
@@ -151,14 +151,14 @@ export function apply(ctx: HostContext, config: Config = {}): void {
           if (action === 'list') return json(res, 200, { ok: true, root, entries: await list(root, path) })
           if (action === 'preview') return json(res, 200, { ok: true, preview: await preview(root, path, maxText, maxImage) })
           if (action === 'resolve-path') {
-            const target = inside(root, path)
+            const target = await inside(root, path)
             return json(res, 200, {
               ok: true,
               path: target.absolute,
               parentPath: dirname(target.absolute),
             })
           }
-          json(res, 400, { ok: false, error: 'unknown action' })
+          return json(res, 400, { ok: false, error: 'unknown action' })
         } catch (error) {
           json(res, 400, { ok: false, error: error instanceof Error ? error.message : String(error) })
         }

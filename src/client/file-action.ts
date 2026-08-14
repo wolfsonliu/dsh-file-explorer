@@ -19,6 +19,7 @@ export interface FileAction {
 }
 
 const actions: FileAction[] = []
+let builtinsRegistered = false
 
 /** Register a file action (insertion order = menu order); returns a disposer. */
 export function registerFileAction(action: FileAction): () => void {
@@ -34,8 +35,10 @@ export function fileActionsFor(kind: 'file' | 'directory'): FileAction[] {
   return actions.filter(a => a.appliesTo === kind || a.appliesTo === 'both')
 }
 
-/** Register the built-in file actions, in menu order. */
+/** Register the built-in file actions, in menu order (idempotent). */
 export function registerBuiltinFileActions(): void {
+  if (builtinsRegistered) return
+  builtinsRegistered = true
   registerFileAction({ id: 'open', label: t => t('open'), appliesTo: 'file', onSelect: (entry, h) => { h.openFile(entry.path) } })
   registerFileAction({ id: 'copy-absolute', label: t => t('copyAbsolutePath'), appliesTo: 'both', onSelect: (entry, h) => { void h.copyAbsolutePath(entry.path) } })
   registerFileAction({ id: 'copy-relative', label: t => t('copyRelativePath'), appliesTo: 'both', onSelect: (entry, h) => { void h.copyRelativePath(entry.path) } })

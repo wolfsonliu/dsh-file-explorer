@@ -106,7 +106,7 @@ describe('apply', () => {
     expect(host).not.toBeNull()
   })
 
-  test('provides the fileExplorer service with registerPreview', async () => {
+  test('provides the fileExplorer service with registerPreview and registerFileAction', async () => {
     const fakeCtx = createFakeCtx()
 
     await act(async () => {
@@ -117,8 +117,9 @@ describe('apply', () => {
     expect(provide).toHaveBeenCalled()
     const call = provide.mock.calls.find((c) => c[0] === 'fileExplorer')
     expect(call).toBeDefined()
-    const service = call![1] as { registerPreview?: unknown }
+    const service = call![1] as { registerPreview?: unknown; registerFileAction?: unknown }
     expect(typeof service.registerPreview).toBe('function')
+    expect(typeof service.registerFileAction).toBe('function')
   })
 
   test('an external plugin can override a built-in preview via the fileExplorer service', async () => {

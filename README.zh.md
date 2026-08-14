@@ -12,7 +12,7 @@ DSH Web 的文件浏览器。页面边缘有一个浮动「文件」按钮，点
 4. **悬浮预览框**：点文件在右侧浮出可拖拽/缩放/最小化/关闭的预览框。
 5. **文件预览**：内置文本（源码）、Markdown（渲染 + 源码切换）、图片（data URL）、二进制（文件信息）预览。
 6. **可扩展预览**：通过 `fileExplorer` 服务按扩展名注册预览器，未注册的扩展名回退到 `binary` 预览。新增蛋白质结构（`.cif`/`.pdb` → Mol*）、CSV、PDF 等预览器无需改动核心。
-7. **右键菜单**：打开 / 复制路径 / 复制相对路径。
+7. **行操作菜单**：hover 文件/目录行末尾出现「···」菜单（打开 / 复制绝对路径 / 复制相对路径）。
 8. **快捷键**：`Ctrl/Cmd+Shift+E` 开关文件浏览器抽屉。
 
 ## 安装
@@ -70,7 +70,7 @@ dsh web
 
 ## 开发预览插件
 
-`dsh-file-explorer` 通过 cordis 服务 `fileExplorer` 暴露预览注册入口，领域专家可把专业文件预览做成独立插件（命名 `@dsh-external/dsh-file-explorer-preview-<domain>`），无需改动核心。
+`dsh-file-explorer` 通过 cordis 服务 `fileExplorer` 暴露注册入口：`registerPreview`（新增预览器）与 `registerFileAction`（新增文件行菜单项）。领域专家可把扩展做成独立插件（命名 `@dsh-external/dsh-file-explorer-preview-<domain>`），无需改动核心。
 
 ```typescript
 // preview 插件 client 入口

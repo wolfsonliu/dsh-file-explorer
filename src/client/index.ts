@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { FILE_EXPLORER_ROUTE } from '../protocol.ts'
 import { registerBuiltinPreviews } from './preview/index.ts'
 import { registerPreview } from './preview/registry.ts'
-import { registerBuiltinFileActions } from './file-action.ts'
+import { registerBuiltinFileActions, registerFileAction } from './file-action.ts'
 import { FileExplorerApp, type FileExplorerAppHandle } from './app.tsx'
 import { interceptFileLinks } from './intercept.ts'
 import { PANEL_CSS } from './styles.ts'
@@ -44,9 +44,9 @@ export function apply(ctx: ClientContext): void {
   registerBuiltinPreviews()
   registerBuiltinFileActions()
 
-  // Expose the preview-registration service so external preview plugins can
-  // register their own previewers (and override built-ins by priority).
-  ctx.reflect.provide('fileExplorer', { registerPreview })
+  // Expose the registration services so external plugins can contribute
+  // previewers and file-row actions (and override built-ins by priority).
+  ctx.reflect.provide('fileExplorer', { registerPreview, registerFileAction })
 
   // Inject panel styles (an external plugin cannot import a CSS module).
   const styleEl = document.createElement('style')

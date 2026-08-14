@@ -12,7 +12,7 @@ A file explorer for DSH Web. A floating "Files" button opens a left drawer (work
 4. **Floating preview**: clicking a file floats a draggable/resizable/minimizable/closable preview box on the right.
 5. **Previewers**: built-in text (source), Markdown (rendered + source toggle), image (data URL), and binary (file info) previews.
 6. **Extensible previews**: register previewers by extension through the `fileExplorer` service; unregistered extensions fall back to the `binary` preview. Add protein-structure (`.cif`/`.pdb` → Mol*), CSV, PDF, etc. previewers without touching the core.
-7. **Context menu**: Open / Copy path / Copy relative path.
+7. **Row actions menu**: hover a file/directory row to reveal a "···" menu (Open / Copy absolute path / Copy relative path).
 8. **Shortcut**: `Ctrl/Cmd+Shift+E` toggles the file drawer.
 
 ## Install
@@ -70,7 +70,7 @@ This plugin is a pure UI surface — it emits no session events and does not mod
 
 ## Developing preview plugins
 
-`dsh-file-explorer` exposes a preview-registration entry via the cordis service `fileExplorer`. Domain experts can ship a preview as a separate plugin (named `@dsh-external/dsh-file-explorer-preview-<domain>`) without touching the core.
+`dsh-file-explorer` exposes registration entries via the cordis service `fileExplorer`: `registerPreview` (add a previewer) and `registerFileAction` (add a file-row menu item). Domain experts can ship extensions as separate plugins (named `@dsh-external/dsh-file-explorer-preview-<domain>`) without touching the core.
 
 ```typescript
 // preview plugin client entry

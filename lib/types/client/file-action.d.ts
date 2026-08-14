@@ -19,5 +19,5 @@ export interface FileAction {
 export declare function registerFileAction(action: FileAction): () => void;
 /** Actions applicable to the given entry kind, in registration order. */
 export declare function fileActionsFor(kind: 'file' | 'directory'): FileAction[];
-/** Register the built-in file actions, in menu order. */
+/** Register the built-in file actions, in menu order (idempotent). */
 export declare function registerBuiltinFileActions(): void;

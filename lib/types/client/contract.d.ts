@@ -1,12 +1,13 @@
 import type { ComponentType } from 'react';
 import type { PreviewProps } from './preview/registry.ts';
+import type { FileAction } from './file-action.ts';
 export type { PreviewProps } from './preview/registry.ts';
 export type { Translate } from './locale.ts';
+export type { FileAction, FileActionHelpers } from './file-action.ts';
 /**
  * The service `dsh-file-explorer` provides under the name 'fileExplorer'.
- * External preview plugins inject it and call `registerPreview` to contribute
- * a previewer for a file extension, optionally overriding built-in previewers
- * with a higher priority.
+ * External plugins inject it to contribute previewers and file-row actions,
+ * optionally overriding built-ins with a higher priority.
  */
 export interface FileExplorerService {
     /**
@@ -18,4 +19,10 @@ export interface FileExplorerService {
      * @returns disposer that removes this registration (idempotent).
      */
     registerPreview(ext: string, component: ComponentType<PreviewProps>, priority?: number): () => void;
+    /**
+     * Register a file-row action (appears in the row "···" menu).
+     * @param action The action; insertion order = menu order.
+     * @returns disposer that removes this registration (idempotent).
+     */
+    registerFileAction(action: FileAction): () => void;
 }

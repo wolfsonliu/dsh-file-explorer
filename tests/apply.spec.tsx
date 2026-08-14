@@ -16,6 +16,7 @@ beforeEach(async () => {
 })
 
 function createFakeCtx() {
+  const unsubscribe = vi.fn(() => {})
   return {
     sessions: {
       list: {
@@ -23,34 +24,22 @@ function createFakeCtx() {
           current: 's1',
           byId: { s1: { id: 's1', cwd: '/workspace' } },
         })),
-        subscribe: vi.fn(() => () => {}),
+        subscribe: vi.fn(() => unsubscribe),
       },
     },
     workspaces: { openPath: vi.fn() },
     effect: vi.fn((cb: () => () => void) => {
       disposer = cb()
     }),
+    _unsubscribe: unsubscribe,
   }
 }
 
-/** Flush microtasks and observer callbacks. */
+/** Flush microtasks so async state updates settle. */
 async function flush(): Promise<void> {
   await act(async () => {
     await new Promise<void>((r) => setTimeout(r, 0))
   })
-}
-
-/** Append a `[role="tree"]` element and wait for `mountSidebar` to inject its host. */
-async function mountSidebarHost(): Promise<HTMLElement> {
-  const tree = document.createElement('div')
-  tree.setAttribute('role', 'tree')
-  document.body.appendChild(tree)
-
-  await vi.waitFor(() => {
-    expect(document.body.querySelector('[data-fe-sidebar-host]')).not.toBeNull()
-  })
-
-  return document.body.querySelector('[data-fe-sidebar-host]') as HTMLElement
 }
 
 describe('apply', () => {
@@ -61,20 +50,13 @@ describe('apply', () => {
         const u = String(url)
         if (u.includes('action=list')) {
           return Promise.resolve({
-            json: () =>
-              Promise.resolve({
-                entries: [
-                  { name: 'src', path: 'src', kind: 'directory' },
-                  { name: 'README.md', path: 'README.md', kind: 'file', size: 100 },
-                ],
-              }),
+            json: () => Promise.resolve({ entries: [] }),
           })
         }
         return Promise.resolve({
           json: () =>
             Promise.resolve({
-              ok: true,
-              preview: { kind: 'text', name: 'f.ts', extension: '.ts', content: 'hi', size: 2 },
+              preview: { kind: 'text', name: 'b.ts', extension: 'ts', content: 'hi', size: 2 },
             }),
         })
       }),
@@ -93,7 +75,7 @@ describe('apply', () => {
     document.head.querySelectorAll('[data-fe-style]').forEach((el) => el.remove())
   })
 
-  test('injects the <style> and the data-fe-preview-host', async () => {
+  test('injects the <style data-fe-style> and a data-fe-host div', async () => {
     const fakeCtx = createFakeCtx()
 
     await act(async () => {
@@ -104,44 +86,26 @@ describe('apply', () => {
     expect(style).not.toBeNull()
     expect(style!.textContent).toContain('.dsh-fe-panel')
 
-    const previewHost = document.body.querySelector('[data-fe-preview-host]')
-    expect(previewHost).not.toBeNull()
-
-    // The floating panel starts closed: no visible panel yet.
-    expect(previewHost!.querySelector('.dsh-fe-panel')).toBeNull()
+    const host = document.body.querySelector('[data-fe-host]')
+    expect(host).not.toBeNull()
   })
 
-  test('after a [role="tree"] appears, injects the sidebar host and the file tree becomes reachable', async () => {
+  test('renders the floating file button (data-fe-file-button) inside the host', async () => {
     const fakeCtx = createFakeCtx()
 
     await act(async () => {
       apply(fakeCtx)
     })
 
-    // No tree yet → no sidebar host.
-    expect(document.body.querySelector('[data-fe-sidebar-host]')).toBeNull()
+    const host = document.body.querySelector('[data-fe-host]')
+    expect(host).not.toBeNull()
+    expect(host!.querySelector('[data-fe-file-button]')).not.toBeNull()
 
-    const sidebarHost = await mountSidebarHost()
-
-    // Tab bar is rendered inside the sidebar host.
-    const filesTab = sidebarHost.querySelector('[data-fe-tab="files"]') as HTMLElement
-    const sessionsTab = sidebarHost.querySelector('[data-fe-tab="sessions"]') as HTMLElement
-    expect(filesTab).not.toBeNull()
-    expect(sessionsTab).not.toBeNull()
-    expect(sessionsTab.getAttribute('data-fe-active')).toBe('true')
-
-    // Switch to the files tab: the tree fetches and renders entries.
-    act(() => {
-      filesTab.click()
-    })
-    await flush()
-
-    expect(filesTab.getAttribute('data-fe-active')).toBe('true')
-    expect(sidebarHost.querySelector('[data-fe-tree-visible="true"]')).not.toBeNull()
-    expect(sidebarHost.textContent).toContain('README.md')
+    // Drawer starts closed.
+    expect(document.body.querySelector('[data-fe-drawer]')).toBeNull()
   })
 
-  test('clicking a produced-file chip triggers a preview fetch and opens the preview panel', async () => {
+  test('clicking a produced-file chip triggers a preview fetch and opens the drawer and preview panel', async () => {
     const fakeCtx = createFakeCtx()
 
     await act(async () => {
@@ -171,23 +135,21 @@ describe('apply', () => {
     expect(String(previewCall![0])).toContain('sessionId=s1')
     expect(String(previewCall![0])).toContain('path=src%2Fb.ts')
 
-    // The floating panel opened with data-visible="true".
-    const panel = document.querySelector('[data-fe-preview-host] .dsh-fe-panel')
+    // The drawer opened and the floating preview panel became visible.
+    expect(document.body.querySelector('[data-fe-drawer]')).not.toBeNull()
+    const panel = document.querySelector('[data-fe-host] [data-visible]')
     expect(panel).not.toBeNull()
     expect(panel!.getAttribute('data-visible')).toBe('true')
   })
 
-  test('Ctrl/Cmd+Shift+E toggles the sidebar tab to files', async () => {
+  test('Ctrl/Cmd+Shift+E toggles the drawer', async () => {
     const fakeCtx = createFakeCtx()
 
     await act(async () => {
       apply(fakeCtx)
     })
 
-    const sidebarHost = await mountSidebarHost()
-    const filesTab = sidebarHost.querySelector('[data-fe-tab="files"]') as HTMLElement
-    const sessionsTab = sidebarHost.querySelector('[data-fe-tab="sessions"]') as HTMLElement
-    expect(sessionsTab.getAttribute('data-fe-active')).toBe('true')
+    expect(document.body.querySelector('[data-fe-drawer]')).toBeNull()
 
     await act(async () => {
       document.dispatchEvent(
@@ -200,48 +162,34 @@ describe('apply', () => {
       )
     })
 
-    expect(filesTab.getAttribute('data-fe-active')).toBe('true')
-    expect(sessionsTab.getAttribute('data-fe-active')).toBe('false')
-    expect(sidebarHost.querySelector('[data-fe-tree-visible="true"]')).not.toBeNull()
+    expect(document.body.querySelector('[data-fe-drawer]')).not.toBeNull()
+
+    // Toggling again closes it.
+    await act(async () => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'E',
+          ctrlKey: true,
+          shiftKey: true,
+          bubbles: true,
+        }),
+      )
+    })
+
+    expect(document.body.querySelector('[data-fe-drawer]')).toBeNull()
   })
 
-  test('subscribes to the sessions list and re-renders without crashing', async () => {
+  test('disposer removes the host and style and unsubscribes sessions', async () => {
     const fakeCtx = createFakeCtx()
 
     await act(async () => {
       apply(fakeCtx)
     })
 
-    const list = fakeCtx.sessions.list as unknown as {
-      getSnapshot: ReturnType<typeof vi.fn>
-      subscribe: ReturnType<typeof vi.fn>
-    }
-    expect(list.subscribe).toHaveBeenCalled()
+    expect(fakeCtx.sessions.list.subscribe).toHaveBeenCalled()
+    expect(fakeCtx._unsubscribe).not.toHaveBeenCalled()
 
-    const subscribeCb = list.subscribe.mock.calls[0][0] as () => void
-    ;(list.getSnapshot as ReturnType<typeof vi.fn>).mockReturnValue({
-      current: 's2',
-      byId: { s2: { id: 's2', cwd: '/other' } },
-    })
-
-    await act(async () => {
-      subscribeCb()
-    })
-
-    expect(document.body.querySelector('[data-fe-preview-host]')).not.toBeNull()
-  })
-
-  test('disposer removes both hosts and the style', async () => {
-    const fakeCtx = createFakeCtx()
-
-    await act(async () => {
-      apply(fakeCtx)
-    })
-
-    await mountSidebarHost()
-
-    expect(document.body.querySelector('[data-fe-preview-host]')).not.toBeNull()
-    expect(document.body.querySelector('[data-fe-sidebar-host]')).not.toBeNull()
+    expect(document.body.querySelector('[data-fe-host]')).not.toBeNull()
     expect(document.head.querySelector('[data-fe-style]')).not.toBeNull()
 
     expect(disposer).toBeDefined()
@@ -249,8 +197,8 @@ describe('apply', () => {
       disposer!()
     })
 
-    expect(document.body.querySelector('[data-fe-preview-host]')).toBeNull()
-    expect(document.body.querySelector('[data-fe-sidebar-host]')).toBeNull()
+    expect(document.body.querySelector('[data-fe-host]')).toBeNull()
     expect(document.head.querySelector('[data-fe-style]')).toBeNull()
+    expect(fakeCtx._unsubscribe).toHaveBeenCalledTimes(1)
   })
 })

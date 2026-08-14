@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react-dom/test-utils'
+import { resolvePreview } from '../src/client/preview/registry.ts'
+import { MarkdownPreview } from '../src/client/preview/markdown.tsx'
 
 // ---------------------------------------------------------------------------
 // Dynamic import of apply — must be after polyfills
@@ -117,6 +119,32 @@ describe('apply', () => {
     expect(call).toBeDefined()
     const service = call![1] as { registerPreview?: unknown }
     expect(typeof service.registerPreview).toBe('function')
+  })
+
+  test('an external plugin can override a built-in preview via the fileExplorer service', async () => {
+    const fakeCtx = createFakeCtx()
+
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    // The built-in markdown preview is registered by apply()'s
+    // registerBuiltinPreviews().
+    expect(resolvePreview('md')).toBe(MarkdownPreview)
+
+    const provide = fakeCtx.reflect.provide as ReturnType<typeof vi.fn>
+    const call = provide.mock.calls.find((c) => c[0] === 'fileExplorer')
+    const service = call![1] as { registerPreview(ext: string, comp: unknown, priority?: number): () => void }
+
+    const External = () => null
+    const dispose = service.registerPreview('md', External, 10)
+
+    // The higher-priority external preview now wins.
+    expect(resolvePreview('md')).toBe(External)
+
+    // Disposing the registration restores the built-in preview.
+    dispose()
+    expect(resolvePreview('md')).toBe(MarkdownPreview)
   })
 
   test('renders the floating file button (data-fe-file-button) inside the host', async () => {

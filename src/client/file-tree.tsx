@@ -8,6 +8,7 @@ import React, {
 } from 'react'
 import type { BrowserEntry } from '../protocol.ts'
 import type { Translate } from './locale.ts'
+import { IconChevronRight, IconFile, IconFolderClose, IconFolderOpen } from './icons.tsx'
 
 export interface FileTreeProps {
   /** Current session id; undefined means "no session". */
@@ -183,13 +184,27 @@ function EntryList({
                   onDisclosureClick(entry)
                 }}
               >
-                {expanded[entry.path] ? '▾' : '▸'}
+                <IconChevronRight
+                  size={14}
+                  style={{
+                    transform: expanded[entry.path] ? 'rotate(90deg)' : undefined,
+                    transition: 'transform 0.1s',
+                  }}
+                />
               </span>
             ) : (
               <span className="dsh-fe-spacer" />
             )}
             <span className="dsh-fe-icon">
-              {entry.kind === 'directory' ? '📁' : '📄'}
+              {entry.kind === 'directory' ? (
+                expanded[entry.path] ? (
+                  <IconFolderOpen size={16} />
+                ) : (
+                  <IconFolderClose size={16} />
+                )
+              ) : (
+                <IconFile size={16} />
+              )}
             </span>
             <span className="dsh-fe-name">{entry.name}</span>
           </div>

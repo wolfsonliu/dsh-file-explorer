@@ -355,4 +355,133 @@ describe('FileTree', () => {
 
     expect(onContextMenu).not.toHaveBeenCalled()
   })
+
+  // -------------------------------------------------------------------------
+  // SVG icons — no emoji/glyph text
+  // -------------------------------------------------------------------------
+  test('directory rows render an SVG icon (not the 📁 emoji)', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const onSelectFile = vi.fn()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+    )
+    await flush()
+
+    const srcRow = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
+      r.textContent!.includes('src'),
+    ) as HTMLElement
+    const icon = srcRow.querySelector('.dsh-fe-icon') as HTMLElement
+
+    expect(icon).toBeTruthy()
+    expect(icon.querySelector('svg')).toBeTruthy()
+    expect(icon.textContent).not.toContain('📁')
+  })
+
+  test('file rows render an SVG icon (not the 📄 emoji)', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const onSelectFile = vi.fn()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+    )
+    await flush()
+
+    const readmeRow = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
+      r.textContent!.includes('README.md'),
+    ) as HTMLElement
+    const icon = readmeRow.querySelector('.dsh-fe-icon') as HTMLElement
+
+    expect(icon).toBeTruthy()
+    expect(icon.querySelector('svg')).toBeTruthy()
+    expect(icon.textContent).not.toContain('📄')
+  })
+
+  test('directory rows render an SVG chevron in the disclosure span (not ▸/▾)', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const onSelectFile = vi.fn()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+    )
+    await flush()
+
+    const srcRow = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
+      r.textContent!.includes('src'),
+    ) as HTMLElement
+    const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
+
+    expect(disclosure).toBeTruthy()
+    expect(disclosure.querySelector('svg')).toBeTruthy()
+    expect(disclosure.textContent).not.toContain('▸')
+    expect(disclosure.textContent).not.toContain('▾')
+  })
+
+  test('expanding a directory swaps the folder icon and rotates the chevron', async () => {
+    const fetchList = vi
+      .fn()
+      .mockResolvedValueOnce(rootEntries) // root
+      .mockResolvedValueOnce(srcChildren) // src children
+
+    const onSelectFile = vi.fn()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+    )
+    await flush()
+
+    const srcRow = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
+      r.textContent!.includes('src'),
+    ) as HTMLElement
+    const icon = srcRow.querySelector('.dsh-fe-icon') as HTMLElement
+    const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
+
+    const iconData = (el: HTMLElement) =>
+      Array.from(el.querySelectorAll('path'))
+        .map((p) => p.getAttribute('d') ?? '')
+        .join('')
+
+    const closedData = iconData(icon)
+    const chevron = disclosure.querySelector('svg') as SVGElement
+    expect(chevron.style.transform).toBe('')
+
+    act(() => {
+      disclosure.click()
+    })
+    await flush()
+
+    expect(iconData(icon)).not.toBe(closedData)
+    expect((disclosure.querySelector('svg') as SVGElement).style.transform).toBe('rotate(90deg)')
+  })
+
+  test('no row textContent contains the 📁/📄 emoji glyphs', async () => {
+    const fetchList = vi
+      .fn()
+      .mockResolvedValueOnce(rootEntries) // root
+      .mockResolvedValueOnce(srcChildren) // src children
+
+    const onSelectFile = vi.fn()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+    )
+    await flush()
+
+    // Expand "src" so child rows (another dir + a file) are also covered.
+    const srcRow = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
+      r.textContent!.includes('src'),
+    ) as HTMLElement
+    const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
+    act(() => {
+      disclosure.click()
+    })
+    await flush()
+
+    const rows = container.querySelectorAll('.dsh-fe-tree-row')
+    expect(rows.length).toBe(5)
+    for (const row of Array.from(rows)) {
+      expect(row.textContent).not.toContain('📁')
+      expect(row.textContent).not.toContain('📄')
+    }
+  })
 })

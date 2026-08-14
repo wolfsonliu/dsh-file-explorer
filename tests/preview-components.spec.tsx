@@ -1,0 +1,214 @@
+// @vitest-environment jsdom
+import { describe, expect, test } from 'vitest'
+import { createRoot } from 'react-dom/client'
+import { act } from 'react-dom/test-utils'
+import { TextPreview } from '../src/client/preview/text.tsx'
+import { MarkdownPreview } from '../src/client/preview/markdown.tsx'
+import { ImagePreview } from '../src/client/preview/image.tsx'
+import { BinaryPreview } from '../src/client/preview/binary.tsx'
+import { formatBytes } from '../src/client/preview/status.tsx'
+import {
+  registerBuiltinPreviews,
+} from '../src/client/preview/index.ts'
+import { resolvePreview, registerPreview } from '../src/client/preview/registry.ts'
+import type { PreviewProps } from '../src/client/preview/registry.ts'
+import type { FilePreview } from '../src/protocol.ts'
+
+/** Render a React element into a jsdom container and return the container. */
+function render(element: React.ReactElement): HTMLElement {
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  const root = createRoot(container)
+  act(() => {
+    root.render(element)
+  })
+  return container
+}
+
+function props(overrides: Partial<FilePreview> & { kind: FilePreview['kind'] }): PreviewProps {
+  const base = {
+    name: 'test.txt',
+    size: 0,
+    ...overrides,
+  } as FilePreview
+  return {
+    preview: base,
+    filePath: '/test/test.txt',
+    activeView: 'preview' as const,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// formatBytes
+// ---------------------------------------------------------------------------
+describe('formatBytes', () => {
+  test('0 B', () => {
+    expect(formatBytes(0)).toBe('0 B')
+  })
+
+  test('1024 → 1.0 KB', () => {
+    expect(formatBytes(1024)).toBe('1.0 KB')
+  })
+
+  test('1048576 → 1.0 MB', () => {
+    expect(formatBytes(1048576)).toBe('1.0 MB')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// StatusPreview (via BinaryPreview)
+// ---------------------------------------------------------------------------
+describe('StatusPreview', () => {
+  test('shows binary message for {kind: "binary"}', () => {
+    const p = props({ kind: 'binary', name: 'data.bin', size: 1024 })
+    const container = render(<BinaryPreview {...p} />)
+    expect(container.textContent).toContain('无法预览此文件（二进制）')
+    expect(container.textContent).toContain('data.bin')
+    expect(container.textContent).toContain('1.0 KB')
+  })
+
+  test('shows too-large message for {kind: "too-large"}', () => {
+    const p = props({ kind: 'too-large', name: 'big.txt', size: 1048576 })
+    const container = render(<BinaryPreview {...p} />)
+    expect(container.textContent).toContain('文件过大')
+    expect(container.textContent).toContain('big.txt')
+    expect(container.textContent).toContain('1.0 MB')
+  })
+
+  test('shows empty message for {kind: "empty"}', () => {
+    const p = props({ kind: 'empty', name: 'empty.txt', size: 0 })
+    const container = render(<BinaryPreview {...p} />)
+    expect(container.textContent).toContain('空文件')
+    expect(container.textContent).toContain('empty.txt')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TextPreview
+// ---------------------------------------------------------------------------
+describe('TextPreview', () => {
+  test('renders preview.content for {kind: "text"}', () => {
+    const p = props({
+      kind: 'text',
+      name: 'hello.ts',
+      content: 'const x = 1',
+      extension: 'ts',
+      size: 13,
+    })
+    const container = render(<TextPreview {...p} />)
+    // Should render the content inside <pre><code>
+    const code = container.querySelector('code')
+    expect(code).toBeTruthy()
+    expect(code!.textContent).toBe('const x = 1')
+  })
+
+  test('renders StatusPreview for non-text kind', () => {
+    const p = props({ kind: 'binary', name: 'data.bin', size: 100 })
+    const container = render(<TextPreview {...p} />)
+    // Should fall back to StatusPreview, showing binary message
+    expect(container.textContent).toContain('无法预览此文件（二进制）')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// MarkdownPreview
+// ---------------------------------------------------------------------------
+describe('MarkdownPreview', () => {
+  test('renders <h1> for # Hi when activeView is preview', () => {
+    const p = {
+      ...props({
+        kind: 'text',
+        name: 'readme.md',
+        content: '# Hi',
+        extension: 'md',
+        size: 4,
+      }),
+      activeView: 'preview' as const,
+    }
+    const container = render(<MarkdownPreview {...p} />)
+    const h1 = container.querySelector('h1')
+    expect(h1).toBeTruthy()
+    expect(h1!.textContent).toBe('Hi')
+  })
+
+  test('renders raw # Hi when activeView is source', () => {
+    const p = {
+      ...props({
+        kind: 'text',
+        name: 'readme.md',
+        content: '# Hi',
+        extension: 'md',
+        size: 4,
+      }),
+      activeView: 'source' as const,
+    }
+    const container = render(<MarkdownPreview {...p} />)
+    const code = container.querySelector('code')
+    expect(code).toBeTruthy()
+    expect(code!.textContent).toBe('# Hi')
+  })
+
+  test('renders StatusPreview for non-text kind', () => {
+    const p = {
+      ...props({ kind: 'binary', name: 'data.bin', size: 100 }),
+      activeView: 'preview' as const,
+    }
+    const container = render(<MarkdownPreview {...p} />)
+    expect(container.textContent).toContain('无法预览此文件（二进制）')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// ImagePreview
+// ---------------------------------------------------------------------------
+describe('ImagePreview', () => {
+  test('renders <img> with src=dataUrl for {kind: "image"}', () => {
+    const p = props({
+      kind: 'image',
+      name: 'photo.png',
+      mime: 'image/png',
+      dataUrl: 'data:image/png;base64,abc123',
+      size: 100,
+    })
+    const container = render(<ImagePreview {...p} />)
+    const img = container.querySelector('img')
+    expect(img).toBeTruthy()
+    expect(img!.getAttribute('src')).toBe('data:image/png;base64,abc123')
+    expect(img!.getAttribute('alt')).toBe('photo.png')
+  })
+
+  test('renders StatusPreview for non-image kind', () => {
+    const p = props({ kind: 'binary', name: 'data.bin', size: 100 })
+    const container = render(<ImagePreview {...p} />)
+    expect(container.textContent).toContain('无法预览此文件（二进制）')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// registerBuiltinPreviews
+// ---------------------------------------------------------------------------
+describe('registerBuiltinPreviews', () => {
+  test('resolvePreview("md") returns markdown component', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreview('md')
+    expect(comp).toBe(MarkdownPreview)
+  })
+
+  test('resolvePreview("ts") returns text component', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreview('ts')
+    expect(comp).toBe(TextPreview)
+  })
+
+  test('resolvePreview("png") returns image component', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreview('png')
+    expect(comp).toBe(ImagePreview)
+  })
+
+  test('resolvePreview("unknown") returns binary component', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreview('unknown')
+    expect(comp).toBe(BinaryPreview)
+  })
+})

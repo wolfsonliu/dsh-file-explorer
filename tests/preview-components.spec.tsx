@@ -25,7 +25,10 @@ function render(element: React.ReactElement): HTMLElement {
   return container
 }
 
-function props(overrides: Partial<FilePreview> & { kind: FilePreview['kind'] }): PreviewProps {
+function props(
+  overrides: Partial<FilePreview> & { kind: FilePreview['kind'] },
+  t: PreviewProps['t'] = (key) => key,
+): PreviewProps {
   const base = {
     name: 'test.txt',
     size: 0,
@@ -35,6 +38,7 @@ function props(overrides: Partial<FilePreview> & { kind: FilePreview['kind'] }):
     preview: base,
     filePath: '/test/test.txt',
     activeView: 'preview' as const,
+    t,
   }
 }
 
@@ -59,26 +63,30 @@ describe('formatBytes', () => {
 // StatusPreview (via BinaryPreview)
 // ---------------------------------------------------------------------------
 describe('StatusPreview', () => {
+  // A marker translator proves StatusPreview calls `t` with the right key,
+  // rather than rendering a hardcoded Chinese string.
+  const t: PreviewProps['t'] = (key) => `T:${key}`
+
   test('shows binary message for {kind: "binary"}', () => {
-    const p = props({ kind: 'binary', name: 'data.bin', size: 1024 })
+    const p = props({ kind: 'binary', name: 'data.bin', size: 1024 }, t)
     const container = render(<BinaryPreview {...p} />)
-    expect(container.textContent).toContain('无法预览此文件（二进制）')
+    expect(container.textContent).toContain('T:binary')
     expect(container.textContent).toContain('data.bin')
     expect(container.textContent).toContain('1.0 KB')
   })
 
   test('shows too-large message for {kind: "too-large"}', () => {
-    const p = props({ kind: 'too-large', name: 'big.txt', size: 1048576 })
+    const p = props({ kind: 'too-large', name: 'big.txt', size: 1048576 }, t)
     const container = render(<BinaryPreview {...p} />)
-    expect(container.textContent).toContain('文件过大')
+    expect(container.textContent).toContain('T:tooLarge')
     expect(container.textContent).toContain('big.txt')
     expect(container.textContent).toContain('1.0 MB')
   })
 
   test('shows empty message for {kind: "empty"}', () => {
-    const p = props({ kind: 'empty', name: 'empty.txt', size: 0 })
+    const p = props({ kind: 'empty', name: 'empty.txt', size: 0 }, t)
     const container = render(<BinaryPreview {...p} />)
-    expect(container.textContent).toContain('空文件')
+    expect(container.textContent).toContain('T:emptyFile')
     expect(container.textContent).toContain('empty.txt')
   })
 })
@@ -105,8 +113,8 @@ describe('TextPreview', () => {
   test('renders StatusPreview for non-text kind', () => {
     const p = props({ kind: 'binary', name: 'data.bin', size: 100 })
     const container = render(<TextPreview {...p} />)
-    // Should fall back to StatusPreview, showing binary message
-    expect(container.textContent).toContain('无法预览此文件（二进制）')
+    // Should fall back to StatusPreview, showing the translated binary message
+    expect(container.textContent).toContain('binary')
   })
 })
 
@@ -154,7 +162,7 @@ describe('MarkdownPreview', () => {
       activeView: 'preview' as const,
     }
     const container = render(<MarkdownPreview {...p} />)
-    expect(container.textContent).toContain('无法预览此文件（二进制）')
+    expect(container.textContent).toContain('binary')
   })
 })
 
@@ -180,7 +188,7 @@ describe('ImagePreview', () => {
   test('renders StatusPreview for non-image kind', () => {
     const p = props({ kind: 'binary', name: 'data.bin', size: 100 })
     const container = render(<ImagePreview {...p} />)
-    expect(container.textContent).toContain('无法预览此文件（二进制）')
+    expect(container.textContent).toContain('binary')
   })
 })
 

@@ -11,7 +11,7 @@ export function formatBytes(bytes: number): string {
   return `${mb.toFixed(1)} MB`
 }
 
-export const StatusPreview: ComponentType<PreviewProps> = ({ preview, filePath }) => {
+export const StatusPreview: ComponentType<PreviewProps> = ({ preview, t }) => {
   const sizeStr = formatBytes(preview.size)
 
   if (preview.kind === 'empty') {
@@ -20,7 +20,7 @@ export const StatusPreview: ComponentType<PreviewProps> = ({ preview, filePath }
         <p>
           <strong>{preview.name}</strong>
         </p>
-        <p>空文件</p>
+        <p>{t('emptyFile')}</p>
       </div>
     )
   }
@@ -31,7 +31,7 @@ export const StatusPreview: ComponentType<PreviewProps> = ({ preview, filePath }
         <p>
           <strong>{preview.name}</strong>
         </p>
-        <p>无法预览此文件（二进制）</p>
+        <p>{t('binary')}</p>
         <p>{sizeStr}</p>
       </div>
     )
@@ -43,7 +43,7 @@ export const StatusPreview: ComponentType<PreviewProps> = ({ preview, filePath }
         <p>
           <strong>{preview.name}</strong>
         </p>
-        <p>文件过大，无法预览</p>
+        <p>{t('tooLarge')}</p>
         <p>{sizeStr}</p>
       </div>
     )

@@ -5,6 +5,9 @@ import { act } from 'react-dom/test-utils'
 import React from 'react'
 import { FileExplorerPanel } from '../src/client/panel.tsx'
 
+/** Identity translator: renders the localization key as-is. */
+const t = (key: string) => key
+
 // jsdom does not expose PointerEvent; polyfill from MouseEvent.
 if (typeof PointerEvent === 'undefined') {
   class PointerEventPolyfill extends MouseEvent {
@@ -58,7 +61,7 @@ function render(element: React.ReactElement): HTMLElement {
 describe('FileExplorerPanel', () => {
   test('renders null when visible is false (default)', () => {
     const container = render(
-      <FileExplorerPanel>
+      <FileExplorerPanel t={t}>
         <span>Preview</span>
       </FileExplorerPanel>,
     )
@@ -69,7 +72,7 @@ describe('FileExplorerPanel', () => {
 
   test('renders panel when initialVisible is true', () => {
     const container = render(
-      <FileExplorerPanel initialVisible>
+      <FileExplorerPanel initialVisible t={t}>
         <span>Preview</span>
       </FileExplorerPanel>,
     )
@@ -80,7 +83,7 @@ describe('FileExplorerPanel', () => {
 
   test('renders children content inside the body', () => {
     const container = render(
-      <FileExplorerPanel initialVisible>
+      <FileExplorerPanel initialVisible t={t}>
         <span data-testid="preview-content">Preview Content</span>
       </FileExplorerPanel>,
     )
@@ -90,20 +93,20 @@ describe('FileExplorerPanel', () => {
     expect(panel.textContent).toContain('Preview Content')
   })
 
-  test('renders default title when title prop is not provided', () => {
+  test('renders localized default title when title prop is not provided', () => {
     const container = render(
-      <FileExplorerPanel initialVisible>
+      <FileExplorerPanel initialVisible t={t}>
         <span>Preview</span>
       </FileExplorerPanel>,
     )
     const titleText = container.querySelector('.dsh-fe-title-text') as HTMLElement
     expect(titleText).not.toBeNull()
-    expect(titleText.textContent).toBe('文件浏览器')
+    expect(titleText.textContent).toBe('title')
   })
 
   test('renders custom title when title prop is provided', () => {
     const container = render(
-      <FileExplorerPanel initialVisible title="My Panel">
+      <FileExplorerPanel initialVisible t={t} title="My Panel">
         <span>Preview</span>
       </FileExplorerPanel>,
     )
@@ -114,7 +117,7 @@ describe('FileExplorerPanel', () => {
 
   test('does not render a tree pane, divider, or preview pane', () => {
     const container = render(
-      <FileExplorerPanel initialVisible>
+      <FileExplorerPanel initialVisible t={t}>
         <span data-testid="preview-content">Preview Content</span>
       </FileExplorerPanel>,
     )
@@ -128,7 +131,7 @@ describe('FileExplorerPanel', () => {
 
   test('clicking close button sets data-visible to false', () => {
     const container = render(
-      <FileExplorerPanel initialVisible>
+      <FileExplorerPanel initialVisible t={t}>
         <span>Preview</span>
       </FileExplorerPanel>,
     )
@@ -149,7 +152,7 @@ describe('FileExplorerPanel', () => {
 
   test('clicking minimize toggles data-minimized attribute', () => {
     const container = render(
-      <FileExplorerPanel initialVisible>
+      <FileExplorerPanel initialVisible t={t}>
         <span>Preview</span>
       </FileExplorerPanel>,
     )
@@ -186,7 +189,7 @@ describe('FileExplorerPanel', () => {
 
   test('clicking maximize toggles data-maximized attribute', () => {
     const container = render(
-      <FileExplorerPanel initialVisible>
+      <FileExplorerPanel initialVisible t={t}>
         <span>Preview</span>
       </FileExplorerPanel>,
     )
@@ -213,7 +216,7 @@ describe('FileExplorerPanel', () => {
 
   test('title text drag updates position via pointer events', () => {
     const container = render(
-      <FileExplorerPanel initialVisible>
+      <FileExplorerPanel initialVisible t={t}>
         <span>Preview</span>
       </FileExplorerPanel>,
     )
@@ -264,7 +267,7 @@ describe('FileExplorerPanel', () => {
 
   test('resize handle drag updates panel size', () => {
     const container = render(
-      <FileExplorerPanel initialVisible>
+      <FileExplorerPanel initialVisible t={t}>
         <span>Preview</span>
       </FileExplorerPanel>,
     )

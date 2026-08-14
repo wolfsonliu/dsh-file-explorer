@@ -62,6 +62,7 @@ function makeProps() {
     sessionId: 's1' as string | undefined,
     fetchList: vi.fn().mockResolvedValue(rootEntries),
     fetchPreview: vi.fn().mockResolvedValue(cannedPreview),
+    t: (key: string) => key,
   }
 }
 
@@ -182,6 +183,6 @@ describe('FileExplorerApp', () => {
 
     const panel = container.querySelector('[data-visible]')
     expect(panel).not.toBeNull()
-    expect(panel!.textContent).toContain('从文件树选择文件')
+    expect(panel!.textContent).toContain('selectFile')
   })
 })

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react'
+import type { Translate } from './locale.ts'
 
 export interface FileContextMenuProps {
   /** Menu anchor position (viewport coordinates). */
@@ -10,6 +11,8 @@ export interface FileContextMenuProps {
   path: string
   /** The file's path relative to the workspace root (for "copy relative path"). */
   relativePath: string
+  /** Translator for localized menu item labels. */
+  t: Translate
   onOpen: () => void
   onCopyPath: () => void
   onCopyRelativePath: () => void
@@ -22,6 +25,7 @@ export function FileContextMenu({
   open,
   path,
   relativePath,
+  t,
   onOpen,
   onCopyPath,
   onCopyRelativePath,
@@ -84,21 +88,21 @@ export function FileContextMenu({
         role="menuitem"
         onClick={handleOpen}
       >
-        打开
+        {t('open')}
       </div>
       <div
         className="dsh-fe-context-menu-item"
         role="menuitem"
         onClick={handleCopyPath}
       >
-        复制路径
+        {t('copyPath')}
       </div>
       <div
         className="dsh-fe-context-menu-item"
         role="menuitem"
         onClick={handleCopyRelativePath}
       >
-        复制相对路径
+        {t('copyRelativePath')}
       </div>
     </div>
   )

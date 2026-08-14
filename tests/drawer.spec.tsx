@@ -5,6 +5,9 @@ import { act } from 'react-dom/test-utils'
 import React from 'react'
 import { FileExplorerDrawer, FloatingFileButton } from '../src/client/drawer.tsx'
 
+/** Identity translator: renders the localization key as-is. */
+const t = (key: string) => key
+
 // jsdom does not expose PointerEvent; polyfill from MouseEvent.
 if (typeof PointerEvent === 'undefined') {
   class PointerEventPolyfill extends MouseEvent {
@@ -40,7 +43,7 @@ function render(element: React.ReactElement): HTMLElement {
 describe('FileExplorerDrawer', () => {
   test('renders null when open is false', () => {
     const container = render(
-      <FileExplorerDrawer open={false} onClose={() => {}}>
+      <FileExplorerDrawer open={false} onClose={() => {}} t={t}>
         <span>Tree</span>
       </FileExplorerDrawer>,
     )
@@ -49,7 +52,7 @@ describe('FileExplorerDrawer', () => {
 
   test('renders a drawer root when open', () => {
     const container = render(
-      <FileExplorerDrawer open onClose={() => {}}>
+      <FileExplorerDrawer open onClose={() => {}} t={t}>
         <span>Tree</span>
       </FileExplorerDrawer>,
     )
@@ -58,20 +61,20 @@ describe('FileExplorerDrawer', () => {
     expect(drawer!.className).toContain('dsh-fe-drawer')
   })
 
-  test('renders the default title 文件浏览器', () => {
+  test('renders the localized default title', () => {
     const container = render(
-      <FileExplorerDrawer open onClose={() => {}}>
+      <FileExplorerDrawer open onClose={() => {}} t={t}>
         <span>Tree</span>
       </FileExplorerDrawer>,
     )
     const titleText = container.querySelector('.dsh-fe-drawer-title-text')
     expect(titleText).not.toBeNull()
-    expect(titleText!.textContent).toBe('文件浏览器')
+    expect(titleText!.textContent).toBe('title')
   })
 
   test('renders a custom title', () => {
     const container = render(
-      <FileExplorerDrawer open onClose={() => {}} title="My Files">
+      <FileExplorerDrawer open onClose={() => {}} t={t} title="My Files">
         <span>Tree</span>
       </FileExplorerDrawer>,
     )
@@ -82,7 +85,7 @@ describe('FileExplorerDrawer', () => {
 
   test('renders children inside the scrollable body', () => {
     const container = render(
-      <FileExplorerDrawer open onClose={() => {}}>
+      <FileExplorerDrawer open onClose={() => {}} t={t}>
         <span data-testid="tree">File Tree</span>
       </FileExplorerDrawer>,
     )
@@ -94,7 +97,7 @@ describe('FileExplorerDrawer', () => {
   test('clicking the close button calls onClose', () => {
     const onClose = vi.fn()
     const container = render(
-      <FileExplorerDrawer open onClose={onClose}>
+      <FileExplorerDrawer open onClose={onClose} t={t}>
         <span>Tree</span>
       </FileExplorerDrawer>,
     )
@@ -110,7 +113,7 @@ describe('FileExplorerDrawer', () => {
 
   test('renders a refresh button to the left of close when onRefresh is provided', () => {
     const container = render(
-      <FileExplorerDrawer open onClose={() => {}} onRefresh={() => {}}>
+      <FileExplorerDrawer open onClose={() => {}} onRefresh={() => {}} t={t}>
         <span>Tree</span>
       </FileExplorerDrawer>,
     )
@@ -122,7 +125,7 @@ describe('FileExplorerDrawer', () => {
 
     const refreshBtn = buttons[0]
     expect(refreshBtn.getAttribute('data-fe-action')).toBe('refresh')
-    expect(refreshBtn.getAttribute('title')).toBe('刷新')
+    expect(refreshBtn.getAttribute('title')).toBe('refresh')
     expect(refreshBtn.className).toContain('dsh-fe-btn')
 
     const closeBtn = buttons[1]
@@ -132,7 +135,7 @@ describe('FileExplorerDrawer', () => {
   test('clicking the refresh button calls onRefresh', () => {
     const onRefresh = vi.fn()
     const container = render(
-      <FileExplorerDrawer open onClose={() => {}} onRefresh={onRefresh}>
+      <FileExplorerDrawer open onClose={() => {}} onRefresh={onRefresh} t={t}>
         <span>Tree</span>
       </FileExplorerDrawer>,
     )
@@ -148,7 +151,7 @@ describe('FileExplorerDrawer', () => {
 
   test('does not render a refresh button when onRefresh is omitted', () => {
     const container = render(
-      <FileExplorerDrawer open onClose={() => {}}>
+      <FileExplorerDrawer open onClose={() => {}} t={t}>
         <span>Tree</span>
       </FileExplorerDrawer>,
     )
@@ -160,17 +163,17 @@ describe('FileExplorerDrawer', () => {
 // FloatingFileButton
 // ---------------------------------------------------------------------------
 describe('FloatingFileButton', () => {
-  test('renders a button labeled 文件', () => {
-    const container = render(<FloatingFileButton onClick={() => {}} />)
+  test('renders a button with the localized label', () => {
+    const container = render(<FloatingFileButton onClick={() => {}} t={t} />)
     const button = container.querySelector('[data-fe-file-button]')
     expect(button).not.toBeNull()
     expect(button!.className).toContain('dsh-fe-file-button')
-    expect(button!.textContent).toContain('文件')
+    expect(button!.textContent).toContain('file')
   })
 
   test('clicking the button calls onClick', () => {
     const onClick = vi.fn()
-    const container = render(<FloatingFileButton onClick={onClick} />)
+    const container = render(<FloatingFileButton onClick={onClick} t={t} />)
     const button = container.querySelector('[data-fe-file-button]')
 
     act(() => {
@@ -181,7 +184,7 @@ describe('FloatingFileButton', () => {
   })
 
   test('hover-move without pointerdown does not move the button', () => {
-    const container = render(<FloatingFileButton onClick={() => {}} />)
+    const container = render(<FloatingFileButton onClick={() => {}} t={t} />)
     const button = container.querySelector('[data-fe-file-button]') as HTMLElement
     const initialTop = button.style.top
 
@@ -194,7 +197,7 @@ describe('FloatingFileButton', () => {
 
   test('dragging the button vertically moves it and suppresses click', () => {
     const onClick = vi.fn()
-    const container = render(<FloatingFileButton onClick={onClick} />)
+    const container = render(<FloatingFileButton onClick={onClick} t={t} />)
     const button = container.querySelector('[data-fe-file-button]') as HTMLElement
 
     act(() => {

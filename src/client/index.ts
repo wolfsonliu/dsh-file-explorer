@@ -5,6 +5,11 @@ import { registerBuiltinPreviews } from './preview/index.ts'
 import { FileExplorerApp, type FileExplorerAppHandle } from './app.tsx'
 import { interceptFileLinks } from './intercept.ts'
 import { PANEL_CSS } from './styles.ts'
+import {
+  FILE_EXPLORER_NS,
+  registerFileExplorerLocale,
+  type Translate,
+} from './locale.ts'
 
 // ---------------------------------------------------------------------------
 // Client context (the shape of the Cordis context the client plugin receives)
@@ -18,10 +23,15 @@ interface ClientContext {
     }
   }
   workspaces: { openPath(path: string): Promise<void> }
+  locale: {
+    register(ns: string, locale: string, dict: Record<string, string>): () => void
+    bind(ns: string): Translate
+    subscribe(fn: () => void): () => void
+  }
   effect(callback: () => (() => void), label?: string): void
 }
 
-export const inject = ['sessions', 'workspaces']
+export const inject = ['sessions', 'workspaces', 'locale']
 
 // ---------------------------------------------------------------------------
 // apply
@@ -43,12 +53,17 @@ export function apply(ctx: ClientContext): void {
   const root = createRoot(host)
   const appRef = React.createRef<FileExplorerAppHandle>()
 
+  // Register localized copy and bind a stable translator.
+  const disposeLocale = registerFileExplorerLocale(ctx)
+  const t = ctx.locale.bind(FILE_EXPLORER_NS)
+
   function render(): void {
     const sessionId = ctx.sessions.list.getSnapshot().current
     root.render(
       React.createElement(FileExplorerApp, {
         ref: appRef,
         sessionId,
+        t,
         fetchList: async (sid, path) => {
           try {
             const res = await fetch(
@@ -79,6 +94,9 @@ export function apply(ctx: ClientContext): void {
   const unsubscribeSessions = ctx.sessions.list.subscribe(() => {
     render()
   })
+  const unsubscribeLocale = ctx.locale.subscribe(() => {
+    render()
+  })
 
   // Capture-phase click listener for intercepting file links.
   const handleClick = (event: MouseEvent) => {
@@ -99,7 +117,9 @@ export function apply(ctx: ClientContext): void {
 
   ctx.effect(() => {
     return () => {
+      disposeLocale()
       unsubscribeSessions()
+      unsubscribeLocale()
       document.removeEventListener('click', handleClick, true)
       document.removeEventListener('keydown', handleKeydown)
       root.unmount()

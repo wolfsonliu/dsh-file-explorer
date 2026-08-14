@@ -1,5 +1,6 @@
 import React, { useRef, useState, type ReactNode } from 'react'
 import { IconClose, IconPanelLeft, IconRefresh } from './icons.tsx'
+import type { Translate } from './locale.ts'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -8,10 +9,12 @@ import { IconClose, IconPanelLeft, IconRefresh } from './icons.tsx'
 export interface FileExplorerDrawerProps {
   open: boolean
   onClose: () => void
-  /** Optional title text (default '文件浏览器'). */
+  /** Optional title text (defaults to the localized title). */
   title?: string
   /** Called when the refresh button is clicked; button hidden when omitted. */
   onRefresh?: () => void
+  /** Translator for localized UI copy. */
+  t: Translate
   /** The file tree. */
   children: ReactNode
 }
@@ -25,6 +28,7 @@ export function FileExplorerDrawer({
   onClose,
   title,
   onRefresh,
+  t,
   children,
 }: FileExplorerDrawerProps) {
   if (!open) {
@@ -34,13 +38,13 @@ export function FileExplorerDrawer({
   return (
     <div className="dsh-fe-drawer" data-fe-drawer>
       <div className="dsh-fe-drawer-title">
-        <span className="dsh-fe-drawer-title-text">{title ?? '文件浏览器'}</span>
+        <span className="dsh-fe-drawer-title-text">{title ?? t('title')}</span>
         {onRefresh && (
           <button
             className="dsh-fe-btn"
             data-fe-action="refresh"
             onClick={onRefresh}
-            title="刷新"
+            title={t('refresh')}
           >
             <IconRefresh size={16} />
           </button>
@@ -49,7 +53,7 @@ export function FileExplorerDrawer({
           className="dsh-fe-btn"
           data-fe-drawer-close
           onClick={onClose}
-          title="关闭"
+          title={t('close')}
         >
           <IconClose size={16} />
         </button>
@@ -71,7 +75,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
 
-export function FloatingFileButton({ onClick }: { onClick: () => void }) {
+export function FloatingFileButton({ onClick, t }: { onClick: () => void; t: Translate }) {
   const [top, setTop] = useState<number>(() => {
     try {
       const saved = Number.parseInt(localStorage.getItem(BUTTON_TOP_KEY) ?? '', 10)
@@ -130,7 +134,7 @@ export function FloatingFileButton({ onClick }: { onClick: () => void }) {
       className="dsh-fe-file-button"
       data-fe-file-button
       onClick={handleClick}
-      title="文件浏览器（可上下拖动）"
+      title={t('title')}
       style={{ top }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -138,7 +142,7 @@ export function FloatingFileButton({ onClick }: { onClick: () => void }) {
       onPointerCancel={onPointerCancel}
     >
       <IconPanelLeft size={16} />
-      <span className="dsh-fe-file-button-label">文件</span>
+      <span className="dsh-fe-file-button-label">{t('file')}</span>
     </button>
   )
 }

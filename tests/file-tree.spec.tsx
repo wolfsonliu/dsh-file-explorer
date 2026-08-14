@@ -6,6 +6,9 @@ import React from 'react'
 import { FileTree, type FileTreeHandle } from '../src/client/file-tree.tsx'
 import type { BrowserEntry } from '../src/protocol.ts'
 
+/** Identity translator: renders the localization key as-is. */
+const t = (key: string) => key
+
 /** Render a React element into a jsdom container and return the container. */
 function render(element: React.ReactElement): HTMLElement {
   const container = document.createElement('div')
@@ -44,7 +47,7 @@ describe('FileTree', () => {
     const onSelectFile = vi.fn()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
     )
 
     // Root fetch should have been triggered on mount
@@ -73,7 +76,7 @@ describe('FileTree', () => {
     const onSelectFile = vi.fn()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
     )
     await flush()
 
@@ -100,7 +103,7 @@ describe('FileTree', () => {
     const onSelectFile = vi.fn()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
     )
     await flush()
 
@@ -143,7 +146,7 @@ describe('FileTree', () => {
     const onSelectFile = vi.fn()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
     )
     await flush()
 
@@ -180,14 +183,14 @@ describe('FileTree', () => {
     const onSelectFile = vi.fn()
 
     const container = render(
-      <FileTree sessionId={undefined} fetchList={fetchList} onSelectFile={onSelectFile} />,
+      <FileTree sessionId={undefined} fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
     )
 
     // Should not have called fetchList
     expect(fetchList).not.toHaveBeenCalled()
 
     // Should show empty state message
-    expect(container.textContent).toContain('当前没有打开的会话')
+    expect(container.textContent).toContain('noSession')
   })
 
   test('does not render a toolbar or internal refresh button', async () => {
@@ -195,7 +198,7 @@ describe('FileTree', () => {
     const onSelectFile = vi.fn()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
     )
     await flush()
 
@@ -214,7 +217,7 @@ describe('FileTree', () => {
     const ref = React.createRef<FileTreeHandle>()
 
     const container = render(
-      <FileTree ref={ref} sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+      <FileTree ref={ref} sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
     )
     await flush()
 
@@ -256,7 +259,7 @@ describe('FileTree', () => {
     const onSelectFile = vi.fn()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
     )
     await flush()
     expect(fetchList).toHaveBeenCalledWith('s1', '')
@@ -265,7 +268,7 @@ describe('FileTree', () => {
     const root = createRoot(container.firstChild as HTMLElement)
     act(() => {
       root.render(
-        <FileTree sessionId="s2" fetchList={fetchList} onSelectFile={onSelectFile} />,
+        <FileTree sessionId="s2" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
       )
     })
     await flush()
@@ -288,6 +291,7 @@ describe('FileTree', () => {
         fetchList={fetchList}
         onSelectFile={onSelectFile}
         onContextMenu={onContextMenu}
+        t={t}
       />,
     )
     await flush()
@@ -327,6 +331,7 @@ describe('FileTree', () => {
         fetchList={fetchList}
         onSelectFile={onSelectFile}
         onContextMenu={onContextMenu}
+        t={t}
       />,
     )
     await flush()

@@ -7,6 +7,7 @@ import React, {
   useState,
 } from 'react'
 import type { BrowserEntry } from '../protocol.ts'
+import type { Translate } from './locale.ts'
 
 export interface FileTreeProps {
   /** Current session id; undefined means "no session". */
@@ -17,6 +18,8 @@ export interface FileTreeProps {
   fetchList: (sessionId: string, path: string) => Promise<BrowserEntry[]>
   /** Called when the user right-clicks a file row. */
   onContextMenu?: (entry: BrowserEntry, x: number, y: number) => void
+  /** Translator for localized UI copy. */
+  t: Translate
 }
 
 /** Imperative handle exposed by FileTree. */
@@ -34,7 +37,7 @@ function sortEntries(entries: BrowserEntry[]): BrowserEntry[] {
 }
 
 export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
-  { sessionId, fetchList, onSelectFile, onContextMenu },
+  { sessionId, fetchList, onSelectFile, onContextMenu, t },
   ref,
 ) {
   const [entries, setEntries] = useState<BrowserEntry[]>([])
@@ -105,7 +108,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
   if (!sessionId) {
     return (
       <div className="dsh-fe-tree-empty">
-        <span className="dsh-fe-empty-text">当前没有打开的会话</span>
+        <span className="dsh-fe-empty-text">{t('noSession')}</span>
       </div>
     )
   }

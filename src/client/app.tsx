@@ -12,6 +12,7 @@ import { FileTree, type FileTreeHandle } from './file-tree.tsx'
 import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
 import { resolvePreview } from './preview/registry.ts'
 import type { PreviewProps } from './preview/registry.ts'
+import type { Translate } from './locale.ts'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,6 +23,8 @@ export interface FileExplorerAppProps {
   fetchList: (sessionId: string, path: string) => Promise<BrowserEntry[]>
   /** Fetch one file's preview (injectable for tests). */
   fetchPreview: (sessionId: string, path: string) => Promise<FilePreview | null>
+  /** Translator for localized UI copy. */
+  t: Translate
 }
 
 export interface FileExplorerAppHandle {
@@ -48,7 +51,7 @@ function extensionOf(filePath: string): string {
 
 /** Composes the floating button, left drawer, and floating preview box. */
 export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerAppProps>(
-  function FileExplorerApp({ sessionId, fetchList, fetchPreview }, ref) {
+  function FileExplorerApp({ sessionId, fetchList, fetchPreview, t }, ref) {
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [selectedPath, setSelectedPath] = useState<string | null>(null)
     const [previewData, setPreviewData] = useState<FilePreview | null>(null)
@@ -90,33 +93,36 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
 
     let previewChildren: ReactNode
     if (previewData === null) {
-      previewChildren = <div className="dsh-fe-placeholder">从文件树选择文件</div>
+      previewChildren = <div className="dsh-fe-placeholder">{t('selectFile')}</div>
     } else {
       const PreviewComponent = resolvePreview(extensionOf(selectedPath ?? ''))
       const previewProps: PreviewProps = {
         preview: previewData,
         filePath: selectedPath ?? '',
         activeView: 'preview',
+        t,
       }
       previewChildren = <PreviewComponent {...previewProps} />
     }
 
     return (
       <>
-        <FloatingFileButton onClick={toggleDrawer} />
+        <FloatingFileButton onClick={toggleDrawer} t={t} />
         <FileExplorerDrawer
           open={drawerOpen}
           onClose={closeDrawer}
           onRefresh={() => treeRef.current?.refresh()}
+          t={t}
         >
           <FileTree
             ref={treeRef}
             sessionId={sessionId}
             fetchList={fetchList}
             onSelectFile={(path) => openFile(path)}
+            t={t}
           />
         </FileExplorerDrawer>
-        <FileExplorerPanel ref={previewPanelRef} title="文件预览">
+        <FileExplorerPanel ref={previewPanelRef} t={t}>
           {previewChildren}
         </FileExplorerPanel>
       </>

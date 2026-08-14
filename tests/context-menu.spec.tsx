@@ -5,6 +5,9 @@ import { act } from 'react-dom/test-utils'
 import React from 'react'
 import { FileContextMenu } from '../src/client/context-menu.tsx'
 
+/** Identity translator: renders the localization key as-is. */
+const t = (key: string) => key
+
 // ---------------------------------------------------------------------------
 // jsdom polyfills
 // ---------------------------------------------------------------------------
@@ -64,6 +67,7 @@ describe('FileContextMenu', () => {
         open={false}
         path="/home/user/file.ts"
         relativePath="file.ts"
+        t={t}
         onOpen={vi.fn()}
         onCopyPath={vi.fn()}
         onCopyRelativePath={vi.fn()}
@@ -83,6 +87,7 @@ describe('FileContextMenu', () => {
         open={true}
         path="/home/user/file.ts"
         relativePath="file.ts"
+        t={t}
         onOpen={vi.fn()}
         onCopyPath={vi.fn()}
         onCopyRelativePath={vi.fn()}
@@ -95,9 +100,9 @@ describe('FileContextMenu', () => {
 
     const items = menu!.querySelectorAll('[role="menuitem"]')
     expect(items.length).toBe(3)
-    expect(items[0].textContent).toBe('打开')
-    expect(items[1].textContent).toBe('复制路径')
-    expect(items[2].textContent).toBe('复制相对路径')
+    expect(items[0].textContent).toBe('open')
+    expect(items[1].textContent).toBe('copyPath')
+    expect(items[2].textContent).toBe('copyRelativePath')
   })
 
   test('menu is positioned at (x, y) when open', () => {
@@ -108,6 +113,7 @@ describe('FileContextMenu', () => {
         open={true}
         path="/home/user/file.ts"
         relativePath="file.ts"
+        t={t}
         onOpen={vi.fn()}
         onCopyPath={vi.fn()}
         onCopyRelativePath={vi.fn()}
@@ -133,6 +139,7 @@ describe('FileContextMenu', () => {
         open={true}
         path="/home/user/file.ts"
         relativePath="file.ts"
+        t={t}
         onOpen={onOpen}
         onCopyPath={vi.fn()}
         onCopyRelativePath={vi.fn()}
@@ -162,6 +169,7 @@ describe('FileContextMenu', () => {
         open={true}
         path="/home/user/file.ts"
         relativePath="file.ts"
+        t={t}
         onOpen={vi.fn()}
         onCopyPath={onCopyPath}
         onCopyRelativePath={vi.fn()}
@@ -195,6 +203,7 @@ describe('FileContextMenu', () => {
         open={true}
         path="/home/user/file.ts"
         relativePath="file.ts"
+        t={t}
         onOpen={vi.fn()}
         onCopyPath={vi.fn()}
         onCopyRelativePath={onCopyRelativePath}
@@ -227,6 +236,7 @@ describe('FileContextMenu', () => {
         open={true}
         path="/home/user/file.ts"
         relativePath="file.ts"
+        t={t}
         onOpen={vi.fn()}
         onCopyPath={vi.fn()}
         onCopyRelativePath={vi.fn()}
@@ -254,6 +264,7 @@ describe('FileContextMenu', () => {
         open={true}
         path="/home/user/file.ts"
         relativePath="file.ts"
+        t={t}
         onOpen={vi.fn()}
         onCopyPath={vi.fn()}
         onCopyRelativePath={vi.fn()}

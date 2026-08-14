@@ -8,6 +8,7 @@ import React, {
   type ReactNode,
 } from 'react'
 import { IconClose, IconFullscreen } from './icons.tsx'
+import type { Translate } from './locale.ts'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -20,8 +21,10 @@ export interface FileExplorerPanelHandle {
 }
 
 export interface FileExplorerPanelProps {
-  /** Optional title text (default '文件浏览器'). */
+  /** Optional title text (defaults to the localized title). */
   title?: string
+  /** Translator for localized UI copy. */
+  t: Translate
   /** Preview content rendered in the body. */
   children: ReactNode
   initialVisible?: boolean
@@ -154,7 +157,7 @@ function useDragHandle(
 // ---------------------------------------------------------------------------
 
 export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplorerPanelProps>(
-  function FileExplorerPanel({ title, children, initialVisible = false }, ref) {
+  function FileExplorerPanel({ title, t, children, initialVisible = false }, ref) {
     const [geometry, dispatch] = useReducer(geometryReducer, {
       visible: initialVisible,
       minimized: false,
@@ -245,14 +248,14 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
             className="dsh-fe-title-text"
             onPointerDown={isMaximized ? undefined : titleDrag.onPointerDown}
           >
-            {title ?? '文件浏览器'}
+            {title ?? t('title')}
           </span>
           <div className="dsh-fe-title-actions">
             <button
               className="dsh-fe-btn"
               data-fe-action="minimize"
               onClick={() => dispatch({ type: 'MINIMIZE' })}
-              title={geometry.minimized ? '展开' : '最小化'}
+              title={geometry.minimized ? t('restore') : t('minimize')}
             >
               {geometry.minimized ? '□' : '−'}
             </button>
@@ -260,7 +263,7 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
               className="dsh-fe-btn"
               data-fe-action="maximize"
               onClick={() => dispatch({ type: 'MAXIMIZE' })}
-              title={isMaximized ? '还原' : '最大化'}
+              title={isMaximized ? t('restore') : t('maximize')}
             >
               <IconFullscreen size={16} />
             </button>
@@ -268,7 +271,7 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
               className="dsh-fe-btn"
               data-fe-action="close"
               onClick={() => dispatch({ type: 'CLOSE' })}
-              title="关闭"
+              title={t('close')}
             >
               <IconClose size={16} />
             </button>

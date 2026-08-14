@@ -17,6 +17,8 @@ beforeEach(async () => {
 
 function createFakeCtx() {
   const unsubscribe = vi.fn(() => {})
+  const localeUnsubscribe = vi.fn(() => {})
+  const localeDisposers: Array<() => void> = []
   return {
     sessions: {
       list: {
@@ -28,10 +30,21 @@ function createFakeCtx() {
       },
     },
     workspaces: { openPath: vi.fn() },
+    locale: {
+      register: vi.fn().mockImplementation(() => {
+        const dispose = vi.fn(() => {})
+        localeDisposers.push(dispose)
+        return dispose
+      }),
+      bind: vi.fn().mockReturnValue((key: string) => key),
+      subscribe: vi.fn(() => localeUnsubscribe),
+    },
     effect: vi.fn((cb: () => () => void) => {
       disposer = cb()
     }),
     _unsubscribe: unsubscribe,
+    _localeUnsubscribe: localeUnsubscribe,
+    _localeDisposers: localeDisposers,
   }
 }
 
@@ -200,5 +213,49 @@ describe('apply', () => {
     expect(document.body.querySelector('[data-fe-host]')).toBeNull()
     expect(document.head.querySelector('[data-fe-style]')).toBeNull()
     expect(fakeCtx._unsubscribe).toHaveBeenCalledTimes(1)
+  })
+
+  test('registers locale dictionaries and binds/subscribes the translator', async () => {
+    const fakeCtx = createFakeCtx()
+
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    expect(fakeCtx.locale.register).toHaveBeenCalledTimes(2)
+    expect(fakeCtx.locale.register).toHaveBeenNthCalledWith(
+      1,
+      'file-explorer',
+      'zh',
+      expect.any(Object),
+    )
+    expect(fakeCtx.locale.register).toHaveBeenNthCalledWith(
+      2,
+      'file-explorer',
+      'en',
+      expect.any(Object),
+    )
+    expect(fakeCtx.locale.bind).toHaveBeenCalledWith('file-explorer')
+    expect(fakeCtx.locale.subscribe).toHaveBeenCalledTimes(1)
+  })
+
+  test('disposer removes registered locale dictionaries and locale subscription', async () => {
+    const fakeCtx = createFakeCtx()
+
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    expect(fakeCtx._localeDisposers).toHaveLength(2)
+    expect(fakeCtx._localeUnsubscribe).not.toHaveBeenCalled()
+
+    act(() => {
+      disposer!()
+    })
+
+    expect(fakeCtx._localeUnsubscribe).toHaveBeenCalledTimes(1)
+    for (const dispose of fakeCtx._localeDisposers) {
+      expect(dispose).toHaveBeenCalledTimes(1)
+    }
   })
 })

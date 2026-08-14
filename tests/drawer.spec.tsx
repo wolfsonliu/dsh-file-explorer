@@ -5,6 +5,24 @@ import { act } from 'react-dom/test-utils'
 import React from 'react'
 import { FileExplorerDrawer, FloatingFileButton } from '../src/client/drawer.tsx'
 
+// jsdom does not expose PointerEvent; polyfill from MouseEvent.
+if (typeof PointerEvent === 'undefined') {
+  class PointerEventPolyfill extends MouseEvent {
+    declare pointerId: number
+    declare pointerType: string
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init)
+      this.pointerId = (init as any).pointerId ?? 1
+      this.pointerType = (init as any).pointerType ?? 'mouse'
+    }
+  }
+  ;(globalThis as any).PointerEvent = PointerEventPolyfill
+}
+if (!('setPointerCapture' in Element.prototype)) {
+  ;(Element.prototype as any).setPointerCapture = function () {}
+  ;(Element.prototype as any).releasePointerCapture = function () {}
+}
+
 /** Render a React element into a jsdom container and return the container. */
 function render(element: React.ReactElement): HTMLElement {
   const container = document.createElement('div')
@@ -113,5 +131,22 @@ describe('FloatingFileButton', () => {
     })
 
     expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
+  test('dragging the button vertically moves it and suppresses click', () => {
+    const onClick = vi.fn()
+    const container = render(<FloatingFileButton onClick={onClick} />)
+    const button = container.querySelector('[data-fe-file-button]') as HTMLElement
+
+    act(() => {
+      button.dispatchEvent(new PointerEvent('pointerdown', { clientY: 100, bubbles: true }))
+      button.dispatchEvent(new PointerEvent('pointermove', { clientY: 160, bubbles: true }))
+      button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
+    })
+
+    // Dragging moved the button down (top > initial)...
+    expect(parseInt(button.style.top, 10)).toBeGreaterThan(0)
+    // ...and did NOT trigger a click.
+    expect(onClick).not.toHaveBeenCalled()
   })
 })

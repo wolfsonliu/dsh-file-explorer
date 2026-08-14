@@ -1,5 +1,6 @@
 import React from 'react';
 import type { BrowserEntry } from '../protocol.ts';
+import type { Translate } from './locale.ts';
 export interface FileTreeProps {
     /** Current session id; undefined means "no session". */
     sessionId: string | undefined;
@@ -9,5 +10,12 @@ export interface FileTreeProps {
     fetchList: (sessionId: string, path: string) => Promise<BrowserEntry[]>;
     /** Called when the user right-clicks a file row. */
     onContextMenu?: (entry: BrowserEntry, x: number, y: number) => void;
+    /** Translator for localized UI copy. */
+    t: Translate;
 }
-export declare function FileTree({ sessionId, fetchList, onSelectFile, onContextMenu }: FileTreeProps): React.JSX.Element;
+/** Imperative handle exposed by FileTree. */
+export interface FileTreeHandle {
+    /** Re-fetch the root and clear cached children. */
+    refresh(): void;
+}
+export declare const FileTree: React.ForwardRefExoticComponent<FileTreeProps & React.RefAttributes<FileTreeHandle>>;

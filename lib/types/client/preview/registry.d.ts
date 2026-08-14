@@ -1,9 +1,12 @@
 import type { ComponentType } from 'react';
 import type { FilePreview } from '../../protocol.ts';
+import type { Translate } from '../locale.ts';
 /** Props every preview component receives. */
 export interface PreviewProps {
     preview: FilePreview;
     filePath: string;
+    /** Translator for localized preview status copy (empty/binary/too-large). */
+    t: Translate;
     onViewSource?: () => void;
     activeView: 'preview' | 'source';
 }

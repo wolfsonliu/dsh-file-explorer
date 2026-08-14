@@ -3,11 +3,13 @@
  *
  * An external plugin cannot import `@deepseek-ai/dsh-client-ui-primitives`, so
  * the SVG path data is inlined from DSH's own icon components (see dsh-source).
- * Every glyph renders fill="currentColor" and takes { size, className }.
+ * Every glyph renders fill="currentColor" and takes { size, className, style }.
  */
+import type { CSSProperties } from 'react';
 export interface FeIconProps {
     size?: number;
     className?: string;
+    style?: CSSProperties;
 }
 /** ic_ds_panel_left_outline_16 — inlined from `IconPanelLeftOutline16`. */
 export declare function IconPanelLeft(props: FeIconProps): import("react").JSX.Element;
@@ -25,3 +27,5 @@ export declare function IconRefresh(props: FeIconProps): import("react").JSX.Ele
 export declare function IconCopy(props: FeIconProps): import("react").JSX.Element;
 /** ic_ds_fullscreen_outline_16 — inlined from `IconFullscreenOutline16`. */
 export declare function IconFullscreen(props: FeIconProps): import("react").JSX.Element;
+/** generic_file_16 — simple document outline with a folded top-right corner. */
+export declare function IconFile(props: FeIconProps): import("react").JSX.Element;

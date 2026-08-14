@@ -1,3 +1,4 @@
+import { type Translate } from './locale.ts';
 interface ClientContext {
     sessions: {
         list: {
@@ -13,6 +14,11 @@ interface ClientContext {
     };
     workspaces: {
         openPath(path: string): Promise<void>;
+    };
+    locale: {
+        register(ns: string, locale: string, dict: Record<string, string>): () => void;
+        bind(ns: string): Translate;
+        subscribe(fn: () => void): () => void;
     };
     effect(callback: () => (() => void), label?: string): void;
 }

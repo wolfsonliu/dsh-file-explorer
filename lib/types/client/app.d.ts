@@ -1,10 +1,13 @@
 import React from 'react';
 import type { BrowserEntry, FilePreview } from '../protocol.ts';
+import type { Translate } from './locale.ts';
 export interface FileExplorerAppProps {
     sessionId: string | undefined;
     fetchList: (sessionId: string, path: string) => Promise<BrowserEntry[]>;
     /** Fetch one file's preview (injectable for tests). */
     fetchPreview: (sessionId: string, path: string) => Promise<FilePreview | null>;
+    /** Translator for localized UI copy. */
+    t: Translate;
 }
 export interface FileExplorerAppHandle {
     openDrawer(): void;

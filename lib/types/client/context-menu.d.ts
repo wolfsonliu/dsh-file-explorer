@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Translate } from './locale.ts';
 export interface FileContextMenuProps {
     /** Menu anchor position (viewport coordinates). */
     x: number;
@@ -9,9 +10,11 @@ export interface FileContextMenuProps {
     path: string;
     /** The file's path relative to the workspace root (for "copy relative path"). */
     relativePath: string;
+    /** Translator for localized menu item labels. */
+    t: Translate;
     onOpen: () => void;
     onCopyPath: () => void;
     onCopyRelativePath: () => void;
     onClose: () => void;
 }
-export declare function FileContextMenu({ x, y, open, path, relativePath, onOpen, onCopyPath, onCopyRelativePath, onClose, }: FileContextMenuProps): React.JSX.Element | null;
+export declare function FileContextMenu({ x, y, open, path, relativePath, t, onOpen, onCopyPath, onCopyRelativePath, onClose, }: FileContextMenuProps): React.JSX.Element | null;

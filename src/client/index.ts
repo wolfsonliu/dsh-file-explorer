@@ -2,6 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { FILE_EXPLORER_ROUTE } from '../protocol.ts'
 import { registerBuiltinPreviews } from './preview/index.ts'
+import { registerPreview } from './preview/registry.ts'
 import { FileExplorerApp, type FileExplorerAppHandle } from './app.tsx'
 import { interceptFileLinks } from './intercept.ts'
 import { PANEL_CSS } from './styles.ts'
@@ -28,6 +29,7 @@ interface ClientContext {
     bind(ns: string): Translate
     subscribe(fn: () => void): () => void
   }
+  reflect: { provide(name: string, value: unknown): void }
   effect(callback: () => (() => void), label?: string): void
 }
 
@@ -39,6 +41,10 @@ export const inject = ['sessions', 'workspaces', 'locale']
 
 export function apply(ctx: ClientContext): void {
   registerBuiltinPreviews()
+
+  // Expose the preview-registration service so external preview plugins can
+  // register their own previewers (and override built-ins by priority).
+  ctx.reflect.provide('fileExplorer', { registerPreview })
 
   // Inject panel styles (an external plugin cannot import a CSS module).
   const styleEl = document.createElement('style')

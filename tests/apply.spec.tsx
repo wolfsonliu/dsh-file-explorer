@@ -39,6 +39,7 @@ function createFakeCtx() {
       bind: vi.fn().mockReturnValue((key: string) => key),
       subscribe: vi.fn(() => localeUnsubscribe),
     },
+    reflect: { provide: vi.fn() },
     effect: vi.fn((cb: () => () => void) => {
       disposer = cb()
     }),
@@ -101,6 +102,21 @@ describe('apply', () => {
 
     const host = document.body.querySelector('[data-fe-host]')
     expect(host).not.toBeNull()
+  })
+
+  test('provides the fileExplorer service with registerPreview', async () => {
+    const fakeCtx = createFakeCtx()
+
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    const provide = fakeCtx.reflect.provide as ReturnType<typeof vi.fn>
+    expect(provide).toHaveBeenCalled()
+    const call = provide.mock.calls.find((c) => c[0] === 'fileExplorer')
+    expect(call).toBeDefined()
+    const service = call![1] as { registerPreview?: unknown }
+    expect(typeof service.registerPreview).toBe('function')
   })
 
   test('renders the floating file button (data-fe-file-button) inside the host', async () => {

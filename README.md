@@ -69,6 +69,35 @@ dsh web
 - **文件链接拦截为 best-effort**：依赖 DSH 会话区的 CSS 类名（`_fileLink`、`data-produced-files-row`），上游 UI 结构调整时需同步选择器。
 - **大文件**：整文件读取受 `maxTextBytes`/`maxImageBytes` 上限约束，流式读取未实现。
 
+## 开发预览插件
+
+`dsh-file-explorer` 通过 cordis 服务 `fileExplorer` 暴露预览注册入口，领域专家可把专业文件预览做成独立插件（命名 `@dsh-external/dsh-file-explorer-preview-<domain>`），无需改动核心。
+
+```typescript
+// preview 插件 client 入口
+import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'
+
+export const inject = ['fileExplorer']
+
+export function apply(ctx: {
+  fileExplorer: { registerPreview(ext: string, comp: React.ComponentType<PreviewProps>, priority?: number): () => void }
+  effect(cb: () => (() => void), label?: string): void
+}): void {
+  ctx.effect(() => ctx.fileExplorer.registerPreview('cif', CifPreview, 10))
+}
+
+function CifPreview(props: PreviewProps) {
+  // props.preview.kind === 'text' 时，props.preview.content 是文件文本内容
+  return renderStructure(props.preview.content)
+}
+```
+
+要点：
+- **服务名**：`fileExplorer`，`inject: ['fileExplorer']` 后通过 `ctx.fileExplorer.registerPreview(ext, component, priority?)` 注册。
+- **优先级**：数值越大越优先；内置预览为 `0`，外部用 `10` 即可覆盖。同优先级后注册者胜。
+- **契约类型**：`import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'` 获得类型提示。
+- **registerPreview 返回 disposer**：在 `ctx.effect` 的清理里调用以卸载/HMR 时移除注册。
+
 ## 开发
 
 ```sh

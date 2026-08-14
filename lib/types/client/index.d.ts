@@ -20,6 +20,9 @@ interface ClientContext {
         bind(ns: string): Translate;
         subscribe(fn: () => void): () => void;
     };
+    reflect: {
+        provide(name: string, value: unknown): void;
+    };
     effect(callback: () => (() => void), label?: string): void;
 }
 export declare const inject: string[];

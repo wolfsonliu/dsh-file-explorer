@@ -11,8 +11,12 @@ export interface PreviewProps {
     activeView: 'preview' | 'source';
 }
 type PreviewComponent = ComponentType<PreviewProps>;
-/** Register (or replace) the preview component for a file extension. */
-export declare function registerPreview(ext: string, component: PreviewComponent): void;
+/**
+ * Register a preview component for a file extension, returning a disposer that
+ * removes this exact entry (idempotently). Higher priority wins at resolution;
+ * among equal priorities the later-registered entry wins.
+ */
+export declare function registerPreview(ext: string, component: PreviewComponent, priority?: number): () => void;
 /** The registry key for an extension: itself if registered, else the fallback. */
 export declare function previewKeyOf(ext: string): string;
 /** Resolve the preview component for an extension, falling back to 'binary'. */

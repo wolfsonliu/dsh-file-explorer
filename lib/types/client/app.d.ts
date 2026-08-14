@@ -1,5 +1,5 @@
 import React from 'react';
-import type { BrowserEntry, FilePreview } from '../protocol.ts';
+import { type BrowserEntry, type FilePreview } from '../protocol.ts';
 import type { Translate } from './locale.ts';
 export interface FileExplorerAppProps {
     sessionId: string | undefined;

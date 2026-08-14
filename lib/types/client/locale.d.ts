@@ -12,6 +12,7 @@ export declare const ZH: {
     readonly noSession: "当前没有打开的会话";
     readonly open: "打开";
     readonly copyPath: "复制路径";
+    readonly copyAbsolutePath: "复制绝对路径";
     readonly copyRelativePath: "复制相对路径";
     readonly emptyFile: "空文件";
     readonly binary: "无法预览此文件（二进制）";
@@ -29,6 +30,7 @@ export declare const EN: {
     readonly noSession: "No open session";
     readonly open: "Open";
     readonly copyPath: "Copy path";
+    readonly copyAbsolutePath: "Copy absolute path";
     readonly copyRelativePath: "Copy relative path";
     readonly emptyFile: "Empty file";
     readonly binary: "Cannot preview binary file";

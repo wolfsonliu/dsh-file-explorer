@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { describe, expect, test, vi } from 'vitest'
+import { describe, expect, test, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React, { createRef } from 'react'
 import { FileExplorerApp, type FileExplorerAppHandle } from '../src/client/app.tsx'
 import { registerPreview } from '../src/client/preview/registry.ts'
 import type { PreviewProps } from '../src/client/preview/registry.ts'
+import { registerBuiltinFileActions } from '../src/client/file-action.ts'
 import type { BrowserEntry, FilePreview } from '../src/protocol.ts'
 
 // ---------------------------------------------------------------------------
@@ -34,6 +35,27 @@ const TxtPreview = ({ preview }: PreviewProps) => {
 
 // Register the stub so `resolvePreview('txt')` resolves to it for this suite.
 registerPreview('txt', TxtPreview)
+
+// Register built-in file actions once for this whole spec file (the registry
+// is module-level and not idempotent).
+beforeAll(() => {
+  registerBuiltinFileActions()
+})
+
+// Stub navigator.clipboard — jsdom does not implement it.
+beforeEach(() => {
+  Object.defineProperty(navigator, 'clipboard', {
+    value: {
+      writeText: vi.fn().mockResolvedValue(undefined),
+    },
+    configurable: true,
+    writable: true,
+  })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -184,5 +206,107 @@ describe('FileExplorerApp', () => {
     const panel = container.querySelector('[data-visible]')
     expect(panel).not.toBeNull()
     expect(panel!.textContent).toContain('selectFile')
+  })
+
+  test('clicking the ellipsis menu "open" item opens the preview via helpers', async () => {
+    const props = makeProps()
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.toggleDrawer())
+    await flush()
+
+    const row = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find(
+      (r) => r.textContent!.includes('notes.txt'),
+    ) as HTMLElement
+    expect(row).toBeTruthy()
+
+    const btn = row.querySelector('[data-fe-action-button]') as HTMLElement
+    expect(btn).toBeTruthy()
+    act(() => btn.click())
+
+    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    expect(menu).not.toBeNull()
+    const openItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find(
+      (el) => el.textContent!.includes('open'),
+    ) as HTMLElement
+    expect(openItem).toBeTruthy()
+
+    act(() => openItem.click())
+    await flush()
+
+    expect(props.fetchPreview).toHaveBeenCalledWith('s1', 'notes.txt')
+
+    const panel = container.querySelector('[data-visible]')
+    expect(panel).not.toBeNull()
+    expect(panel!.getAttribute('data-visible')).toBe('true')
+    expect(container.textContent).toContain('hello world')
+  })
+
+  test('copy absolute path fetches resolve-path and writes the resolved path to clipboard', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({ path: '/workspace/notes.txt' }),
+      }),
+    )
+
+    const props = makeProps()
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.toggleDrawer())
+    await flush()
+
+    const row = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find(
+      (r) => r.textContent!.includes('notes.txt'),
+    ) as HTMLElement
+    const btn = row.querySelector('[data-fe-action-button]') as HTMLElement
+    act(() => btn.click())
+
+    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    const copyAbsItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find(
+      (el) => el.textContent!.includes('copyAbsolutePath'),
+    ) as HTMLElement
+    expect(copyAbsItem).toBeTruthy()
+
+    act(() => copyAbsItem.click())
+    await flush()
+
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>
+    const resolveCall = fetchMock.mock.calls.find((c) =>
+      String(c[0]).includes('action=resolve-path'),
+    )
+    expect(resolveCall).toBeDefined()
+    expect(String(resolveCall![0])).toContain('sessionId=s1')
+    expect(String(resolveCall![0])).toContain('path=notes.txt')
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('/workspace/notes.txt')
+  })
+
+  test('copy relative path writes the entry path to clipboard', async () => {
+    const props = makeProps()
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.toggleDrawer())
+    await flush()
+
+    const row = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find(
+      (r) => r.textContent!.includes('notes.txt'),
+    ) as HTMLElement
+    const btn = row.querySelector('[data-fe-action-button]') as HTMLElement
+    act(() => btn.click())
+
+    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    const copyRelItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find(
+      (el) => el.textContent!.includes('copyRelativePath'),
+    ) as HTMLElement
+    expect(copyRelItem).toBeTruthy()
+
+    act(() => copyRelItem.click())
+    await flush()
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('notes.txt')
   })
 })

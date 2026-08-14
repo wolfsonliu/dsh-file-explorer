@@ -125,6 +125,17 @@ export const PANEL_CSS = `
   font-size: 13px;
   line-height: 20px;
 }
+.dsh-fe-row-actions {
+  flex-shrink: 0;
+  display: inline-flex;
+  opacity: 0;
+}
+.dsh-fe-tree-row:hover .dsh-fe-row-actions { opacity: 1; }
+.dsh-fe-row-action-btn {
+  width: 20px;
+  height: 20px;
+  color: var(--dsw-alias-label-secondary, #999);
+}
 .dsh-fe-menu {
   position: fixed;
   z-index: 1001;

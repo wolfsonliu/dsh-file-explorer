@@ -8,17 +8,17 @@ import React, {
 } from 'react'
 import type { BrowserEntry } from '../protocol.ts'
 import type { Translate } from './locale.ts'
-import { IconChevronRight, IconFile, IconFolderClose, IconFolderOpen } from './icons.tsx'
+import { FileContextMenu } from './context-menu.tsx'
+import { fileActionsFor, type FileActionHelpers } from './file-action.ts'
+import { IconChevronRight, IconEllipsis, IconFile, IconFolderClose, IconFolderOpen } from './icons.tsx'
 
 export interface FileTreeProps {
   /** Current session id; undefined means "no session". */
   sessionId: string | undefined
-  /** Called when the user clicks a file row. */
-  onSelectFile: (path: string) => void
+  /** Action helpers used by the per-row action menu. */
+  helpers: FileActionHelpers
   /** List one directory level (injectable for tests). Returns workspace-relative entries. */
   fetchList: (sessionId: string, path: string) => Promise<BrowserEntry[]>
-  /** Called when the user right-clicks a file row. */
-  onContextMenu?: (entry: BrowserEntry, x: number, y: number) => void
   /** Translator for localized UI copy. */
   t: Translate
 }
@@ -37,14 +37,22 @@ function sortEntries(entries: BrowserEntry[]): BrowserEntry[] {
   })
 }
 
+/** Per-row action-menu state. */
+interface MenuState {
+  open: boolean
+  anchor: { x: number; y: number }
+  entry: BrowserEntry | null
+}
+
 export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
-  { sessionId, fetchList, onSelectFile, onContextMenu, t },
+  { sessionId, helpers, fetchList, t },
   ref,
 ) {
   const [entries, setEntries] = useState<BrowserEntry[]>([])
   const [children, setChildren] = useState<Record<string, BrowserEntry[]>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [refreshKey, setRefreshKey] = useState(0)
+  const [menu, setMenu] = useState<MenuState>({ open: false, anchor: { x: 0, y: 0 }, entry: null })
 
   // Track mounted state to avoid setState after unmount
   const mountedRef = useRef(true)
@@ -103,6 +111,14 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     setRefreshKey((k) => k + 1)
   }, [])
 
+  const openMenu = useCallback((entry: BrowserEntry, anchor: { x: number; y: number }) => {
+    setMenu({ open: true, anchor, entry })
+  }, [])
+
+  const closeMenu = useCallback(() => {
+    setMenu((prev) => ({ ...prev, open: false }))
+  }, [])
+
   useImperativeHandle(ref, () => ({ refresh: handleRefresh }), [handleRefresh])
 
   // Empty state
@@ -114,6 +130,16 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     )
   }
 
+  const menuEntry = menu.entry
+  const menuItems = menuEntry
+    ? fileActionsFor(menuEntry.kind).map((a) => ({
+        id: a.id,
+        label: a.label(t),
+        icon: a.icon,
+        onSelect: () => a.onSelect(menuEntry, helpers),
+      }))
+    : []
+
   return (
     <div className="dsh-fe-tree">
       <div className="dsh-fe-tree-body">
@@ -123,10 +149,16 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
           expanded={expanded}
           childrenMap={children}
           onDisclosureClick={handleDisclosureClick}
-          onSelectFile={onSelectFile}
-          onContextMenu={onContextMenu}
+          helpers={helpers}
+          onOpenMenu={openMenu}
         />
       </div>
+      <FileContextMenu
+        open={menu.open}
+        anchor={menu.anchor}
+        items={menuItems}
+        onClose={closeMenu}
+      />
     </div>
   )
 })
@@ -137,8 +169,8 @@ interface EntryListProps {
   expanded: Record<string, boolean>
   childrenMap: Record<string, BrowserEntry[]>
   onDisclosureClick: (entry: BrowserEntry) => void
-  onSelectFile: (path: string) => void
-  onContextMenu?: (entry: BrowserEntry, x: number, y: number) => void
+  helpers: FileActionHelpers
+  onOpenMenu: (entry: BrowserEntry, anchor: { x: number; y: number }) => void
 }
 
 function EntryList({
@@ -147,8 +179,8 @@ function EntryList({
   expanded,
   childrenMap,
   onDisclosureClick,
-  onSelectFile,
-  onContextMenu,
+  helpers,
+  onOpenMenu,
 }: EntryListProps) {
   return (
     <>
@@ -164,17 +196,9 @@ function EntryList({
             style={{ paddingLeft: `${depth * 16 + 4}px` }}
             onClick={() => {
               if (entry.kind === 'file') {
-                onSelectFile(entry.path)
+                helpers.openFile(entry.path)
               }
             }}
-            onContextMenu={
-              entry.kind === 'file' && onContextMenu
-                ? (e) => {
-                    e.preventDefault()
-                    onContextMenu(entry, e.clientX, e.clientY)
-                  }
-                : undefined
-            }
           >
             {entry.kind === 'directory' ? (
               <span
@@ -207,6 +231,20 @@ function EntryList({
               )}
             </span>
             <span className="dsh-fe-name">{entry.name}</span>
+            <span className="dsh-fe-row-actions">
+              <button
+                type="button"
+                className="dsh-fe-btn dsh-fe-row-action-btn"
+                data-fe-action-button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  onOpenMenu(entry, { x: rect.left, y: rect.bottom })
+                }}
+              >
+                <IconEllipsis size={16} />
+              </button>
+            </span>
           </div>
           {entry.kind === 'directory' &&
             expanded[entry.path] &&
@@ -217,8 +255,8 @@ function EntryList({
                 expanded={expanded}
                 childrenMap={childrenMap}
                 onDisclosureClick={onDisclosureClick}
-                onSelectFile={onSelectFile}
-                onContextMenu={onContextMenu}
+                helpers={helpers}
+                onOpenMenu={onOpenMenu}
               />
             )}
         </React.Fragment>

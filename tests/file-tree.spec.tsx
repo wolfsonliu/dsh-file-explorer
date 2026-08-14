@@ -1,13 +1,30 @@
 // @vitest-environment jsdom
-import { describe, expect, test, vi } from 'vitest'
+import { describe, expect, test, vi, beforeAll } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React from 'react'
 import { FileTree, type FileTreeHandle } from '../src/client/file-tree.tsx'
+import { registerBuiltinFileActions } from '../src/client/file-action.ts'
+import type { FileActionHelpers } from '../src/client/file-action.ts'
 import type { BrowserEntry } from '../src/protocol.ts'
 
 /** Identity translator: renders the localization key as-is. */
 const t = (key: string) => key
+
+// The built-in action registry is module-level and not idempotent, so register
+// exactly once for this whole spec file.
+beforeAll(() => {
+  registerBuiltinFileActions()
+})
+
+/** File-action helpers with spy implementations. */
+function makeHelpers(): FileActionHelpers {
+  return {
+    openFile: vi.fn(),
+    copyAbsolutePath: vi.fn().mockResolvedValue(undefined),
+    copyRelativePath: vi.fn().mockResolvedValue(undefined),
+  }
+}
 
 /** Render a React element into a jsdom container and return the container. */
 function render(element: React.ReactElement): HTMLElement {
@@ -27,6 +44,22 @@ async function flush(): Promise<void> {
   })
 }
 
+/** Find the row whose text content includes the given name. */
+function rowNamed(container: HTMLElement, name: string): HTMLElement {
+  const row = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
+    r.textContent!.includes(name),
+  ) as HTMLElement
+  expect(row).toBeTruthy()
+  return row
+}
+
+/** The trailing ellipsis action button on a row. */
+function actionButton(row: HTMLElement): HTMLElement {
+  const btn = row.querySelector('[data-fe-action-button]') as HTMLElement
+  expect(btn).toBeTruthy()
+  return btn
+}
+
 const rootEntries: BrowserEntry[] = [
   { name: 'src', path: 'src', kind: 'directory' },
   { name: 'README.md', path: 'README.md', kind: 'file', size: 100 },
@@ -44,10 +77,10 @@ const srcChildren: BrowserEntry[] = [
 describe('FileTree', () => {
   test('renders root entries with dirs sorted before files', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
 
     // Root fetch should have been triggered on mount
@@ -71,27 +104,22 @@ describe('FileTree', () => {
     expect(rows[2].textContent).toContain('package.json')
   })
 
-  test('clicking a file row calls onSelectFile with the file path', async () => {
+  test('clicking a file row calls helpers.openFile with the file path', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
-    // Find the README.md file row
-    const rows = container.querySelectorAll('.dsh-fe-tree-row')
-    const readmeRow = Array.from(rows).find((r) =>
-      r.textContent!.includes('README.md'),
-    ) as HTMLElement
-    expect(readmeRow).toBeTruthy()
+    const readmeRow = rowNamed(container, 'README.md')
 
     act(() => {
       readmeRow.click()
     })
 
-    expect(onSelectFile).toHaveBeenCalledWith('README.md')
+    expect(helpers.openFile).toHaveBeenCalledWith('README.md')
   })
 
   test('clicking a directory row first time fetches children and reveals them', async () => {
@@ -100,19 +128,14 @@ describe('FileTree', () => {
       .mockResolvedValueOnce(rootEntries) // root
       .mockResolvedValueOnce(srcChildren) // src children
 
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
-    // Find the "src" directory row
-    const rows = container.querySelectorAll('.dsh-fe-tree-row')
-    const srcRow = Array.from(rows).find((r) =>
-      r.textContent!.includes('src'),
-    ) as HTMLElement
-    expect(srcRow).toBeTruthy()
+    const srcRow = rowNamed(container, 'src')
 
     // Click the disclosure triangle to expand
     const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
@@ -143,17 +166,14 @@ describe('FileTree', () => {
       .mockResolvedValueOnce(rootEntries) // root
       .mockResolvedValueOnce(srcChildren) // src children (first expand)
 
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
-    const rows = container.querySelectorAll('.dsh-fe-tree-row')
-    const srcRow = Array.from(rows).find((r) =>
-      r.textContent!.includes('src'),
-    ) as HTMLElement
+    const srcRow = rowNamed(container, 'src')
     const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
 
     // First expand
@@ -180,10 +200,10 @@ describe('FileTree', () => {
 
   test('renders empty state when sessionId is undefined', () => {
     const fetchList = vi.fn().mockResolvedValue([])
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId={undefined} fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId={undefined} fetchList={fetchList} helpers={helpers} t={t} />,
     )
 
     // Should not have called fetchList
@@ -195,10 +215,10 @@ describe('FileTree', () => {
 
   test('does not render a toolbar or internal refresh button', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
@@ -213,19 +233,16 @@ describe('FileTree', () => {
       .mockResolvedValueOnce(srcChildren) // first expand src
       .mockResolvedValueOnce(rootEntries) // refresh root
 
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
     const ref = React.createRef<FileTreeHandle>()
 
     const container = render(
-      <FileTree ref={ref} sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree ref={ref} sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
     // Expand src to cache children
-    const rows = container.querySelectorAll('.dsh-fe-tree-row')
-    const srcRow = Array.from(rows).find((r) =>
-      r.textContent!.includes('src'),
-    ) as HTMLElement
+    const srcRow = rowNamed(container, 'src')
     const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
     act(() => {
       disclosure.click()
@@ -256,10 +273,10 @@ describe('FileTree', () => {
       .mockResolvedValueOnce(rootEntries) // s1 root
       .mockResolvedValueOnce([]) // s2 root (empty)
 
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
     expect(fetchList).toHaveBeenCalledWith('s1', '')
@@ -268,7 +285,7 @@ describe('FileTree', () => {
     const root = createRoot(container.firstChild as HTMLElement)
     act(() => {
       root.render(
-        <FileTree sessionId="s2" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+        <FileTree sessionId="s2" fetchList={fetchList} helpers={helpers} t={t} />,
       )
     })
     await flush()
@@ -278,82 +295,174 @@ describe('FileTree', () => {
   })
 
   // -------------------------------------------------------------------------
-  // Context menu — right-click on file rows
+  // Ellipsis action button + menu
   // -------------------------------------------------------------------------
-  test('right-clicking a file row calls onContextMenu with entry and coordinates', async () => {
+  test('each row renders an ellipsis action button', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
-    const onSelectFile = vi.fn()
-    const onContextMenu = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree
-        sessionId="s1"
-        fetchList={fetchList}
-        onSelectFile={onSelectFile}
-        onContextMenu={onContextMenu}
-        t={t}
-      />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
-    // Find the README.md file row
     const rows = container.querySelectorAll('.dsh-fe-tree-row')
-    const readmeRow = Array.from(rows).find((r) =>
-      r.textContent!.includes('README.md'),
-    ) as HTMLElement
-    expect(readmeRow).toBeTruthy()
-
-    act(() => {
-      const event = new MouseEvent('contextmenu', {
-        bubbles: true,
-        cancelable: true,
-        clientX: 150,
-        clientY: 250,
-      })
-      readmeRow.dispatchEvent(event)
-    })
-
-    expect(onContextMenu).toHaveBeenCalledTimes(1)
-    const call = onContextMenu.mock.calls[0]
-    expect(call[0]).toEqual({ name: 'README.md', path: 'README.md', kind: 'file', size: 100 })
-    expect(call[1]).toBe(150)
-    expect(call[2]).toBe(250)
+    expect(rows.length).toBe(3)
+    for (const row of Array.from(rows)) {
+      expect(row.querySelector('[data-fe-action-button]')).not.toBeNull()
+    }
   })
 
-  test('right-clicking a directory row does NOT call onContextMenu', async () => {
+  test('clicking the ellipsis button opens a menu with 3 items for a file row', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
-    const onSelectFile = vi.fn()
-    const onContextMenu = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree
-        sessionId="s1"
-        fetchList={fetchList}
-        onSelectFile={onSelectFile}
-        onContextMenu={onContextMenu}
-        t={t}
-      />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
-    // Find the "src" directory row
-    const rows = container.querySelectorAll('.dsh-fe-tree-row')
-    const srcRow = Array.from(rows).find((r) =>
-      r.textContent!.includes('src') && r.querySelector('.dsh-fe-disclosure'),
-    ) as HTMLElement
-    expect(srcRow).toBeTruthy()
-
+    const readmeRow = rowNamed(container, 'README.md')
     act(() => {
-      const event = new MouseEvent('contextmenu', {
-        bubbles: true,
-        cancelable: true,
-        clientX: 100,
-        clientY: 200,
-      })
-      srcRow.dispatchEvent(event)
+      actionButton(readmeRow).click()
     })
 
-    expect(onContextMenu).not.toHaveBeenCalled()
+    const menu = container.querySelector('[role="menu"]')
+    expect(menu).not.toBeNull()
+
+    const items = menu!.querySelectorAll('[role="menuitem"]')
+    expect(items.length).toBe(3)
+    expect(items[0].textContent).toContain('open')
+    expect(items[1].textContent).toContain('copyAbsolutePath')
+    expect(items[2].textContent).toContain('copyRelativePath')
+  })
+
+  test('clicking the ellipsis button opens a menu with 2 items for a directory row', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    const srcRow = rowNamed(container, 'src')
+    act(() => {
+      actionButton(srcRow).click()
+    })
+
+    const menu = container.querySelector('[role="menu"]')
+    expect(menu).not.toBeNull()
+
+    const items = menu!.querySelectorAll('[role="menuitem"]')
+    expect(items.length).toBe(2)
+    expect(items[0].textContent).toContain('copyAbsolutePath')
+    expect(items[1].textContent).toContain('copyRelativePath')
+  })
+
+  test('clicking the open menu item calls helpers.openFile', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    const readmeRow = rowNamed(container, 'README.md')
+    act(() => {
+      actionButton(readmeRow).click()
+    })
+
+    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    const openItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find((el) =>
+      el.textContent!.includes('open'),
+    ) as HTMLElement
+    expect(openItem).toBeTruthy()
+
+    act(() => {
+      openItem.click()
+    })
+
+    expect(helpers.openFile).toHaveBeenCalledWith('README.md')
+  })
+
+  test('clicking the copy-absolute menu item calls helpers.copyAbsolutePath', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    const readmeRow = rowNamed(container, 'README.md')
+    act(() => {
+      actionButton(readmeRow).click()
+    })
+
+    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    const copyItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find((el) =>
+      el.textContent!.includes('copyAbsolutePath'),
+    ) as HTMLElement
+    expect(copyItem).toBeTruthy()
+
+    act(() => {
+      copyItem.click()
+    })
+
+    expect(helpers.copyAbsolutePath).toHaveBeenCalledWith('README.md')
+  })
+
+  test('clicking the copy-relative menu item calls helpers.copyRelativePath', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    const readmeRow = rowNamed(container, 'README.md')
+    act(() => {
+      actionButton(readmeRow).click()
+    })
+
+    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    const copyItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find((el) =>
+      el.textContent!.includes('copyRelativePath'),
+    ) as HTMLElement
+    expect(copyItem).toBeTruthy()
+
+    act(() => {
+      copyItem.click()
+    })
+
+    expect(helpers.copyRelativePath).toHaveBeenCalledWith('README.md')
+  })
+
+  test('right-clicking a row no longer opens a menu', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    const readmeRow = rowNamed(container, 'README.md')
+    act(() => {
+      readmeRow.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: 150,
+          clientY: 250,
+        }),
+      )
+    })
+
+    expect(container.querySelector('[role="menu"]')).toBeNull()
   })
 
   // -------------------------------------------------------------------------
@@ -361,16 +470,14 @@ describe('FileTree', () => {
   // -------------------------------------------------------------------------
   test('directory rows render an SVG icon (not the 📁 emoji)', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
-    const srcRow = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
-      r.textContent!.includes('src'),
-    ) as HTMLElement
+    const srcRow = rowNamed(container, 'src')
     const icon = srcRow.querySelector('.dsh-fe-icon') as HTMLElement
 
     expect(icon).toBeTruthy()
@@ -380,16 +487,14 @@ describe('FileTree', () => {
 
   test('file rows render an SVG icon (not the 📄 emoji)', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
-    const readmeRow = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
-      r.textContent!.includes('README.md'),
-    ) as HTMLElement
+    const readmeRow = rowNamed(container, 'README.md')
     const icon = readmeRow.querySelector('.dsh-fe-icon') as HTMLElement
 
     expect(icon).toBeTruthy()
@@ -399,16 +504,14 @@ describe('FileTree', () => {
 
   test('directory rows render an SVG chevron in the disclosure span (not ▸/▾)', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
-    const srcRow = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
-      r.textContent!.includes('src'),
-    ) as HTMLElement
+    const srcRow = rowNamed(container, 'src')
     const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
 
     expect(disclosure).toBeTruthy()
@@ -423,16 +526,14 @@ describe('FileTree', () => {
       .mockResolvedValueOnce(rootEntries) // root
       .mockResolvedValueOnce(srcChildren) // src children
 
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
-    const srcRow = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
-      r.textContent!.includes('src'),
-    ) as HTMLElement
+    const srcRow = rowNamed(container, 'src')
     const icon = srcRow.querySelector('.dsh-fe-icon') as HTMLElement
     const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
 
@@ -460,17 +561,15 @@ describe('FileTree', () => {
       .mockResolvedValueOnce(rootEntries) // root
       .mockResolvedValueOnce(srcChildren) // src children
 
-    const onSelectFile = vi.fn()
+    const helpers = makeHelpers()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} t={t} />,
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
     )
     await flush()
 
     // Expand "src" so child rows (another dir + a file) are also covered.
-    const srcRow = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
-      r.textContent!.includes('src'),
-    ) as HTMLElement
+    const srcRow = rowNamed(container, 'src')
     const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
     act(() => {
       disclosure.click()

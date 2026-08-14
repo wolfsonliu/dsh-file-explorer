@@ -29,3 +29,5 @@ export declare function IconCopy(props: FeIconProps): import("react").JSX.Elemen
 export declare function IconFullscreen(props: FeIconProps): import("react").JSX.Element;
 /** generic_file_16 — simple document outline with a folded top-right corner. */
 export declare function IconFile(props: FeIconProps): import("react").JSX.Element;
+/** ic_ds_ellipsis_outline_16 — inlined from `IconEllipsisOutline16`. */
+export declare function IconEllipsis(props: FeIconProps): import("react").JSX.Element;

@@ -6,9 +6,10 @@ import React, {
   useState,
   type ReactNode,
 } from 'react'
-import type { BrowserEntry, FilePreview } from '../protocol.ts'
+import { FILE_EXPLORER_ROUTE, type BrowserEntry, type FilePreview } from '../protocol.ts'
 import { FileExplorerDrawer, FloatingFileButton } from './drawer.tsx'
 import { FileTree, type FileTreeHandle } from './file-tree.tsx'
+import type { FileActionHelpers } from './file-action.ts'
 import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
 import { resolvePreviewFor } from './preview/index.ts'
 import type { PreviewProps } from './preview/registry.ts'
@@ -80,6 +81,28 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       [sessionId, fetchPreview],
     )
 
+    const copyAbsolutePath = useCallback(
+      async (path: string) => {
+        if (sessionId === undefined) return
+        try {
+          const res = await fetch(
+            `${FILE_EXPLORER_ROUTE}?action=resolve-path&sessionId=${encodeURIComponent(sessionId)}&path=${encodeURIComponent(path)}`,
+          )
+          const data = await res.json()
+          await navigator.clipboard.writeText(data.path)
+        } catch {
+          // Ignore resolve-path / clipboard failures.
+        }
+      },
+      [sessionId],
+    )
+
+    const copyRelativePath = useCallback(async (path: string) => {
+      await navigator.clipboard.writeText(path)
+    }, [])
+
+    const helpers: FileActionHelpers = { openFile, copyAbsolutePath, copyRelativePath }
+
     useImperativeHandle(
       ref,
       () => ({
@@ -118,7 +141,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
             ref={treeRef}
             sessionId={sessionId}
             fetchList={fetchList}
-            onSelectFile={(path) => openFile(path)}
+            helpers={helpers}
             t={t}
           />
         </FileExplorerDrawer>

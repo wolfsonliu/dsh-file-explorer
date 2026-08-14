@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { FILE_EXPLORER_ROUTE } from '../protocol.ts'
 import { registerBuiltinPreviews } from './preview/index.ts'
 import { registerPreview } from './preview/registry.ts'
+import { registerBuiltinFileActions } from './file-action.ts'
 import { FileExplorerApp, type FileExplorerAppHandle } from './app.tsx'
 import { interceptFileLinks } from './intercept.ts'
 import { PANEL_CSS } from './styles.ts'
@@ -41,6 +42,7 @@ export const inject = ['sessions', 'workspaces', 'locale']
 
 export function apply(ctx: ClientContext): void {
   registerBuiltinPreviews()
+  registerBuiltinFileActions()
 
   // Expose the preview-registration service so external preview plugins can
   // register their own previewers (and override built-ins by priority).

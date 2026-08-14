@@ -1,44 +1,36 @@
-import React, { useCallback, useEffect, useRef } from 'react'
-import type { Translate } from './locale.ts'
+import React, { useEffect, useRef, type ReactNode } from 'react'
+
+export interface FileContextMenuItem {
+  /** Stable identity for the item (also used as the React key). */
+  id: string
+  /** Display label (already localized). */
+  label: string
+  /** Optional leading icon. */
+  icon?: ReactNode
+  /** Called when the item is selected (before the menu closes). */
+  onSelect: () => void
+}
 
 export interface FileContextMenuProps {
-  /** Menu anchor position (viewport coordinates). */
-  x: number
-  y: number
   /** Whether the menu is shown. */
   open: boolean
-  /** The file's full (workspace-relative) path. */
-  path: string
-  /** The file's path relative to the workspace root (for "copy relative path"). */
-  relativePath: string
-  /** Translator for localized menu item labels. */
-  t: Translate
-  onOpen: () => void
-  onCopyPath: () => void
-  onCopyRelativePath: () => void
+  /** Menu anchor position (viewport coordinates). */
+  anchor: { x: number; y: number }
+  /** The menu items, in render order. */
+  items: Array<FileContextMenuItem>
   onClose: () => void
 }
 
-export function FileContextMenu({
-  x,
-  y,
-  open,
-  path,
-  relativePath,
-  t,
-  onOpen,
-  onCopyPath,
-  onCopyRelativePath,
-  onClose,
-}: FileContextMenuProps) {
+/** A generic anchored popup menu listing arbitrary items. */
+export function FileContextMenu({ open, anchor, items, onClose }: FileContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // Close on outside pointerdown
+  // Close on outside pointerdown.
   useEffect(() => {
     if (!open) return
 
     const handlePointerDown = (e: PointerEvent) => {
-      // If the click is inside the menu, do nothing
+      // If the click is inside the menu, do nothing.
       if (menuRef.current && menuRef.current.contains(e.target as Node)) {
         return
       }
@@ -51,59 +43,33 @@ export function FileContextMenu({
     }
   }, [open, onClose])
 
-  const handleOpen = useCallback(() => {
-    onOpen()
-    onClose()
-  }, [onOpen, onClose])
-
-  const handleCopyPath = useCallback(() => {
-    navigator.clipboard.writeText(path).then(() => {
-      onCopyPath()
-      onClose()
-    })
-  }, [path, onCopyPath, onClose])
-
-  const handleCopyRelativePath = useCallback(() => {
-    navigator.clipboard.writeText(relativePath).then(() => {
-      onCopyRelativePath()
-      onClose()
-    })
-  }, [relativePath, onCopyRelativePath, onClose])
-
   if (!open) return null
 
   return (
     <div
       ref={menuRef}
-      className="dsh-fe-context-menu"
+      className="dsh-fe-menu"
       role="menu"
       style={{
         position: 'fixed',
-        left: `${x}px`,
-        top: `${y}px`,
+        left: `${anchor.x}px`,
+        top: `${anchor.y}px`,
       }}
     >
-      <div
-        className="dsh-fe-context-menu-item"
-        role="menuitem"
-        onClick={handleOpen}
-      >
-        {t('open')}
-      </div>
-      <div
-        className="dsh-fe-context-menu-item"
-        role="menuitem"
-        onClick={handleCopyPath}
-      >
-        {t('copyPath')}
-      </div>
-      <div
-        className="dsh-fe-context-menu-item"
-        role="menuitem"
-        onClick={handleCopyRelativePath}
-      >
-        {t('copyRelativePath')}
-      </div>
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="dsh-fe-menu-item"
+          role="menuitem"
+          onClick={() => {
+            item.onSelect()
+            onClose()
+          }}
+        >
+          {item.icon}
+          <span>{item.label}</span>
+        </div>
+      ))}
     </div>
   )
 }

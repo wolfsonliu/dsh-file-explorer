@@ -133,6 +133,18 @@ describe('FloatingFileButton', () => {
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
+  test('hover-move without pointerdown does not move the button', () => {
+    const container = render(<FloatingFileButton onClick={() => {}} />)
+    const button = container.querySelector('[data-fe-file-button]') as HTMLElement
+    const initialTop = button.style.top
+
+    act(() => {
+      button.dispatchEvent(new PointerEvent('pointermove', { clientY: 300, bubbles: true }))
+    })
+
+    expect(button.style.top).toBe(initialTop)
+  })
+
   test('dragging the button vertically moves it and suppresses click', () => {
     const onClick = vi.fn()
     const container = render(<FloatingFileButton onClick={onClick} />)

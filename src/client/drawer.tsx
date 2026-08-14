@@ -66,9 +66,11 @@ export function FloatingFileButton({ onClick }: { onClick: () => void }) {
   const topRef = useRef(top)
   topRef.current = top
   const startRef = useRef({ y: 0, top: 0 })
+  const downRef = useRef(false)
   const movedRef = useRef(false)
 
   const onPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    downRef.current = true
     startRef.current = { y: e.clientY, top: topRef.current }
     movedRef.current = false
     try {
@@ -79,6 +81,7 @@ export function FloatingFileButton({ onClick }: { onClick: () => void }) {
   }
 
   const onPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!downRef.current) return
     if (!movedRef.current && Math.abs(e.clientY - startRef.current.y) <= DRAG_THRESHOLD) return
     movedRef.current = true
     const maxTop = window.innerHeight - BUTTON_HEIGHT - 8
@@ -86,12 +89,17 @@ export function FloatingFileButton({ onClick }: { onClick: () => void }) {
   }
 
   const onPointerUp = () => {
+    downRef.current = false
     if (!movedRef.current) return
     try {
       localStorage.setItem(BUTTON_TOP_KEY, String(topRef.current))
     } catch {
       // ignore persistence failure.
     }
+  }
+
+  const onPointerCancel = () => {
+    downRef.current = false
   }
 
   const handleClick = () => {
@@ -109,6 +117,7 @@ export function FloatingFileButton({ onClick }: { onClick: () => void }) {
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
     >
       <IconPanelLeft size={16} />
       <span className="dsh-fe-file-button-label">文件</span>

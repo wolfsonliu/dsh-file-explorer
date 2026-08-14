@@ -211,7 +211,7 @@ describe('FileExplorerPanel', () => {
     expect(panel.getAttribute('data-maximized')).toBe('false')
   })
 
-  test('title bar drag updates position via pointer events', () => {
+  test('title text drag updates position via pointer events', () => {
     const container = render(
       <FileExplorerPanel initialVisible>
         <span>Preview</span>
@@ -220,18 +220,16 @@ describe('FileExplorerPanel', () => {
     const panel = container.querySelector('[data-visible]') as HTMLElement
     expect(panel).not.toBeNull()
 
-    const titleBar = panel.querySelector('[data-fe-title-bar]') as HTMLElement
-    expect(titleBar).not.toBeNull()
+    const titleText = panel.querySelector('.dsh-fe-title-text') as HTMLElement
+    expect(titleText).not.toBeNull()
 
-    // Initial position should be set (default 80,80)
     const initialLeft = panel.style.left
     const initialTop = panel.style.top
     expect(initialLeft).toBeTruthy()
     expect(initialTop).toBeTruthy()
 
-    // Simulate pointer events on the title bar
     act(() => {
-      titleBar.dispatchEvent(
+      titleText.dispatchEvent(
         new PointerEvent('pointerdown', {
           clientX: 100,
           clientY: 100,
@@ -260,9 +258,42 @@ describe('FileExplorerPanel', () => {
       )
     })
 
-    // After drag, position should have changed
-    // The delta is (50, 30), so position should move from (80,80) to (130,110)
     expect(panel.style.left).not.toBe(initialLeft)
     expect(panel.style.top).not.toBe(initialTop)
+  })
+
+  test('resize handle drag updates panel size', () => {
+    const container = render(
+      <FileExplorerPanel initialVisible>
+        <span>Preview</span>
+      </FileExplorerPanel>,
+    )
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    expect(panel).not.toBeNull()
+
+    const handle = panel.querySelector('[data-fe-resize]') as HTMLElement
+    expect(handle).not.toBeNull()
+
+    const initialWidth = panel.style.width
+    const initialHeight = panel.style.height
+
+    act(() => {
+      handle.dispatchEvent(
+        new PointerEvent('pointerdown', { clientX: 640, clientY: 480, bubbles: true }),
+      )
+    })
+    act(() => {
+      document.dispatchEvent(
+        new PointerEvent('pointermove', { clientX: 700, clientY: 520, bubbles: true }),
+      )
+    })
+    act(() => {
+      document.dispatchEvent(
+        new PointerEvent('pointerup', { bubbles: true }),
+      )
+    })
+
+    expect(panel.style.width).not.toBe(initialWidth)
+    expect(panel.style.height).not.toBe(initialHeight)
   })
 })

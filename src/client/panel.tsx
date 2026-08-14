@@ -7,6 +7,7 @@ import React, {
   useRef,
   type ReactNode,
 } from 'react'
+import { IconClose, IconFullscreen } from './icons.tsx'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +51,7 @@ type Action =
   | { type: 'MINIMIZE' }
   | { type: 'MAXIMIZE' }
   | { type: 'MOVE'; payload: Position }
+  | { type: 'RESIZE'; payload: Size }
 
 // ---------------------------------------------------------------------------
 // Reducer
@@ -57,6 +59,7 @@ type Action =
 
 const DEFAULT_POSITION: Position = { x: 80, y: 80 }
 const DEFAULT_SIZE: Size = { width: 640, height: 480 }
+const MIN_SIZE: Size = { width: 320, height: 240 }
 
 function geometryReducer(state: Geometry, action: Action): Geometry {
   switch (action.type) {
@@ -70,6 +73,14 @@ function geometryReducer(state: Geometry, action: Action): Geometry {
       return { ...state, maximized: !state.maximized, minimized: false }
     case 'MOVE':
       return { ...state, position: action.payload }
+    case 'RESIZE':
+      return {
+        ...state,
+        size: {
+          width: Math.max(MIN_SIZE.width, action.payload.width),
+          height: Math.max(MIN_SIZE.height, action.payload.height),
+        },
+      }
     default:
       return state
   }
@@ -152,7 +163,6 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
       size: DEFAULT_SIZE,
     })
 
-    // Track visible state for useImperativeHandle toggle
     const visibleRef = useRef(initialVisible)
     visibleRef.current = geometry.visible
 
@@ -168,7 +178,9 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
       },
     }))
 
-    // Title bar drag
+    // Title drag (moves the panel). Bound to the title TEXT only, so the
+    // action buttons keep their own click handling without pointer-capture
+    // interference.
     const handleTitleDrag = useCallback(
       (dx: number, dy: number) => {
         if (geometry.maximized) return
@@ -182,8 +194,22 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
       },
       [geometry.position, geometry.maximized],
     )
-
     const titleDrag = useDragHandle(handleTitleDrag)
+
+    // Resize drag (bottom-right corner handle).
+    const handleResizeDrag = useCallback(
+      (dx: number, dy: number) => {
+        dispatch({
+          type: 'RESIZE',
+          payload: {
+            width: geometry.size.width + dx,
+            height: geometry.size.height + dy,
+          },
+        })
+      },
+      [geometry.size],
+    )
+    const resizeDrag = useDragHandle(handleResizeDrag)
 
     if (!geometry.visible) {
       return null
@@ -214,12 +240,13 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
         style={panelStyle}
       >
         {/* Title Bar */}
-        <div
-          className="dsh-fe-title-bar"
-          data-fe-title-bar
-          onPointerDown={isMaximized ? undefined : titleDrag.onPointerDown}
-        >
-          <span className="dsh-fe-title-text">{title ?? '文件浏览器'}</span>
+        <div className="dsh-fe-title-bar" data-fe-title-bar>
+          <span
+            className="dsh-fe-title-text"
+            onPointerDown={isMaximized ? undefined : titleDrag.onPointerDown}
+          >
+            {title ?? '文件浏览器'}
+          </span>
           <div className="dsh-fe-title-actions">
             <button
               className="dsh-fe-btn"
@@ -235,7 +262,7 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
               onClick={() => dispatch({ type: 'MAXIMIZE' })}
               title={isMaximized ? '还原' : '最大化'}
             >
-              {isMaximized ? '❐' : '□'}
+              <IconFullscreen size={16} />
             </button>
             <button
               className="dsh-fe-btn"
@@ -243,7 +270,7 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
               onClick={() => dispatch({ type: 'CLOSE' })}
               title="关闭"
             >
-              ✕
+              <IconClose size={16} />
             </button>
           </div>
         </div>
@@ -253,6 +280,15 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
           <div className="dsh-fe-body" data-fe-body>
             {children}
           </div>
+        )}
+
+        {/* Resize handle (bottom-right corner) */}
+        {!isMaximized && (
+          <div
+            className="dsh-fe-resize-handle"
+            data-fe-resize
+            onPointerDown={resizeDrag.onPointerDown}
+          />
         )}
       </div>
     )

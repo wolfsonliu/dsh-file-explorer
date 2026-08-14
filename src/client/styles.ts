@@ -9,7 +9,7 @@ export const PANEL_CSS = `
   --fe-btn-hover: var(--dsw-alias-interactive-bg-hover, #0000000d);
   background: var(--fe-bg);
   position: fixed;
-  z-index: 1000;
+  z-index: 10000;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--fe-border);
   border-radius: 8px;
@@ -28,13 +28,10 @@ export const PANEL_CSS = `
   padding: 0 8px;
   height: 32px;
   min-height: 32px;
-  cursor: grab;
   user-select: none;
-  touch-action: none;
   border-bottom: 1px solid var(--fe-border);
   flex-shrink: 0;
 }
-.dsh-fe-title-bar:active { cursor: grabbing; }
 .dsh-fe-title-text {
   flex: 1;
   font-weight: 600;
@@ -43,7 +40,14 @@ export const PANEL_CSS = `
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
 }
+.dsh-fe-title-text:active { cursor: grabbing; }
 .dsh-fe-title-actions { display: flex; gap: 2px; margin-left: auto; }
 .dsh-fe-btn {
   display: inline-flex;
@@ -62,6 +66,7 @@ export const PANEL_CSS = `
 }
 .dsh-fe-btn:hover { background: var(--fe-btn-hover); }
 .dsh-fe-body { flex: 1; min-height: 0; overflow: auto; }
+.dsh-fe-resize-handle { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; touch-action: none; }
 .dsh-fe-pane { overflow: auto; min-width: 0; }
 .dsh-fe-pane--tree { flex-shrink: 0; border-right: none; }
 .dsh-fe-pane--preview { flex: 1; }

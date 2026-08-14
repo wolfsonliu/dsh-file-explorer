@@ -44,7 +44,7 @@ interface FileExplorerAppProps {
   panelRef: React.RefObject<FileExplorerPanelHandle>
 }
 
-function FileExplorerApp({ sessionId, panelRef }: FileExplorerAppProps) {
+export function FileExplorerApp({ sessionId, panelRef }: FileExplorerAppProps) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<FilePreview | null>(null)
   const [contextMenu, setContextMenu] = useState<Omit<FileContextMenuProps, 'onOpen' | 'onCopyPath' | 'onCopyRelativePath' | 'onClose'> | null>(null)
@@ -84,15 +84,14 @@ function FileExplorerApp({ sessionId, panelRef }: FileExplorerAppProps) {
   )
 
   const handleContextMenu = useCallback(
-    (e: React.MouseEvent, filePath: string) => {
-      e.preventDefault()
+    (entry: BrowserEntry, x: number, y: number) => {
       // Compute relativePath: strip leading slash if any
-      const relativePath = filePath.startsWith('/') ? filePath.slice(1) : filePath
+      const relativePath = entry.path.startsWith('/') ? entry.path.slice(1) : entry.path
       setContextMenu({
-        x: e.clientX,
-        y: e.clientY,
+        x,
+        y,
         open: true,
-        path: filePath,
+        path: entry.path,
         relativePath,
       })
     },
@@ -145,6 +144,7 @@ function FileExplorerApp({ sessionId, panelRef }: FileExplorerAppProps) {
         sessionId,
         fetchList,
         onSelectFile: handleSelectFile,
+        onContextMenu: handleContextMenu,
       }),
       preview: previewElement,
     }),

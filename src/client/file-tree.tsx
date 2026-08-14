@@ -8,6 +8,8 @@ export interface FileTreeProps {
   onSelectFile: (path: string) => void
   /** List one directory level (injectable for tests). Returns workspace-relative entries. */
   fetchList: (sessionId: string, path: string) => Promise<BrowserEntry[]>
+  /** Called when the user right-clicks a file row. */
+  onContextMenu?: (entry: BrowserEntry, x: number, y: number) => void
 }
 
 /** Stable sort: directories before files, then code-point order by name. */
@@ -18,7 +20,7 @@ function sortEntries(entries: BrowserEntry[]): BrowserEntry[] {
   })
 }
 
-export function FileTree({ sessionId, fetchList, onSelectFile }: FileTreeProps) {
+export function FileTree({ sessionId, fetchList, onSelectFile, onContextMenu }: FileTreeProps) {
   const [entries, setEntries] = useState<BrowserEntry[]>([])
   const [children, setChildren] = useState<Record<string, BrowserEntry[]>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -110,6 +112,7 @@ export function FileTree({ sessionId, fetchList, onSelectFile }: FileTreeProps) 
           childrenMap={children}
           onDisclosureClick={handleDisclosureClick}
           onSelectFile={onSelectFile}
+          onContextMenu={onContextMenu}
         />
       </div>
     </div>
@@ -123,6 +126,7 @@ interface EntryListProps {
   childrenMap: Record<string, BrowserEntry[]>
   onDisclosureClick: (entry: BrowserEntry) => void
   onSelectFile: (path: string) => void
+  onContextMenu?: (entry: BrowserEntry, x: number, y: number) => void
 }
 
 function EntryList({
@@ -132,6 +136,7 @@ function EntryList({
   childrenMap,
   onDisclosureClick,
   onSelectFile,
+  onContextMenu,
 }: EntryListProps) {
   return (
     <>
@@ -150,6 +155,14 @@ function EntryList({
                 onSelectFile(entry.path)
               }
             }}
+            onContextMenu={
+              entry.kind === 'file' && onContextMenu
+                ? (e) => {
+                    e.preventDefault()
+                    onContextMenu(entry, e.clientX, e.clientY)
+                  }
+                : undefined
+            }
           >
             {entry.kind === 'directory' ? (
               <span
@@ -179,6 +192,7 @@ function EntryList({
                 childrenMap={childrenMap}
                 onDisclosureClick={onDisclosureClick}
                 onSelectFile={onSelectFile}
+                onContextMenu={onContextMenu}
               />
             )}
         </React.Fragment>

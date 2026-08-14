@@ -144,4 +144,77 @@ describe('apply', () => {
     expect(String(previewCall![0])).toContain('sessionId=s1')
     expect(String(previewCall![0])).toContain('path=src%2Fb.ts')
   })
+
+  test('right-clicking a file row in the tree shows the context menu', async () => {
+    // Override the existing fetch stub to return file entries for list action
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>
+    fetchMock.mockImplementation((url: string) => {
+      if (String(url).includes('action=list')) {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              entries: [
+                { name: 'src', path: 'src', kind: 'directory' },
+                { name: 'README.md', path: 'README.md', kind: 'file', size: 100 },
+              ],
+            }),
+        })
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ ok: true, preview: { kind: 'text', name: 'f.ts', extension: '.ts', content: 'hi', size: 2 } }),
+      })
+    })
+
+    const fakeCtx = createFakeCtx()
+
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    // Open the panel via Ctrl+Shift+E keyboard shortcut
+    await act(async () => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'E',
+          ctrlKey: true,
+          shiftKey: true,
+          bubbles: true,
+        }),
+      )
+    })
+
+    // Wait for the async fetch and state updates to settle
+    await act(async () => {
+      await new Promise<void>((r) => setTimeout(r, 0))
+    })
+
+    // Find the file row
+    const rows = document.querySelectorAll('.dsh-fe-tree-row')
+    const readmeRow = Array.from(rows).find((r) =>
+      r.textContent!.includes('README.md'),
+    ) as HTMLElement
+    expect(readmeRow).toBeTruthy()
+
+    // Right-click the file row
+    await act(async () => {
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 150,
+        clientY: 250,
+      })
+      readmeRow.dispatchEvent(event)
+    })
+
+    // The context menu should now be visible
+    const menu = document.querySelector('[role="menu"]')
+    expect(menu).not.toBeNull()
+
+    // It should have three menu items
+    const items = menu!.querySelectorAll('[role="menuitem"]')
+    expect(items.length).toBe(3)
+    expect(items[0].textContent).toBe('打开')
+    expect(items[1].textContent).toBe('复制路径')
+    expect(items[2].textContent).toBe('复制相对路径')
+  })
 })

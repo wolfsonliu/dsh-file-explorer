@@ -261,4 +261,81 @@ describe('FileTree', () => {
     expect(fetchList).toHaveBeenCalledWith('s2', '')
     expect(fetchList).toHaveBeenCalledTimes(2)
   })
+
+  // -------------------------------------------------------------------------
+  // Context menu — right-click on file rows
+  // -------------------------------------------------------------------------
+  test('right-clicking a file row calls onContextMenu with entry and coordinates', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const onSelectFile = vi.fn()
+    const onContextMenu = vi.fn()
+
+    const container = render(
+      <FileTree
+        sessionId="s1"
+        fetchList={fetchList}
+        onSelectFile={onSelectFile}
+        onContextMenu={onContextMenu}
+      />,
+    )
+    await flush()
+
+    // Find the README.md file row
+    const rows = container.querySelectorAll('.dsh-fe-tree-row')
+    const readmeRow = Array.from(rows).find((r) =>
+      r.textContent!.includes('README.md'),
+    ) as HTMLElement
+    expect(readmeRow).toBeTruthy()
+
+    act(() => {
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 150,
+        clientY: 250,
+      })
+      readmeRow.dispatchEvent(event)
+    })
+
+    expect(onContextMenu).toHaveBeenCalledTimes(1)
+    const call = onContextMenu.mock.calls[0]
+    expect(call[0]).toEqual({ name: 'README.md', path: 'README.md', kind: 'file', size: 100 })
+    expect(call[1]).toBe(150)
+    expect(call[2]).toBe(250)
+  })
+
+  test('right-clicking a directory row does NOT call onContextMenu', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const onSelectFile = vi.fn()
+    const onContextMenu = vi.fn()
+
+    const container = render(
+      <FileTree
+        sessionId="s1"
+        fetchList={fetchList}
+        onSelectFile={onSelectFile}
+        onContextMenu={onContextMenu}
+      />,
+    )
+    await flush()
+
+    // Find the "src" directory row
+    const rows = container.querySelectorAll('.dsh-fe-tree-row')
+    const srcRow = Array.from(rows).find((r) =>
+      r.textContent!.includes('src') && r.querySelector('.dsh-fe-disclosure'),
+    ) as HTMLElement
+    expect(srcRow).toBeTruthy()
+
+    act(() => {
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: 100,
+        clientY: 200,
+      })
+      srcRow.dispatchEvent(event)
+    })
+
+    expect(onContextMenu).not.toHaveBeenCalled()
+  })
 })

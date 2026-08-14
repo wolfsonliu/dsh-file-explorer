@@ -5,8 +5,10 @@ export interface FileExplorerPanelHandle {
     toggle: () => void;
 }
 export interface FileExplorerPanelProps {
-    tree: ReactNode;
-    preview: ReactNode;
+    /** Optional title text (default '文件浏览器'). */
+    title?: string;
+    /** Preview content rendered in the body. */
+    children: ReactNode;
     initialVisible?: boolean;
 }
 export declare const FileExplorerPanel: React.ForwardRefExoticComponent<FileExplorerPanelProps & React.RefAttributes<FileExplorerPanelHandle>>;

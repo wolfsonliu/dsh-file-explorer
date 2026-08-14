@@ -2,8 +2,8 @@
 import { describe, expect, test, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
-import React from 'react'
-import { SidebarExplorer } from '../src/client/sidebar-explorer.tsx'
+import React, { createRef } from 'react'
+import { SidebarExplorer, type SidebarExplorerHandle } from '../src/client/sidebar-explorer.tsx'
 import type { BrowserEntry } from '../src/protocol.ts'
 
 /** Render a React element into a jsdom container and return the container. */
@@ -135,5 +135,54 @@ describe('SidebarExplorer', () => {
     })
 
     expect(onSelectFile).toHaveBeenCalledWith('README.md')
+  })
+
+  test('calling showFiles via the ref switches to the files tab', () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const onSelectFile = vi.fn()
+    const ref = createRef<SidebarExplorerHandle>()
+
+    const container = render(
+      <SidebarExplorer ref={ref} sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+    )
+
+    // 「会话」 active by default
+    expect(
+      container.querySelector('[data-fe-tab="sessions"]')!.getAttribute('data-fe-active'),
+    ).toBe('true')
+
+    act(() => {
+      ref.current!.showFiles()
+    })
+
+    expect(
+      container.querySelector('[data-fe-tab="files"]')!.getAttribute('data-fe-active'),
+    ).toBe('true')
+    expect(
+      container.querySelector('[data-fe-tab="sessions"]')!.getAttribute('data-fe-active'),
+    ).toBe('false')
+    expect(container.querySelector('[data-fe-tree-visible="true"]')).not.toBeNull()
+  })
+
+  test('calling showSessions via the ref switches back to the sessions tab', () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const onSelectFile = vi.fn()
+    const ref = createRef<SidebarExplorerHandle>()
+
+    const container = render(
+      <SidebarExplorer ref={ref} sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+    )
+
+    act(() => {
+      ref.current!.showFiles()
+    })
+    act(() => {
+      ref.current!.showSessions()
+    })
+
+    expect(
+      container.querySelector('[data-fe-tab="sessions"]')!.getAttribute('data-fe-active'),
+    ).toBe('true')
+    expect(container.querySelector('[data-fe-tree-visible="true"]')).toBeNull()
   })
 })

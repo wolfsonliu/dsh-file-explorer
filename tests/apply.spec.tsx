@@ -2,40 +2,6 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react-dom/test-utils'
 
-// Stub navigator.clipboard — jsdom does not implement it
-beforeEach(() => {
-  Object.defineProperty(navigator, 'clipboard', {
-    value: { writeText: vi.fn().mockResolvedValue(undefined) },
-    configurable: true,
-    writable: true,
-  })
-})
-
-// jsdom does not expose PointerEvent; polyfill from MouseEvent.
-if (typeof PointerEvent === 'undefined') {
-  class PointerEventPolyfill extends MouseEvent {
-    declare pointerId: number
-    declare pointerType: string
-    constructor(type: string, init: PointerEventInit = {}) {
-      super(type, init)
-      this.pointerId = (init as any).pointerId ?? 1
-      this.pointerType = (init as any).pointerType ?? 'mouse'
-    }
-  }
-  ;(globalThis as any).PointerEvent = PointerEventPolyfill
-}
-
-// jsdom setPointerCapture polyfill
-if (!('setPointerCapture' in Element.prototype)) {
-  ;(Element.prototype as any).setPointerCapture = function () {}
-  ;(Element.prototype as any).releasePointerCapture = function () {}
-  ;(Element.prototype as any).hasPointerCapture = function () { return false }
-}
-
-// jsdom rAF polyfill
-globalThis.requestAnimationFrame = (cb: FrameRequestCallback): number => { cb(0); return 0 }
-globalThis.cancelAnimationFrame = (_handle: number): void => {}
-
 // ---------------------------------------------------------------------------
 // Dynamic import of apply — must be after polyfills
 // ---------------------------------------------------------------------------
@@ -67,31 +33,67 @@ function createFakeCtx() {
   }
 }
 
+/** Flush microtasks and observer callbacks. */
+async function flush(): Promise<void> {
+  await act(async () => {
+    await new Promise<void>((r) => setTimeout(r, 0))
+  })
+}
+
+/** Append a `[role="tree"]` element and wait for `mountSidebar` to inject its host. */
+async function mountSidebarHost(): Promise<HTMLElement> {
+  const tree = document.createElement('div')
+  tree.setAttribute('role', 'tree')
+  document.body.appendChild(tree)
+
+  await vi.waitFor(() => {
+    expect(document.body.querySelector('[data-fe-sidebar-host]')).not.toBeNull()
+  })
+
+  return document.body.querySelector('[data-fe-sidebar-host]') as HTMLElement
+}
+
 describe('apply', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ ok: true, preview: { kind: 'text', name: 'f.ts', extension: '.ts', content: 'hi', size: 2 } }),
-    }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: unknown) => {
+        const u = String(url)
+        if (u.includes('action=list')) {
+          return Promise.resolve({
+            json: () =>
+              Promise.resolve({
+                entries: [
+                  { name: 'src', path: 'src', kind: 'directory' },
+                  { name: 'README.md', path: 'README.md', kind: 'file', size: 100 },
+                ],
+              }),
+          })
+        }
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              ok: true,
+              preview: { kind: 'text', name: 'f.ts', extension: '.ts', content: 'hi', size: 2 },
+            }),
+        })
+      }),
+    )
   })
 
   afterEach(() => {
+    if (disposer) {
+      act(() => {
+        disposer()
+      })
+    }
+    disposer = undefined
     vi.unstubAllGlobals()
-    // Clean up DOM
     document.body.innerHTML = ''
+    document.head.querySelectorAll('[data-fe-style]').forEach((el) => el.remove())
   })
 
-  test('appends a host div to document.body', async () => {
-    const fakeCtx = createFakeCtx()
-
-    await act(async () => {
-      apply(fakeCtx)
-    })
-
-    const host = document.body.querySelector('[data-fe-host]')
-    expect(host).not.toBeNull()
-  })
-
-  test('injects a <style> element with the panel CSS', async () => {
+  test('injects the <style> and the data-fe-preview-host', async () => {
     const fakeCtx = createFakeCtx()
 
     await act(async () => {
@@ -101,10 +103,109 @@ describe('apply', () => {
     const style = document.head.querySelector('[data-fe-style]')
     expect(style).not.toBeNull()
     expect(style!.textContent).toContain('.dsh-fe-panel')
-    expect(style!.textContent).toContain('position: fixed')
+
+    const previewHost = document.body.querySelector('[data-fe-preview-host]')
+    expect(previewHost).not.toBeNull()
+
+    // The floating panel starts closed: no visible panel yet.
+    expect(previewHost!.querySelector('.dsh-fe-panel')).toBeNull()
   })
 
-  test('subscribes to the sessions list and re-renders on change', async () => {
+  test('after a [role="tree"] appears, injects the sidebar host and the file tree becomes reachable', async () => {
+    const fakeCtx = createFakeCtx()
+
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    // No tree yet → no sidebar host.
+    expect(document.body.querySelector('[data-fe-sidebar-host]')).toBeNull()
+
+    const sidebarHost = await mountSidebarHost()
+
+    // Tab bar is rendered inside the sidebar host.
+    const filesTab = sidebarHost.querySelector('[data-fe-tab="files"]') as HTMLElement
+    const sessionsTab = sidebarHost.querySelector('[data-fe-tab="sessions"]') as HTMLElement
+    expect(filesTab).not.toBeNull()
+    expect(sessionsTab).not.toBeNull()
+    expect(sessionsTab.getAttribute('data-fe-active')).toBe('true')
+
+    // Switch to the files tab: the tree fetches and renders entries.
+    act(() => {
+      filesTab.click()
+    })
+    await flush()
+
+    expect(filesTab.getAttribute('data-fe-active')).toBe('true')
+    expect(sidebarHost.querySelector('[data-fe-tree-visible="true"]')).not.toBeNull()
+    expect(sidebarHost.textContent).toContain('README.md')
+  })
+
+  test('clicking a produced-file chip triggers a preview fetch and opens the preview panel', async () => {
+    const fakeCtx = createFakeCtx()
+
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    // A produced-file chip outside our own tree.
+    const container = document.createElement('div')
+    container.innerHTML = `
+      <div data-produced-files-row>
+        <button class="some_file_xyz" title="src/b.ts">📄</button>
+      </div>
+    `
+    document.body.appendChild(container)
+
+    const button = container.querySelector('button') as HTMLButtonElement
+    await act(async () => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    })
+    await flush()
+
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>
+    const previewCall = fetchMock.mock.calls.find((call: any[]) =>
+      String(call[0]).includes('action=preview'),
+    )
+    expect(previewCall).toBeDefined()
+    expect(String(previewCall![0])).toContain('sessionId=s1')
+    expect(String(previewCall![0])).toContain('path=src%2Fb.ts')
+
+    // The floating panel opened with data-visible="true".
+    const panel = document.querySelector('[data-fe-preview-host] .dsh-fe-panel')
+    expect(panel).not.toBeNull()
+    expect(panel!.getAttribute('data-visible')).toBe('true')
+  })
+
+  test('Ctrl/Cmd+Shift+E toggles the sidebar tab to files', async () => {
+    const fakeCtx = createFakeCtx()
+
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    const sidebarHost = await mountSidebarHost()
+    const filesTab = sidebarHost.querySelector('[data-fe-tab="files"]') as HTMLElement
+    const sessionsTab = sidebarHost.querySelector('[data-fe-tab="sessions"]') as HTMLElement
+    expect(sessionsTab.getAttribute('data-fe-active')).toBe('true')
+
+    await act(async () => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'E',
+          ctrlKey: true,
+          shiftKey: true,
+          bubbles: true,
+        }),
+      )
+    })
+
+    expect(filesTab.getAttribute('data-fe-active')).toBe('true')
+    expect(sessionsTab.getAttribute('data-fe-active')).toBe('false')
+    expect(sidebarHost.querySelector('[data-fe-tree-visible="true"]')).not.toBeNull()
+  })
+
+  test('subscribes to the sessions list and re-renders without crashing', async () => {
     const fakeCtx = createFakeCtx()
 
     await act(async () => {
@@ -117,10 +218,7 @@ describe('apply', () => {
     }
     expect(list.subscribe).toHaveBeenCalled()
 
-    // Capture the subscribe callback
     const subscribeCb = list.subscribe.mock.calls[0][0] as () => void
-
-    // Change the current session and notify
     ;(list.getSnapshot as ReturnType<typeof vi.fn>).mockReturnValue({
       current: 's2',
       byId: { s2: { id: 's2', cwd: '/other' } },
@@ -130,135 +228,29 @@ describe('apply', () => {
       subscribeCb()
     })
 
-    // The panel should still be mounted after re-render (no crash)
-    expect(document.body.querySelector('[data-fe-host]')).not.toBeNull()
+    expect(document.body.querySelector('[data-fe-preview-host]')).not.toBeNull()
   })
 
-  test('effect disposer removes the host div from body', async () => {
+  test('disposer removes both hosts and the style', async () => {
     const fakeCtx = createFakeCtx()
 
     await act(async () => {
       apply(fakeCtx)
     })
 
-    const host = document.body.querySelector('[data-fe-host]')
-    expect(host).not.toBeNull()
+    await mountSidebarHost()
 
-    // Call the disposer returned by effect
+    expect(document.body.querySelector('[data-fe-preview-host]')).not.toBeNull()
+    expect(document.body.querySelector('[data-fe-sidebar-host]')).not.toBeNull()
+    expect(document.head.querySelector('[data-fe-style]')).not.toBeNull()
+
     expect(disposer).toBeDefined()
     act(() => {
       disposer!()
     })
 
-    expect(document.body.querySelector('[data-fe-host]')).toBeNull()
-  })
-
-  test('dispatching click on produced-file button calls preview fetch', async () => {
-    const fakeCtx = createFakeCtx()
-
-    await act(async () => {
-      apply(fakeCtx)
-    })
-
-    // Create a produced-file chip in the DOM
-    const container = document.createElement('div')
-    container.innerHTML = `
-      <div data-produced-files-row>
-        <button class="some_file_xyz" title="src/b.ts">📄</button>
-      </div>
-    `
-    document.body.appendChild(container)
-
-    const button = container.querySelector('button') as HTMLButtonElement
-
-    await act(async () => {
-      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
-    })
-
-    // The capture-phase listener should have intercepted the click
-    // and triggered a fetch to the preview API
-    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>
-    expect(fetchMock).toHaveBeenCalled()
-
-    // The first call should be the preview fetch
-    const previewCall = fetchMock.mock.calls.find((call: any[]) =>
-      String(call[0]).includes('action=preview'),
-    )
-    expect(previewCall).toBeDefined()
-    expect(String(previewCall![0])).toContain('sessionId=s1')
-    expect(String(previewCall![0])).toContain('path=src%2Fb.ts')
-  })
-
-  test('right-clicking a file row in the tree shows the context menu', async () => {
-    // Override the existing fetch stub to return file entries for list action
-    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>
-    fetchMock.mockImplementation((url: string) => {
-      if (String(url).includes('action=list')) {
-        return Promise.resolve({
-          json: () =>
-            Promise.resolve({
-              entries: [
-                { name: 'src', path: 'src', kind: 'directory' },
-                { name: 'README.md', path: 'README.md', kind: 'file', size: 100 },
-              ],
-            }),
-        })
-      }
-      return Promise.resolve({
-        json: () => Promise.resolve({ ok: true, preview: { kind: 'text', name: 'f.ts', extension: '.ts', content: 'hi', size: 2 } }),
-      })
-    })
-
-    const fakeCtx = createFakeCtx()
-
-    await act(async () => {
-      apply(fakeCtx)
-    })
-
-    // Open the panel via Ctrl+Shift+E keyboard shortcut
-    await act(async () => {
-      document.dispatchEvent(
-        new KeyboardEvent('keydown', {
-          key: 'E',
-          ctrlKey: true,
-          shiftKey: true,
-          bubbles: true,
-        }),
-      )
-    })
-
-    // Wait for the async fetch and state updates to settle
-    await act(async () => {
-      await new Promise<void>((r) => setTimeout(r, 0))
-    })
-
-    // Find the file row
-    const rows = document.querySelectorAll('.dsh-fe-tree-row')
-    const readmeRow = Array.from(rows).find((r) =>
-      r.textContent!.includes('README.md'),
-    ) as HTMLElement
-    expect(readmeRow).toBeTruthy()
-
-    // Right-click the file row
-    await act(async () => {
-      const event = new MouseEvent('contextmenu', {
-        bubbles: true,
-        cancelable: true,
-        clientX: 150,
-        clientY: 250,
-      })
-      readmeRow.dispatchEvent(event)
-    })
-
-    // The context menu should now be visible
-    const menu = document.querySelector('[role="menu"]')
-    expect(menu).not.toBeNull()
-
-    // It should have three menu items
-    const items = menu!.querySelectorAll('[role="menuitem"]')
-    expect(items.length).toBe(3)
-    expect(items[0].textContent).toBe('打开')
-    expect(items[1].textContent).toBe('复制路径')
-    expect(items[2].textContent).toBe('复制相对路径')
+    expect(document.body.querySelector('[data-fe-preview-host]')).toBeNull()
+    expect(document.body.querySelector('[data-fe-sidebar-host]')).toBeNull()
+    expect(document.head.querySelector('[data-fe-style]')).toBeNull()
   })
 })

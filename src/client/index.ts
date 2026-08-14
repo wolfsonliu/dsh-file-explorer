@@ -1,13 +1,13 @@
-import React, { useCallback, useRef, useState } from 'react'
+import React, { type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { FILE_EXPLORER_ROUTE, type BrowserEntry, type FilePreview } from '../protocol.ts'
 import { registerBuiltinPreviews } from './preview/index.ts'
 import { resolvePreview } from './preview/registry.ts'
 import type { PreviewProps } from './preview/registry.ts'
 import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
-import { FileTree } from './file-tree.tsx'
-import { FileContextMenu, type FileContextMenuProps } from './context-menu.tsx'
 import { interceptFileLinks } from './intercept.ts'
+import { mountSidebar } from './mount-sidebar.ts'
+import { SidebarExplorer, type SidebarExplorerHandle } from './sidebar-explorer.tsx'
 import { PANEL_CSS } from './styles.ts'
 
 // ---------------------------------------------------------------------------
@@ -38,126 +38,13 @@ function extensionOf(filePath: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// FileExplorerApp — compose panel + tree + preview
-// ---------------------------------------------------------------------------
-
-interface FileExplorerAppProps {
-  sessionId: string | undefined
-  panelRef: React.RefObject<FileExplorerPanelHandle>
-}
-
-export function FileExplorerApp({ sessionId, panelRef }: FileExplorerAppProps) {
-  const [selectedFile, setSelectedFile] = useState<string | null>(null)
-  const [previewData, setPreviewData] = useState<FilePreview | null>(null)
-  const [contextMenu, setContextMenu] = useState<Omit<FileContextMenuProps, 'onOpen' | 'onCopyPath' | 'onCopyRelativePath' | 'onClose'> | null>(null)
-
-  const fetchList = useCallback(
-    async (sid: string, path: string): Promise<BrowserEntry[]> => {
-      try {
-        const res = await fetch(
-          `${FILE_EXPLORER_ROUTE}?action=list&sessionId=${encodeURIComponent(sid)}&path=${encodeURIComponent(path)}`,
-        )
-        const data = await res.json()
-        return data.entries ?? []
-      } catch {
-        return []
-      }
-    },
-    [],
-  )
-
-  const handleSelectFile = useCallback(
-    async (filePath: string) => {
-      setSelectedFile(filePath)
-      if (!sessionId) return
-      try {
-        const res = await fetch(
-          `${FILE_EXPLORER_ROUTE}?action=preview&sessionId=${encodeURIComponent(sessionId)}&path=${encodeURIComponent(filePath)}`,
-        )
-        const data = await res.json()
-        if (data.ok && data.preview) {
-          setPreviewData(data.preview)
-        }
-      } catch {
-        // ignore preview fetch errors
-      }
-    },
-    [sessionId],
-  )
-
-  const handleContextMenu = useCallback(
-    (entry: BrowserEntry, x: number, y: number) => {
-      // Compute relativePath: strip leading slash if any
-      const relativePath = entry.path.startsWith('/') ? entry.path.slice(1) : entry.path
-      setContextMenu({
-        x,
-        y,
-        open: true,
-        path: entry.path,
-        relativePath,
-      })
-    },
-    [],
-  )
-
-  const handleCloseContextMenu = useCallback(() => {
-    setContextMenu(null)
-  }, [])
-
-  const handleOpenFromContext = useCallback(() => {
-    if (contextMenu) {
-      handleSelectFile(contextMenu.path)
-    }
-  }, [contextMenu, handleSelectFile])
-
-  const handleCopyPath = useCallback(() => {
-    // actual copy is handled by FileContextMenu via navigator.clipboard
-  }, [])
-
-  const handleCopyRelativePath = useCallback(() => {
-    // actual copy is handled by FileContextMenu via navigator.clipboard
-  }, [])
-
-  // Build preview element
-  let previewElement: React.ReactNode
-  if (selectedFile && previewData) {
-    const ext = extensionOf(selectedFile)
-    const PreviewComponent = resolvePreview(ext)
-    const previewProps: PreviewProps = {
-      preview: previewData,
-      filePath: selectedFile,
-      activeView: 'preview',
-    }
-    previewElement = React.createElement(PreviewComponent, previewProps)
-  } else {
-    previewElement = React.createElement(
-      'div',
-      { className: 'dsh-fe-placeholder' },
-      '从文件树选择文件',
-    )
-  }
-
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(FileExplorerPanel, {
-      ref: panelRef,
-      children: previewElement,
-    }),
-    contextMenu &&
-      React.createElement(FileContextMenu, {
-        ...contextMenu,
-        onOpen: handleOpenFromContext,
-        onCopyPath: handleCopyPath,
-        onCopyRelativePath: handleCopyRelativePath,
-        onClose: handleCloseContextMenu,
-      }),
-  )
-}
-
-// ---------------------------------------------------------------------------
 // apply
 // ---------------------------------------------------------------------------
+
+interface PreviewState {
+  path: string
+  data: FilePreview
+}
 
 export function apply(ctx: ClientContext): void {
   registerBuiltinPreviews()
@@ -168,53 +55,113 @@ export function apply(ctx: ClientContext): void {
   styleEl.textContent = PANEL_CSS
   document.head.appendChild(styleEl)
 
-  const host = document.createElement('div')
-  host.setAttribute('data-fe-host', '')
-  document.body.appendChild(host)
-  const root = createRoot(host)
+  // Floating preview box (overlay panel). It starts closed; the placeholder
+  // shows only once a file has been selected and the panel is opened.
+  const previewHost = document.createElement('div')
+  previewHost.setAttribute('data-fe-preview-host', '')
+  document.body.appendChild(previewHost)
+  const previewRoot = createRoot(previewHost)
+  const previewPanelRef = React.createRef<FileExplorerPanelHandle>()
+  let previewState: PreviewState | null = null
 
-  const panelRef = React.createRef<FileExplorerPanelHandle>()
-
-  function render() {
-    const sessionId = ctx.sessions.list.getSnapshot().current
-    root.render(
-      React.createElement(FileExplorerApp, { sessionId, panelRef }),
-    )
+  function renderPreview(): void {
+    let children: ReactNode
+    if (previewState) {
+      const PreviewComponent = resolvePreview(extensionOf(previewState.path))
+      const previewProps: PreviewProps = {
+        preview: previewState.data,
+        filePath: previewState.path,
+        activeView: 'preview',
+      }
+      children = React.createElement(PreviewComponent, previewProps)
+    } else {
+      children = React.createElement('div', { className: 'dsh-fe-placeholder' }, '从文件树选择文件')
+    }
+    previewRoot.render(React.createElement(FileExplorerPanel, { ref: previewPanelRef, children }))
   }
 
-  render()
+  renderPreview()
 
-  // Re-render when the session list changes (the current session may be
-  // selected after this plugin loads, and switching sessions must refresh
-  // the tree).
-  const unsubscribeSessions = ctx.sessions.list.subscribe(() => {
-    render()
-  })
+  // Sidebar tab + overlay file tree.
+  const sidebarRef = React.createRef<SidebarExplorerHandle>()
+  let sidebarRoot: ReturnType<typeof createRoot> | null = null
+  let sidebarTab: 'sessions' | 'files' = 'sessions'
 
-  // openFileInPanel: open the panel and trigger a preview fetch
-  function openFileInPanel(filePath: string) {
-    panelRef.current?.open()
-    const sessionId = ctx.sessions.list.getSnapshot().current
-    if (sessionId) {
-      fetch(
-        `${FILE_EXPLORER_ROUTE}?action=preview&sessionId=${encodeURIComponent(sessionId)}&path=${encodeURIComponent(filePath)}`,
-      ).catch(() => {
-        // ignore fetch errors
-      })
+  const fetchList = async (sessionId: string, path: string): Promise<BrowserEntry[]> => {
+    try {
+      const res = await fetch(
+        `${FILE_EXPLORER_ROUTE}?action=list&sessionId=${encodeURIComponent(sessionId)}&path=${encodeURIComponent(path)}`,
+      )
+      const data = await res.json()
+      return data.entries ?? []
+    } catch {
+      return []
     }
   }
 
-  // Capture-phase click listener for intercepting file links
+  async function openFileInPanel(filePath: string): Promise<void> {
+    const sessionId = ctx.sessions.list.getSnapshot().current
+    try {
+      if (sessionId) {
+        const res = await fetch(
+          `${FILE_EXPLORER_ROUTE}?action=preview&sessionId=${encodeURIComponent(sessionId)}&path=${encodeURIComponent(filePath)}`,
+        )
+        const data = await res.json()
+        if (data.ok && data.preview) {
+          previewState = { path: filePath, data: data.preview }
+          renderPreview()
+          previewPanelRef.current?.open()
+        }
+      }
+    } catch {
+      // ignore preview fetch errors
+    }
+    sidebarRef.current?.showFiles()
+    sidebarTab = 'files'
+  }
+
+  function renderSidebar(): void {
+    if (!sidebarRoot) return
+    const sessionId = ctx.sessions.list.getSnapshot().current
+    sidebarRoot.render(
+      React.createElement(SidebarExplorer, {
+        ref: sidebarRef,
+        sessionId,
+        fetchList,
+        onSelectFile: openFileInPanel,
+      }),
+    )
+  }
+
+  const disposeSidebar = mountSidebar((sidebarHost) => {
+    sidebarRoot = createRoot(sidebarHost)
+    renderSidebar()
+  })
+
+  // Re-render the sidebar when the session list changes (the current session
+  // may be selected after this plugin loads, and switching sessions must
+  // refresh the tree).
+  const unsubscribeSessions = ctx.sessions.list.subscribe(() => {
+    renderSidebar()
+  })
+
+  // Capture-phase click listener for intercepting file links.
   const handleClick = (event: MouseEvent) => {
     interceptFileLinks(event, openFileInPanel)
   }
   document.addEventListener('click', handleClick, true)
 
-  // Keydown listener for Ctrl/Cmd+Shift+E toggle
+  // Keyboard shortcut Ctrl/Cmd+Shift+E toggles the sidebar tab (files ↔ sessions).
   const handleKeydown = (event: KeyboardEvent) => {
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'E') {
       event.preventDefault()
-      panelRef.current?.toggle()
+      if (sidebarTab === 'files') {
+        sidebarTab = 'sessions'
+        sidebarRef.current?.showSessions()
+      } else {
+        sidebarTab = 'files'
+        sidebarRef.current?.showFiles()
+      }
     }
   }
   document.addEventListener('keydown', handleKeydown)
@@ -224,9 +171,11 @@ export function apply(ctx: ClientContext): void {
       unsubscribeSessions()
       document.removeEventListener('click', handleClick, true)
       document.removeEventListener('keydown', handleKeydown)
-      root.unmount()
-      host.remove()
+      previewRoot.unmount()
+      sidebarRoot?.unmount()
+      previewHost.remove()
       styleEl.remove()
+      disposeSidebar()
     }
   }, 'file-explorer: client')
 }

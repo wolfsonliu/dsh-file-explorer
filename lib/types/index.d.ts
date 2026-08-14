@@ -1,0 +1,28 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { type BrowserEntry, type Config, type FilePreview } from './protocol.ts';
+interface HostContext {
+    sessions: {
+        get(id: string): {
+            header: {
+                cwd?: string;
+            };
+        } | undefined;
+    };
+    webServer: {
+        register(route: {
+            kind: 'exact';
+            path: string;
+            handler(req: IncomingMessage, res: ServerResponse): Promise<void>;
+        }): () => void;
+    };
+    effect(callback: () => (() => void), label?: string): void;
+}
+export declare const inject: string[];
+declare function inside(root: string, input?: string): Promise<{
+    absolute: string;
+    path: string;
+}>;
+declare function list(root: string, input: string): Promise<BrowserEntry[]>;
+declare function preview(root: string, input: string, maxText: number, maxImage: number): Promise<FilePreview>;
+export declare function apply(ctx: HostContext, config?: Config): void;
+export { inside, list, preview };

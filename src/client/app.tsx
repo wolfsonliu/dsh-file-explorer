@@ -10,7 +10,7 @@ import type { BrowserEntry, FilePreview } from '../protocol.ts'
 import { FileExplorerDrawer, FloatingFileButton } from './drawer.tsx'
 import { FileTree, type FileTreeHandle } from './file-tree.tsx'
 import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
-import { resolvePreview } from './preview/registry.ts'
+import { resolvePreviewFor } from './preview/index.ts'
 import type { PreviewProps } from './preview/registry.ts'
 import type { Translate } from './locale.ts'
 
@@ -95,7 +95,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     if (previewData === null) {
       previewChildren = <div className="dsh-fe-placeholder">{t('selectFile')}</div>
     } else {
-      const PreviewComponent = resolvePreview(extensionOf(selectedPath ?? ''))
+      const PreviewComponent = resolvePreviewFor(previewData, extensionOf(selectedPath ?? ''))
       const previewProps: PreviewProps = {
         preview: previewData,
         filePath: selectedPath ?? '',

@@ -9,6 +9,7 @@ import { BinaryPreview } from '../src/client/preview/binary.tsx'
 import { formatBytes } from '../src/client/preview/status.tsx'
 import {
   registerBuiltinPreviews,
+  resolvePreviewFor,
 } from '../src/client/preview/index.ts'
 import { resolvePreview, registerPreview } from '../src/client/preview/registry.ts'
 import type { PreviewProps } from '../src/client/preview/registry.ts'
@@ -217,6 +218,35 @@ describe('registerBuiltinPreviews', () => {
   test('resolvePreview("unknown") returns binary component', () => {
     registerBuiltinPreviews()
     const comp = resolvePreview('unknown')
+    expect(comp).toBe(BinaryPreview)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// resolvePreviewFor (kind-aware routing)
+// ---------------------------------------------------------------------------
+describe('resolvePreviewFor', () => {
+  test('text kind with empty extension (LICENSE) uses TextPreview', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreviewFor({ kind: 'text', name: 'LICENSE', extension: '', content: 'MIT', size: 3 }, '')
+    expect(comp).toBe(TextPreview)
+  })
+
+  test('text kind with md extension uses MarkdownPreview', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreviewFor({ kind: 'text', name: 'x.md', extension: '.md', content: '# hi', size: 3 }, 'md')
+    expect(comp).toBe(MarkdownPreview)
+  })
+
+  test('image kind uses ImagePreview', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreviewFor({ kind: 'image', name: 'x.png', mime: 'image/png', dataUrl: 'data:image/png;base64,', size: 1 }, 'png')
+    expect(comp).toBe(ImagePreview)
+  })
+
+  test('binary kind uses BinaryPreview', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreviewFor({ kind: 'binary', name: 'x.bin', size: 4 }, '')
     expect(comp).toBe(BinaryPreview)
   })
 })

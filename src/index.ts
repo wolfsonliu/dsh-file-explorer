@@ -46,11 +46,6 @@ const IMAGE_MIME: Record<string, string> = {
 }
 
 // ---------------------------------------------------------------------------
-// Hidden entries to skip when listing
-// ---------------------------------------------------------------------------
-const HIDDEN = new Set(['.git', 'node_modules'])
-
-// ---------------------------------------------------------------------------
 // inside — resolve a workspace-relative input to an absolute path, rejecting
 // any path that escapes the workspace.
 // ---------------------------------------------------------------------------
@@ -72,7 +67,7 @@ async function list(root: string, input: string): Promise<BrowserEntry[]> {
   const children = await readdir(target.absolute, { withFileTypes: true })
   const entries = await Promise.all(
     children
-      .filter(child => !child.isSymbolicLink() && !HIDDEN.has(child.name))
+      .filter(child => !child.isSymbolicLink())
       .map(async child => {
         const childPath = target.path === '' ? child.name : `${target.path}/${child.name}`
         if (child.isDirectory()) {

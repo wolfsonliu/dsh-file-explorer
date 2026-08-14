@@ -1,21 +1,23 @@
 # dsh-file-explorer
 
-DSH Web 的文件浏览器。页面左下角有一个浮动「文件」按钮，点击打开左侧抽屉（工作区文件树），点文件在右侧浮出可拖拽/缩放的预览框。点击会话区"生成的文件"芯片或工具行文件链接，会自动在预览框中打开对应文件，而非跳到系统默认应用。
+[中文](README.zh.md) | English
 
-## 功能
+A file explorer for DSH Web. A floating "Files" button opens a left drawer (workspace file tree); clicking a file floats a draggable/resizable preview box on the right. Clicking a "generated files" chip or a tool-row file link opens that file in the preview box instead of the OS default app.
 
-1. **浮动入口**：页面左下角始终可见的「文件」按钮，点击开关文件浏览器抽屉。
-2. **左抽屉**：左侧全高抽屉（fixed），标题栏带关闭按钮，内含工作区文件树。
-3. **文件浏览**：懒加载目录树，跟随当前会话的工作区根目录，切换会话时自动刷新。
-4. **悬浮预览框**：点文件在右侧浮出可拖拽/缩放/最小化/关闭的预览框。
-5. **文件预览**：内置文本（源码）、Markdown（渲染 + 源码切换）、图片（data URL）、二进制（文件信息）预览。
-6. **可扩展预览注册表**：`registerPreview(ext, component)` 按文件扩展名注册预览组件，未注册的扩展名回退到 `binary` 预览。新增蛋白质结构（`.cif`/`.pdb` → Mol*）、CSV、PDF 等预览器无需改动面板本身。
-7. **右键菜单**：打开 / 复制路径 / 复制相对路径。
-8. **快捷键**：`Ctrl/Cmd+Shift+E` 开关文件浏览器抽屉。
+## Features
 
-## 安装
+1. **Floating entry**: an always-visible "Files" handle at the screen edge; click to toggle the file drawer.
+2. **Left drawer**: a full-height fixed drawer with a title bar (refresh + close buttons) holding the workspace file tree.
+3. **File browsing**: a lazy-loading directory tree that follows the current session's workspace root and refreshes on session switch.
+4. **Floating preview**: clicking a file floats a draggable/resizable/minimizable/closable preview box on the right.
+5. **Previewers**: built-in text (source), Markdown (rendered + source toggle), image (data URL), and binary (file info) previews.
+6. **Extensible previews**: register previewers by extension through the `fileExplorer` service; unregistered extensions fall back to the `binary` preview. Add protein-structure (`.cif`/`.pdb` → Mol*), CSV, PDF, etc. previewers without touching the core.
+7. **Context menu**: Open / Copy path / Copy relative path.
+8. **Shortcut**: `Ctrl/Cmd+Shift+E` toggles the file drawer.
 
-从本地目录安装：
+## Install
+
+From a local checkout:
 
 ```sh
 git clone <this-repo>
@@ -26,11 +28,9 @@ dsh plugin --profile web add .
 dsh web
 ```
 
-或安装后直接 `dsh web` 查看。
+## Configuration
 
-## 配置
-
-组合包默认启用以下配置：
+The bundle enables the following defaults:
 
 ```yaml
 - insert:
@@ -41,40 +41,39 @@ dsh web
         maxImageBytes: 10485760
 ```
 
-| 配置项          | 默认值 | 说明                               |
-| --------------- | -----: | ---------------------------------- |
-| `maxTextBytes`  |  2 MiB | 可预览的单个文本文件大小上限       |
-| `maxImageBytes` | 10 MiB | 可预览的单个图片大小上限           |
+| Config          | Default | Description                                 |
+| --------------- | ------: | ------------------------------------------- |
+| `maxTextBytes`  |   2 MiB | Max size of a single text file to preview   |
+| `maxImageBytes` |  10 MiB | Max size of a single image file to preview  |
 
-## 数据层
+## Data layer
 
-宿主半部通过 `ctx.webServer.register()` 注册一个 `/file-explorer/api` 精确路由，动作（`action` 查询参数）：
+The host half registers a `/file-explorer/api` exact route via `ctx.webServer.register()`. Actions (`action` query param):
 
-- `list`：列出一级目录（目录在前、按名称排序），返回 `BrowserEntry[]`。
-- `preview`：读取单个文件，返回判别式 `FilePreview`（`text` / `image` / `empty` / `binary` / `too-large`）。
-- `resolve-path`：解析工作区相对路径为绝对路径与父路径。
+- `list`: lists one directory level (directories first, by name), returning `BrowserEntry[]`.
+- `preview`: reads one file, returning a discriminated `FilePreview` (`text` / `image` / `empty` / `binary` / `too-large`).
+- `resolve-path`: resolves a workspace-relative path to an absolute path and parent path.
 
-所有路径经 `inside(root, input)` 工作区包含校验（含 `realpath` 符号链接解析），越界路径一律拒绝。文本/二进制通过 NUL 字节扫描判别，图片按扩展名映射 MIME 并返回 data URL。
+All paths pass a workspace-containment check (`inside(root, input)`, including `realpath` symlink resolution); out-of-workspace paths are rejected. Text/binary is detected by a NUL-byte scan; images map extensions to MIME and return a data URL.
 
 ## Model Experience
 
-本插件为纯 UI 表面，**不产生任何会话事件、不改动会话日志**，对模型不可见。宿主半部仅读取文件内容用于浏览器预览，与 agent 工具执行互不影响。
+This plugin is a pure UI surface — it emits no session events and does not modify session logs, so it is invisible to the model. The host half only reads file content for browser preview, independent of agent tool execution.
 
 ## Known Limitations and Deferred Work
 
-- **仅预览，无编辑**：文本编辑（CodeMirror 6）与自动保存属于后续阶段。
-- **单文件预览**：无多标签页、无行内 diff。
-- **不轮询刷新**：目录树仅手动刷新（↻），切换会话时自动刷新。
-- **隐藏目录**：跳过 `.git` 与 `node_modules`；不提供显示隐藏文件的开关。
-- **文件链接拦截为 best-effort**：依赖 DSH 会话区的 CSS 类名（`_fileLink`、`data-produced-files-row`），上游 UI 结构调整时需同步选择器。
-- **大文件**：整文件读取受 `maxTextBytes`/`maxImageBytes` 上限约束，流式读取未实现。
+- **Preview only, no editing**: text editing (CodeMirror 6) and autosave are a later phase.
+- **Single-file preview**: no multi-tab or inline diff.
+- **No polling refresh**: the tree only refreshes manually (↻) or on session switch.
+- **File-link interception is best-effort**: it relies on DSH's CSS class names (`_fileLink`, `data-produced-files-row`); update the selectors if the upstream UI changes.
+- **Large files**: whole-file reads are bounded by `maxTextBytes`/`maxImageBytes`; streaming is not implemented.
 
-## 开发预览插件
+## Developing preview plugins
 
-`dsh-file-explorer` 通过 cordis 服务 `fileExplorer` 暴露预览注册入口，领域专家可把专业文件预览做成独立插件（命名 `@dsh-external/dsh-file-explorer-preview-<domain>`），无需改动核心。
+`dsh-file-explorer` exposes a preview-registration entry via the cordis service `fileExplorer`. Domain experts can ship a preview as a separate plugin (named `@dsh-external/dsh-file-explorer-preview-<domain>`) without touching the core.
 
 ```typescript
-// preview 插件 client 入口
+// preview plugin client entry
 import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'
 
 export const inject = ['fileExplorer']
@@ -87,26 +86,27 @@ export function apply(ctx: {
 }
 
 function CifPreview(props: PreviewProps) {
-  // props.preview.kind === 'text' 时，props.preview.content 是文件文本内容
+  // when props.preview.kind === 'text', props.preview.content is the file text
   return renderStructure(props.preview.content)
 }
 ```
 
-要点：
-- **服务名**：`fileExplorer`，`inject: ['fileExplorer']` 后通过 `ctx.fileExplorer.registerPreview(ext, component, priority?)` 注册。
-- **优先级**：数值越大越优先；内置预览为 `0`，外部用 `10` 即可覆盖。同优先级后注册者胜。
-- **契约类型**：`import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'` 获得类型提示。
-- **registerPreview 返回 disposer**：在 `ctx.effect` 的清理里调用以卸载/HMR 时移除注册。
+Notes:
 
-## 开发
+- **Service name**: `fileExplorer`. Inject it with `inject: ['fileExplorer']`, then call `ctx.fileExplorer.registerPreview(ext, component, priority?)`.
+- **Priority**: higher wins; built-ins use `0`, use `10` to override. Later registration wins on ties.
+- **Contract types**: `import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'`.
+- **registerPreview returns a disposer**: call it in `ctx.effect` cleanup to unregister on unload/HMR.
+
+## Development
 
 ```sh
 npm install
-npm run check     # tsc 类型检查
-npm test          # vitest 单元测试
-npm run build     # tsc + tsdown（宿主 ESM + 客户端 CJS bundle）
+npm run check     # tsc type check
+npm test          # vitest unit tests
+npm run build     # tsc + tsdown (host ESM + client CJS bundle)
 ```
 
-## 许可
+## License
 
 [MIT](LICENSE)

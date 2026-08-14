@@ -128,4 +128,8 @@ export const PANEL_CSS = `
   overflow: auto;
 }
 .dsh-fe-image { max-width: 100%; max-height: 100%; }
+.dsh-fe-sidebar-tabs { display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--fe-border); }
+.dsh-fe-sidebar-tab { flex: 1; padding: 6px 0; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--fe-title-fg); }
+.dsh-fe-sidebar-tab[data-fe-active='true'] { background: var(--fe-btn-hover); font-weight: 600; }
+.dsh-fe-sidebar-tree { position: absolute; inset: 0; background: var(--fe-bg); overflow: auto; display: flex; flex-direction: column; }
 `

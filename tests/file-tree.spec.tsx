@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React from 'react'
-import { FileTree } from '../src/client/file-tree.tsx'
+import { FileTree, type FileTreeHandle } from '../src/client/file-tree.tsx'
 import type { BrowserEntry } from '../src/protocol.ts'
 
 /** Render a React element into a jsdom container and return the container. */
@@ -190,7 +190,20 @@ describe('FileTree', () => {
     expect(container.textContent).toContain('当前没有打开的会话')
   })
 
-  test('refresh button re-fetches root and clears cached children', async () => {
+  test('does not render a toolbar or internal refresh button', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const onSelectFile = vi.fn()
+
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+    )
+    await flush()
+
+    expect(container.querySelector('.dsh-fe-tree-toolbar')).toBeNull()
+    expect(container.querySelector('[data-fe-action="refresh"]')).toBeNull()
+  })
+
+  test('ref.current.refresh() re-fetches root and clears cached children', async () => {
     const fetchList = vi
       .fn()
       .mockResolvedValueOnce(rootEntries) // initial root
@@ -198,9 +211,10 @@ describe('FileTree', () => {
       .mockResolvedValueOnce(rootEntries) // refresh root
 
     const onSelectFile = vi.fn()
+    const ref = React.createRef<FileTreeHandle>()
 
     const container = render(
-      <FileTree sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
+      <FileTree ref={ref} sessionId="s1" fetchList={fetchList} onSelectFile={onSelectFile} />,
     )
     await flush()
 
@@ -216,12 +230,10 @@ describe('FileTree', () => {
     await flush()
     expect(fetchList).toHaveBeenCalledTimes(2) // root + src
 
-    // Click refresh
-    const refreshBtn = container.querySelector('.dsh-fe-refresh') as HTMLElement
-    expect(refreshBtn).toBeTruthy()
-
+    // Call refresh via the imperative handle
+    expect(ref.current).toBeTruthy()
     act(() => {
-      refreshBtn.click()
+      ref.current!.refresh()
     })
 
     // Should have called fetchList for root again

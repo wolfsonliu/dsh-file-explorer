@@ -1,5 +1,5 @@
 import React, { useRef, useState, type ReactNode } from 'react'
-import { IconClose, IconPanelLeft } from './icons.tsx'
+import { IconClose, IconPanelLeft, IconRefresh } from './icons.tsx'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -10,6 +10,8 @@ export interface FileExplorerDrawerProps {
   onClose: () => void
   /** Optional title text (default '文件浏览器'). */
   title?: string
+  /** Called when the refresh button is clicked; button hidden when omitted. */
+  onRefresh?: () => void
   /** The file tree. */
   children: ReactNode
 }
@@ -18,7 +20,13 @@ export interface FileExplorerDrawerProps {
 // FileExplorerDrawer
 // ---------------------------------------------------------------------------
 
-export function FileExplorerDrawer({ open, onClose, title, children }: FileExplorerDrawerProps) {
+export function FileExplorerDrawer({
+  open,
+  onClose,
+  title,
+  onRefresh,
+  children,
+}: FileExplorerDrawerProps) {
   if (!open) {
     return null
   }
@@ -27,6 +35,16 @@ export function FileExplorerDrawer({ open, onClose, title, children }: FileExplo
     <div className="dsh-fe-drawer" data-fe-drawer>
       <div className="dsh-fe-drawer-title">
         <span className="dsh-fe-drawer-title-text">{title ?? '文件浏览器'}</span>
+        {onRefresh && (
+          <button
+            className="dsh-fe-btn"
+            data-fe-action="refresh"
+            onClick={onRefresh}
+            title="刷新"
+          >
+            <IconRefresh size={16} />
+          </button>
+        )}
         <button
           className="dsh-fe-btn"
           data-fe-drawer-close

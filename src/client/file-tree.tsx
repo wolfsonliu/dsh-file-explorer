@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 import type { BrowserEntry } from '../protocol.ts'
 
 export interface FileTreeProps {
@@ -12,6 +19,12 @@ export interface FileTreeProps {
   onContextMenu?: (entry: BrowserEntry, x: number, y: number) => void
 }
 
+/** Imperative handle exposed by FileTree. */
+export interface FileTreeHandle {
+  /** Re-fetch the root and clear cached children. */
+  refresh(): void
+}
+
 /** Stable sort: directories before files, then code-point order by name. */
 function sortEntries(entries: BrowserEntry[]): BrowserEntry[] {
   return [...entries].sort((a, b) => {
@@ -20,7 +33,10 @@ function sortEntries(entries: BrowserEntry[]): BrowserEntry[] {
   })
 }
 
-export function FileTree({ sessionId, fetchList, onSelectFile, onContextMenu }: FileTreeProps) {
+export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
+  { sessionId, fetchList, onSelectFile, onContextMenu },
+  ref,
+) {
   const [entries, setEntries] = useState<BrowserEntry[]>([])
   const [children, setChildren] = useState<Record<string, BrowserEntry[]>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -83,6 +99,8 @@ export function FileTree({ sessionId, fetchList, onSelectFile, onContextMenu }: 
     setRefreshKey((k) => k + 1)
   }, [])
 
+  useImperativeHandle(ref, () => ({ refresh: handleRefresh }), [handleRefresh])
+
   // Empty state
   if (!sessionId) {
     return (
@@ -94,16 +112,6 @@ export function FileTree({ sessionId, fetchList, onSelectFile, onContextMenu }: 
 
   return (
     <div className="dsh-fe-tree">
-      <div className="dsh-fe-tree-toolbar">
-        <button
-          className="dsh-fe-refresh"
-          data-fe-action="refresh"
-          onClick={handleRefresh}
-          title="刷新"
-        >
-          ↻
-        </button>
-      </div>
       <div className="dsh-fe-tree-body">
         <EntryList
           entries={entries}
@@ -117,7 +125,7 @@ export function FileTree({ sessionId, fetchList, onSelectFile, onContextMenu }: 
       </div>
     </div>
   )
-}
+})
 
 interface EntryListProps {
   entries: BrowserEntry[]

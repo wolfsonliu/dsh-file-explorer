@@ -8,7 +8,7 @@ import React, {
 } from 'react'
 import type { BrowserEntry, FilePreview } from '../protocol.ts'
 import { FileExplorerDrawer, FloatingFileButton } from './drawer.tsx'
-import { FileTree } from './file-tree.tsx'
+import { FileTree, type FileTreeHandle } from './file-tree.tsx'
 import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
 import { resolvePreview } from './preview/registry.ts'
 import type { PreviewProps } from './preview/registry.ts'
@@ -54,6 +54,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     const [previewData, setPreviewData] = useState<FilePreview | null>(null)
 
     const previewPanelRef = useRef<FileExplorerPanelHandle>(null)
+    const treeRef = useRef<FileTreeHandle>(null)
 
     const openDrawer = useCallback(() => setDrawerOpen(true), [])
     const closeDrawer = useCallback(() => setDrawerOpen(false), [])
@@ -103,8 +104,13 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     return (
       <>
         <FloatingFileButton onClick={toggleDrawer} />
-        <FileExplorerDrawer open={drawerOpen} onClose={closeDrawer}>
+        <FileExplorerDrawer
+          open={drawerOpen}
+          onClose={closeDrawer}
+          onRefresh={() => treeRef.current?.refresh()}
+        >
           <FileTree
+            ref={treeRef}
             sessionId={sessionId}
             fetchList={fetchList}
             onSelectFile={(path) => openFile(path)}

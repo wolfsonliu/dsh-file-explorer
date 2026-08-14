@@ -107,6 +107,53 @@ describe('FileExplorerDrawer', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  test('renders a refresh button to the left of close when onRefresh is provided', () => {
+    const container = render(
+      <FileExplorerDrawer open onClose={() => {}} onRefresh={() => {}}>
+        <span>Tree</span>
+      </FileExplorerDrawer>,
+    )
+    const titleBar = container.querySelector('.dsh-fe-drawer-title')
+    expect(titleBar).not.toBeNull()
+
+    const buttons = Array.from(titleBar!.querySelectorAll('button'))
+    expect(buttons).toHaveLength(2)
+
+    const refreshBtn = buttons[0]
+    expect(refreshBtn.getAttribute('data-fe-action')).toBe('refresh')
+    expect(refreshBtn.getAttribute('title')).toBe('刷新')
+    expect(refreshBtn.className).toContain('dsh-fe-btn')
+
+    const closeBtn = buttons[1]
+    expect(closeBtn.hasAttribute('data-fe-drawer-close')).toBe(true)
+  })
+
+  test('clicking the refresh button calls onRefresh', () => {
+    const onRefresh = vi.fn()
+    const container = render(
+      <FileExplorerDrawer open onClose={() => {}} onRefresh={onRefresh}>
+        <span>Tree</span>
+      </FileExplorerDrawer>,
+    )
+    const refreshBtn = container.querySelector('[data-fe-action="refresh"]')
+    expect(refreshBtn).not.toBeNull()
+
+    act(() => {
+      ;(refreshBtn as HTMLElement).click()
+    })
+
+    expect(onRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  test('does not render a refresh button when onRefresh is omitted', () => {
+    const container = render(
+      <FileExplorerDrawer open onClose={() => {}}>
+        <span>Tree</span>
+      </FileExplorerDrawer>,
+    )
+    expect(container.querySelector('[data-fe-action="refresh"]')).toBeNull()
+  })
 })
 
 // ---------------------------------------------------------------------------

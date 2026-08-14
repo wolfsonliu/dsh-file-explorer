@@ -2,6 +2,7 @@ const id = '@dsh-external/dsh-file-explorer'
 const platformModules = [
   '@deepseek-ai/dsh-client-runtime/client',
   'react',
+  'react/jsx-runtime',
   'react-dom',
   'react-dom/client',
 ]

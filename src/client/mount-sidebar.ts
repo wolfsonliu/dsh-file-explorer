@@ -28,9 +28,17 @@ export function mountSidebar(onReady: (host: HTMLElement) => void): () => void {
     if (host) return
     host = document.createElement('div')
     host.dataset.feSidebarHost = ''
+    // Contain the host within the session-list wrapper so the file tree
+    // overlays the session list instead of the whole viewport.
+    host.style.position = 'absolute'
+    host.style.inset = '0'
     const parent = tree.parentElement
-    if (parent) parent.appendChild(host)
-    else tree.appendChild(host)
+    if (parent) {
+      parent.style.position = 'relative'
+      parent.appendChild(host)
+    } else {
+      tree.appendChild(host)
+    }
     observer?.disconnect()
     observer = null
     onReady(host)

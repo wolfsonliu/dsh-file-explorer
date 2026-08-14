@@ -51,6 +51,11 @@ describe('mountSidebar', () => {
     expect(host!.hasAttribute('data-fe-sidebar-host')).toBe(true)
     // Host is injected as a sibling after the tree.
     expect(tree.nextElementSibling).toBe(host)
+    // Host is contained within the session-list wrapper (absolute, inset: 0)
+    // and its parent is the positioning context.
+    expect(host!.style.position).toBe('absolute')
+    expect(host!.style.inset).toBe('0')
+    expect(tree.parentElement!.style.position).toBe('relative')
     expect(onReady.mock.calls[0][0]).toBe(host)
 
     dispose()

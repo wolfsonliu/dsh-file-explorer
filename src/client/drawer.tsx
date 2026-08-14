@@ -47,9 +47,9 @@ export function FileExplorerDrawer({ open, onClose, title, children }: FileExplo
 
 export function FloatingFileButton({ onClick }: { onClick: () => void }) {
   return (
-    <button className="dsh-fe-file-button" data-fe-file-button onClick={onClick}>
+    <button className="dsh-fe-file-button" data-fe-file-button onClick={onClick} title="文件浏览器">
       <IconPanelLeft size={16} />
-      文件
+      <span className="dsh-fe-file-button-label">文件</span>
     </button>
   )
 }

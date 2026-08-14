@@ -1,8 +1,22 @@
-import React, { useCallback, useEffect, useReducer, useRef, type ReactNode } from 'react'
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useReducer,
+  useRef,
+  type ReactNode,
+} from 'react'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+export interface FileExplorerPanelHandle {
+  open: () => void
+  close: () => void
+  toggle: () => void
+}
 
 export interface FileExplorerPanelProps {
   tree: ReactNode
@@ -127,21 +141,34 @@ function useDragHandle(
 // Component
 // ---------------------------------------------------------------------------
 
-export function FileExplorerPanel({
-  tree,
-  preview,
-  initialVisible = false,
-}: FileExplorerPanelProps) {
-  const [geometry, dispatch] = useReducer(geometryReducer, {
-    visible: initialVisible,
-    minimized: false,
-    maximized: false,
-    position: DEFAULT_POSITION,
-    size: DEFAULT_SIZE,
-  })
+export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplorerPanelProps>(
+  function FileExplorerPanel({ tree, preview, initialVisible = false }, ref) {
+    const [geometry, dispatch] = useReducer(geometryReducer, {
+      visible: initialVisible,
+      minimized: false,
+      maximized: false,
+      position: DEFAULT_POSITION,
+      size: DEFAULT_SIZE,
+    })
 
-  const treeWidthRef = useRef(DEFAULT_TREE_WIDTH)
-  const [, forceUpdate] = useReducer((x) => x + 1, 0)
+    // Track visible state for useImperativeHandle toggle
+    const visibleRef = useRef(initialVisible)
+    visibleRef.current = geometry.visible
+
+    useImperativeHandle(ref, () => ({
+      open: () => dispatch({ type: 'OPEN' }),
+      close: () => dispatch({ type: 'CLOSE' }),
+      toggle: () => {
+        if (visibleRef.current) {
+          dispatch({ type: 'CLOSE' })
+        } else {
+          dispatch({ type: 'OPEN' })
+        }
+      },
+    }))
+
+    const treeWidthRef = useRef(DEFAULT_TREE_WIDTH)
+    const [, forceUpdate] = useReducer((x) => x + 1, 0)
 
   // Title bar drag
   const handleTitleDrag = useCallback(
@@ -257,4 +284,4 @@ export function FileExplorerPanel({
       )}
     </div>
   )
-}
+})

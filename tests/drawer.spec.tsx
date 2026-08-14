@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React from 'react'
@@ -41,6 +41,10 @@ function render(element: React.ReactElement): HTMLElement {
 // FileExplorerDrawer
 // ---------------------------------------------------------------------------
 describe('FileExplorerDrawer', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   test('renders null when open is false', () => {
     const container = render(
       <FileExplorerDrawer open={false} onClose={() => {}} t={t}>
@@ -156,6 +160,72 @@ describe('FileExplorerDrawer', () => {
       </FileExplorerDrawer>,
     )
     expect(container.querySelector('[data-fe-action="refresh"]')).toBeNull()
+  })
+
+  test('renders a resize handle when open', () => {
+    const container = render(
+      <FileExplorerDrawer open onClose={() => {}} t={t}>
+        <span>Tree</span>
+      </FileExplorerDrawer>,
+    )
+    const handle = container.querySelector('[data-fe-resize]')
+    expect(handle).not.toBeNull()
+    expect(handle!.className).toContain('dsh-fe-drawer-resize')
+  })
+
+  test('dragging the resize handle right increases width and persists it', () => {
+    const container = render(
+      <FileExplorerDrawer open onClose={() => {}} t={t}>
+        <span>Tree</span>
+      </FileExplorerDrawer>,
+    )
+    const drawer = container.querySelector('[data-fe-drawer]') as HTMLElement
+    const handle = container.querySelector('[data-fe-resize]') as HTMLElement
+    const initialWidth = parseInt(drawer.style.width, 10)
+
+    act(() => {
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 280, bubbles: true }))
+      handle.dispatchEvent(new PointerEvent('pointermove', { clientX: 360, bubbles: true }))
+      handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
+    })
+
+    expect(parseInt(drawer.style.width, 10)).toBeGreaterThan(initialWidth)
+    expect(localStorage.getItem('dsh.file-explorer.drawer-width')).toBe('360')
+  })
+
+  test('clamps width to [200, 600]', () => {
+    const container = render(
+      <FileExplorerDrawer open onClose={() => {}} t={t}>
+        <span>Tree</span>
+      </FileExplorerDrawer>,
+    )
+    const drawer = container.querySelector('[data-fe-drawer]') as HTMLElement
+    const handle = container.querySelector('[data-fe-resize]') as HTMLElement
+
+    act(() => {
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 280, bubbles: true }))
+      handle.dispatchEvent(new PointerEvent('pointermove', { clientX: -1000, bubbles: true }))
+      handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
+    })
+    expect(parseInt(drawer.style.width, 10)).toBe(200)
+
+    act(() => {
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, bubbles: true }))
+      handle.dispatchEvent(new PointerEvent('pointermove', { clientX: 2000, bubbles: true }))
+      handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
+    })
+    expect(parseInt(drawer.style.width, 10)).toBe(600)
+  })
+
+  test('reads and clamps a persisted width from localStorage on mount', () => {
+    localStorage.setItem('dsh.file-explorer.drawer-width', '800')
+    const container = render(
+      <FileExplorerDrawer open onClose={() => {}} t={t}>
+        <span>Tree</span>
+      </FileExplorerDrawer>,
+    )
+    const drawer = container.querySelector('[data-fe-drawer]') as HTMLElement
+    expect(drawer.style.width).toBe('600px')
   })
 })
 

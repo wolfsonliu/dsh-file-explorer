@@ -2,6 +2,17 @@ import React, { useRef, useState, type ReactNode } from 'react'
 import { IconClose, IconPanelLeft, IconRefresh } from './icons.tsx'
 import type { Translate } from './locale.ts'
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value))
+}
+
+const DRAG_THRESHOLD = 4
+
+// Drawer resize limits + localStorage persistence key.
+const MIN_DRAWER_WIDTH = 200
+const MAX_DRAWER_WIDTH = 600
+const DRAWER_WIDTH_KEY = 'dsh.file-explorer.drawer-width'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -31,12 +42,65 @@ export function FileExplorerDrawer({
   t,
   children,
 }: FileExplorerDrawerProps) {
+  const [width, setWidth] = useState<number>(() => {
+    try {
+      const saved = Number.parseInt(localStorage.getItem(DRAWER_WIDTH_KEY) ?? '', 10)
+      if (Number.isFinite(saved)) return clamp(saved, MIN_DRAWER_WIDTH, MAX_DRAWER_WIDTH)
+    } catch {
+      // localStorage unavailable (private mode) — fall through to default.
+    }
+    return 280
+  })
+  const widthRef = useRef(width)
+  widthRef.current = width
+  const startRef = useRef({ x: 0, width: 0 })
+  const downRef = useRef(false)
+  const movedRef = useRef(false)
+
+  const onResizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    downRef.current = true
+    startRef.current = { x: e.clientX, width: widthRef.current }
+    movedRef.current = false
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // jsdom / non-capturing environments.
+    }
+  }
+
+  const onResizePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!downRef.current) return
+    if (!movedRef.current && Math.abs(e.clientX - startRef.current.x) <= DRAG_THRESHOLD) return
+    movedRef.current = true
+    const next = clamp(
+      startRef.current.width + (e.clientX - startRef.current.x),
+      MIN_DRAWER_WIDTH,
+      MAX_DRAWER_WIDTH,
+    )
+    widthRef.current = next
+    setWidth(next)
+  }
+
+  const onResizePointerUp = () => {
+    downRef.current = false
+    if (!movedRef.current) return
+    try {
+      localStorage.setItem(DRAWER_WIDTH_KEY, String(widthRef.current))
+    } catch {
+      // ignore persistence failure.
+    }
+  }
+
+  const onResizePointerCancel = () => {
+    downRef.current = false
+  }
+
   if (!open) {
     return null
   }
 
   return (
-    <div className="dsh-fe-drawer" data-fe-drawer>
+    <div className="dsh-fe-drawer" data-fe-drawer style={{ width }}>
       <div className="dsh-fe-drawer-title">
         <span className="dsh-fe-drawer-title-text">{title ?? t('title')}</span>
         {onRefresh && (
@@ -59,6 +123,14 @@ export function FileExplorerDrawer({
         </button>
       </div>
       <div className="dsh-fe-drawer-body">{children}</div>
+      <div
+        className="dsh-fe-drawer-resize"
+        data-fe-resize
+        onPointerDown={onResizePointerDown}
+        onPointerMove={onResizePointerMove}
+        onPointerUp={onResizePointerUp}
+        onPointerCancel={onResizePointerCancel}
+      />
     </div>
   )
 }
@@ -69,11 +141,6 @@ export function FileExplorerDrawer({
 
 const BUTTON_TOP_KEY = 'dsh.file-explorer.button-top'
 const BUTTON_HEIGHT = 36
-const DRAG_THRESHOLD = 4
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
-}
 
 export function FloatingFileButton({ onClick, t }: { onClick: () => void; t: Translate }) {
   const [top, setTop] = useState<number>(() => {

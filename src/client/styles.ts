@@ -133,4 +133,9 @@ export const PANEL_CSS = `
 .dsh-fe-sidebar-tab { flex: 1; padding: 6px 0; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--fe-title-fg); }
 .dsh-fe-sidebar-tab[data-fe-active='true'] { background: var(--fe-btn-hover); font-weight: 600; }
 .dsh-fe-sidebar-tree { flex: 1; min-height: 0; background: var(--fe-bg); overflow: auto; pointer-events: auto; }
+.dsh-fe-drawer { position: fixed; left: 0; top: 0; bottom: 0; width: 280px; z-index: 999; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base, #fff); border-right: 1px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.1)); box-shadow: 4px 0 16px rgba(0,0,0,0.12); }
+.dsh-fe-drawer-title { display: flex; align-items: center; height: 36px; padding: 0 8px; border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.1)); flex-shrink: 0; color: var(--dsw-alias-label-primary, #333); }
+.dsh-fe-drawer-title-text { flex: 1; font-weight: 600; font-size: 13px; }
+.dsh-fe-drawer-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.dsh-fe-file-button { position: fixed; left: 8px; bottom: 8px; z-index: 1000; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.1)); border-radius: 16px; background: var(--dsw-alias-bg-base, #fff); box-shadow: 0 2px 8px rgba(0,0,0,0.16); cursor: pointer; font-size: 13px; color: var(--dsw-alias-label-primary, #333); }
 `

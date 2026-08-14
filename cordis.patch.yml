@@ -1,0 +1,6 @@
+- insert:
+    - id: file-explorer
+      name: '@dsh-external/dsh-file-explorer'
+      config:
+        maxTextBytes: 2097152
+        maxImageBytes: 10485760

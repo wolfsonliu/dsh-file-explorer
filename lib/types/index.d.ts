@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { type BrowserEntry, type Config, type FilePreview } from './protocol.ts';
+import { type BrowserEntry, type Config, type FilePreview, type PreviewMode } from './protocol.ts';
 interface HostContext {
     sessions: {
         get(id: string): {
@@ -25,7 +25,7 @@ declare function inside(root: string, input?: string, opts?: {
     path: string;
 }>;
 declare function list(root: string, input: string): Promise<BrowserEntry[]>;
-declare function preview(root: string, input: string, maxText: number, maxImage: number): Promise<FilePreview>;
+declare function preview(root: string, input: string, maxText: number, maxImage: number, mode?: PreviewMode): Promise<FilePreview>;
 declare function write(root: string, input: string, content: string): Promise<string>;
 export declare function apply(ctx: HostContext, config?: Config): void;
 export { inside, list, preview, write };

@@ -3,6 +3,8 @@ import type { BrowserEntry } from '../protocol.ts';
 import type { Translate } from './locale.ts';
 export interface FileActionHelpers {
     openFile(path: string): void;
+    openFileAsText(path: string): void;
+    openFileAsBinary(path: string): void;
     copyAbsolutePath(path: string): Promise<void>;
     copyRelativePath(path: string): Promise<void>;
 }

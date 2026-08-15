@@ -42,7 +42,6 @@ interface Size {
 
 interface Geometry {
   visible: boolean
-  minimized: boolean
   maximized: boolean
   position: Position
   size: Size
@@ -51,7 +50,6 @@ interface Geometry {
 type Action =
   | { type: 'OPEN' }
   | { type: 'CLOSE' }
-  | { type: 'MINIMIZE' }
   | { type: 'MAXIMIZE' }
   | { type: 'MOVE'; payload: Position }
   | { type: 'RESIZE'; payload: Size }
@@ -70,10 +68,8 @@ function geometryReducer(state: Geometry, action: Action): Geometry {
       return { ...state, visible: true }
     case 'CLOSE':
       return { ...state, visible: false }
-    case 'MINIMIZE':
-      return { ...state, minimized: !state.minimized }
     case 'MAXIMIZE':
-      return { ...state, maximized: !state.maximized, minimized: false }
+      return { ...state, maximized: !state.maximized }
     case 'MOVE':
       return { ...state, position: action.payload }
     case 'RESIZE':
@@ -160,7 +156,6 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
   function FileExplorerPanel({ title, t, children, initialVisible = false }, ref) {
     const [geometry, dispatch] = useReducer(geometryReducer, {
       visible: initialVisible,
-      minimized: false,
       maximized: false,
       position: DEFAULT_POSITION,
       size: DEFAULT_SIZE,
@@ -238,7 +233,6 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
       <div
         className="dsh-fe-panel"
         data-visible={geometry.visible}
-        data-minimized={geometry.minimized}
         data-maximized={geometry.maximized}
         style={panelStyle}
       >
@@ -251,14 +245,6 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
             {title ?? t('title')}
           </span>
           <div className="dsh-fe-title-actions">
-            <button
-              className="dsh-fe-btn"
-              data-fe-action="minimize"
-              onClick={() => dispatch({ type: 'MINIMIZE' })}
-              title={geometry.minimized ? t('restore') : t('minimize')}
-            >
-              {geometry.minimized ? '□' : '−'}
-            </button>
             <button
               className="dsh-fe-btn"
               data-fe-action="maximize"
@@ -279,11 +265,9 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
         </div>
 
         {/* Body */}
-        {!geometry.minimized && (
-          <div className="dsh-fe-body" data-fe-body>
-            {children}
-          </div>
-        )}
+        <div className="dsh-fe-body" data-fe-body>
+          {children}
+        </div>
 
         {/* Resize handle (bottom-right corner) */}
         {!isMaximized && (

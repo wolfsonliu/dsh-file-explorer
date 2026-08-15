@@ -150,7 +150,7 @@ describe('FileExplorerPanel', () => {
     expect(panelAfter).toBeNull()
   })
 
-  test('clicking minimize toggles data-minimized attribute', () => {
+  test('title bar has no minimize button and no data-minimized attribute', () => {
     const container = render(
       <FileExplorerPanel initialVisible t={t}>
         <span>Preview</span>
@@ -158,33 +158,11 @@ describe('FileExplorerPanel', () => {
     )
     const panel = container.querySelector('[data-visible]') as HTMLElement
     expect(panel).not.toBeNull()
-    expect(panel.getAttribute('data-minimized')).toBe('false')
 
-    const minimizeBtn = panel.querySelector('[data-fe-action="minimize"]') as HTMLElement
-    expect(minimizeBtn).not.toBeNull()
-
-    act(() => {
-      minimizeBtn.click()
-    })
-
-    expect(panel.getAttribute('data-minimized')).toBe('true')
-
-    // Body should be hidden when minimized
-    const body = panel.querySelector('[data-fe-body]')
-    expect(body).toBeNull() // body is not rendered when minimized
-
-    // But title bar should still be visible
-    const titleBar = panel.querySelector('[data-fe-title-bar]')
-    expect(titleBar).not.toBeNull()
-
-    // Click again to restore
-    act(() => {
-      minimizeBtn.click()
-    })
-
-    expect(panel.getAttribute('data-minimized')).toBe('false')
-    const bodyRestored = panel.querySelector('[data-fe-body]')
-    expect(bodyRestored).not.toBeNull()
+    expect(panel.querySelector('[data-fe-action="minimize"]')).toBeNull()
+    expect(panel.hasAttribute('data-minimized')).toBe(false)
+    expect(panel.querySelector('[data-fe-action="maximize"]')).not.toBeNull()
+    expect(panel.querySelector('[data-fe-action="close"]')).not.toBeNull()
   })
 
   test('clicking maximize toggles data-maximized attribute', () => {

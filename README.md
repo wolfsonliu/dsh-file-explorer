@@ -4,6 +4,12 @@
 
 A file explorer for DSH Web. A floating "Files" button opens a left drawer (workspace file tree); clicking a file floats a draggable/resizable preview box on the right. Clicking a "generated files" chip or a tool-row file link opens that file in the preview box instead of the OS default app.
 
+## Screenshots
+
+| Light | Dark |
+| ----- | ---- |
+| ![File explorer (light theme)](./assets/dsh-file-explorer_light.png) | ![File explorer (dark theme)](./assets/dsh-file-explorer_dark.png) |
+
 ## Features
 
 1. **Floating entry**: an always-visible "Files" handle at the screen edge; click to toggle the file drawer.
@@ -107,6 +113,11 @@ npm run check     # tsc type check
 npm test          # vitest unit tests
 npm run build     # tsc + tsdown (host ESM + client CJS bundle)
 ```
+
+## References
+
+- [dsh-side-panel](https://github.com/ccq1/dsh-side-panel) — a DSH Web side panel plugin; the architectural reference for this project's host route and file-link interception.
+- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — the DSH framework this plugin extends.
 
 ## License
 

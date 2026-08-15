@@ -4,6 +4,12 @@
 
 DSH Web 的文件浏览器。页面边缘有一个浮动「文件」按钮，点击打开左侧抽屉（工作区文件树），点文件在右侧浮出可拖拽/缩放的预览框。点击会话区"生成的文件"芯片或工具行文件链接，会自动在预览框中打开对应文件，而非跳到系统默认应用。
 
+## 截图
+
+| 浅色 | 深色 |
+| ---- | ---- |
+| ![文件浏览器（浅色主题）](./assets/dsh-file-explorer_light.png) | ![文件浏览器（深色主题）](./assets/dsh-file-explorer_dark.png) |
+
 ## 功能
 
 1. **浮动入口**：屏幕边缘始终可见的「文件」把手，点击开关文件浏览器抽屉。
@@ -107,6 +113,11 @@ npm run check     # tsc 类型检查
 npm test          # vitest 单元测试
 npm run build     # tsc + tsdown（宿主 ESM + 客户端 CJS bundle）
 ```
+
+## 参考
+
+- [dsh-side-panel](https://github.com/ccq1/dsh-side-panel) — 一个 DSH Web 侧边栏插件，本项目的宿主路由与文件链接拦截借鉴了它的架构。
+- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — 本插件所扩展的 DSH 框架。
 
 ## 许可
 

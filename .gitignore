@@ -5,6 +5,9 @@ node_modules/
 # Agent workflow skills (harness tooling, not project code; live in ~/.dsh/skills).
 .dsh/
 
+# Design docs (to be polished and published in a separate repo later).
+docs/
+
 # Exploration clones — reference material only, not part of this project.
 dsh-source/
 dsh-side-panel-ref/

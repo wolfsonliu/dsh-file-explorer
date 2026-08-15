@@ -2,6 +2,9 @@ node_modules/
 *.tsbuildinfo
 .npm-cache/
 
+# Agent workflow skills (harness tooling, not project code; live in ~/.dsh/skills).
+.dsh/
+
 # Exploration clones — reference material only, not part of this project.
 dsh-source/
 dsh-side-panel-ref/

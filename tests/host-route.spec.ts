@@ -213,6 +213,30 @@ describe('preview', () => {
     expect(result.size).toBe(8)
   })
 
+  test('mode binary returns binary for a text file', async () => {
+    const result = await preview(root, 'a.txt', 1024, 1024, 'binary')
+    expect(result.kind).toBe('binary')
+    expect(result.name).toBe('a.txt')
+    expect(result.size).toBe(5)
+  })
+
+  test('mode binary returns empty for a zero-byte file', async () => {
+    const result = await preview(root, 'empty.txt', 1024, 1024, 'binary')
+    expect(result.kind).toBe('empty')
+  })
+
+  test('mode text reads a binary file as UTF-8 text', async () => {
+    const result = await preview(root, 'binary.bin', 1024, 1024, 'text')
+    expect(result.kind).toBe('text')
+    expect(result.name).toBe('binary.bin')
+    expect(result.content).toContain('\u0000')
+  })
+
+  test('mode text respects the maxText cap', async () => {
+    const result = await preview(root, 'big.txt', 50, 1024, 'text')
+    expect(result.kind).toBe('too-large')
+  })
+
   test('rejects when path is a directory', async () => {
     await expect(preview(root, 'subdir', 1024, 1024)).rejects.toThrow('path is not a file')
   })

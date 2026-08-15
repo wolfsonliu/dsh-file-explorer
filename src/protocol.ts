@@ -29,3 +29,5 @@ export interface Config {
   /** Single image-file read cap in bytes (default 10 MiB). */
   maxImageBytes?: number
 }
+
+export type PreviewMode = 'auto' | 'text' | 'binary'

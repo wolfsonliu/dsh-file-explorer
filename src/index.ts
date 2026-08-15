@@ -7,6 +7,7 @@ import {
   type BrowserEntry,
   type Config,
   type FilePreview,
+  type PreviewMode,
 } from './protocol.ts'
 
 // ---------------------------------------------------------------------------
@@ -96,6 +97,7 @@ async function preview(
   input: string,
   maxText: number,
   maxImage: number,
+  mode: PreviewMode = 'auto',
 ): Promise<FilePreview> {
   const target = await inside(root, input)
   const info = await stat(target.absolute)
@@ -103,6 +105,12 @@ async function preview(
   const name = target.path.split('/').at(-1) ?? target.path
   const extension = extname(name).toLowerCase()
   if (info.size === 0) return { kind: 'empty', name, size: 0 }
+  if (mode === 'binary') return { kind: 'binary', name, size: info.size }
+  if (mode === 'text') {
+    if (info.size > maxText) return { kind: 'too-large', name, size: info.size }
+    const body = await readFile(target.absolute)
+    return { kind: 'text', name, extension, content: body.toString('utf8'), size: info.size }
+  }
   const mime = IMAGE_MIME[extension]
   if (mime) {
     if (info.size > maxImage) return { kind: 'too-large', name, size: info.size }
@@ -175,7 +183,13 @@ export function apply(ctx: HostContext, config: Config = {}): void {
           const path = typeof body.path === 'string' ? body.path : url.searchParams.get('path') ?? ''
           const action = typeof body.action === 'string' ? body.action : url.searchParams.get('action') ?? 'list'
           if (action === 'list') return json(res, 200, { ok: true, root, entries: await list(root, path) })
-          if (action === 'preview') return json(res, 200, { ok: true, preview: await preview(root, path, maxText, maxImage) })
+          if (action === 'preview') {
+            const mode = typeof body.mode === 'string' ? body.mode : url.searchParams.get('mode') ?? 'auto'
+            if (mode !== 'auto' && mode !== 'text' && mode !== 'binary') {
+              return json(res, 400, { ok: false, error: 'unknown mode' })
+            }
+            return json(res, 200, { ok: true, preview: await preview(root, path, maxText, maxImage, mode as PreviewMode) })
+          }
           if (action === 'resolve-path') {
             const target = await inside(root, path)
             return json(res, 200, {

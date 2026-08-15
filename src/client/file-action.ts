@@ -4,6 +4,8 @@ import type { Translate } from './locale.ts'
 
 export interface FileActionHelpers {
   openFile(path: string): void
+  openFileAsText(path: string): void
+  openFileAsBinary(path: string): void
   copyAbsolutePath(path: string): Promise<void>
   copyRelativePath(path: string): Promise<void>
 }
@@ -40,6 +42,8 @@ export function registerBuiltinFileActions(): void {
   if (builtinsRegistered) return
   builtinsRegistered = true
   registerFileAction({ id: 'open', label: t => t('open'), appliesTo: 'file', onSelect: (entry, h) => { h.openFile(entry.path) } })
+  registerFileAction({ id: 'open-as-text', label: t => t('openAsText'), appliesTo: 'file', onSelect: (entry, h) => { h.openFileAsText(entry.path) } })
+  registerFileAction({ id: 'open-as-binary', label: t => t('openAsBinary'), appliesTo: 'file', onSelect: (entry, h) => { h.openFileAsBinary(entry.path) } })
   registerFileAction({ id: 'copy-absolute', label: t => t('copyAbsolutePath'), appliesTo: 'both', onSelect: (entry, h) => { void h.copyAbsolutePath(entry.path) } })
   registerFileAction({ id: 'copy-relative', label: t => t('copyRelativePath'), appliesTo: 'both', onSelect: (entry, h) => { void h.copyRelativePath(entry.path) } })
 }

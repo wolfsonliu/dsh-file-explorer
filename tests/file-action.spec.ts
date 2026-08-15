@@ -7,6 +7,8 @@ import type { BrowserEntry } from '../src/protocol.ts'
 function makeHelpers(): FileActionHelpers {
   return {
     openFile: vi.fn(),
+    openFileAsText: vi.fn(),
+    openFileAsBinary: vi.fn(),
     copyAbsolutePath: vi.fn(),
     copyRelativePath: vi.fn(),
   }
@@ -45,12 +47,12 @@ describe('file-action registry', () => {
     d3()
   })
 
-  test('registerBuiltinFileActions registers open, copy-absolute, copy-relative in order', async () => {
+  test('registerBuiltinFileActions registers open, open-as-text, open-as-binary, copy-absolute, copy-relative in order', async () => {
     vi.resetModules()
     const mod = await import('../src/client/file-action.ts')
     mod.registerBuiltinFileActions()
 
-    expect(mod.fileActionsFor('file').map((a) => a.id)).toEqual(['open', 'copy-absolute', 'copy-relative'])
+    expect(mod.fileActionsFor('file').map((a) => a.id)).toEqual(['open', 'open-as-text', 'open-as-binary', 'copy-absolute', 'copy-relative'])
     expect(mod.fileActionsFor('directory').map((a) => a.id)).toEqual(['copy-absolute', 'copy-relative'])
   })
 
@@ -65,6 +67,12 @@ describe('file-action registry', () => {
     expect(helpers.openFile).toHaveBeenCalledWith('src/a.ts')
     expect(helpers.copyAbsolutePath).not.toHaveBeenCalled()
     expect(helpers.copyRelativePath).not.toHaveBeenCalled()
+
+    byId.get('open-as-text')!.onSelect(fileEntry, helpers)
+    expect(helpers.openFileAsText).toHaveBeenCalledWith('src/a.ts')
+
+    byId.get('open-as-binary')!.onSelect(fileEntry, helpers)
+    expect(helpers.openFileAsBinary).toHaveBeenCalledWith('src/a.ts')
 
     byId.get('copy-absolute')!.onSelect(fileEntry, helpers)
     expect(helpers.copyAbsolutePath).toHaveBeenCalledWith('src/a.ts')

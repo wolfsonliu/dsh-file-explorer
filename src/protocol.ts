@@ -20,6 +20,7 @@ export type ApiResponse =
   | { ok: true; root: string; entries: BrowserEntry[] }
   | { ok: true; preview: FilePreview }
   | { ok: true; path: string; parentPath: string }
+  | { ok: true; saved: string }
   | { ok: false; error: string }
 
 export interface Config {

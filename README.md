@@ -53,6 +53,7 @@ The host half registers a `/file-explorer/api` exact route via `ctx.webServer.re
 - `list`: lists one directory level (directories first, by name), returning `BrowserEntry[]`.
 - `preview`: reads one file, returning a discriminated `FilePreview` (`text` / `image` / `empty` / `binary` / `too-large`).
 - `resolve-path`: resolves a workspace-relative path to an absolute path and parent path.
+- `write`: writes UTF-8 text to a workspace file (POST body `{ path, content }`), returning the saved relative path.
 
 All paths pass a workspace-containment check (`inside(root, input)`, including `realpath` symlink resolution); out-of-workspace paths are rejected. Text/binary is detected by a NUL-byte scan; images map extensions to MIME and return a data URL.
 
@@ -70,7 +71,7 @@ This plugin is a pure UI surface — it emits no session events and does not mod
 
 ## Developing preview plugins
 
-`dsh-file-explorer` exposes registration entries via the cordis service `fileExplorer`: `registerPreview` (add a previewer) and `registerFileAction` (add a file-row menu item). Domain experts can ship extensions as separate plugins (named `@dsh-external/dsh-file-explorer-preview-<domain>`) without touching the core.
+`dsh-file-explorer` exposes registration entries via the cordis service `fileExplorer`: `registerPreview` (add a previewer), `registerFileAction` (add a file-row menu item), and `writeFile` (write UTF-8 text back to a workspace file). Domain experts can ship extensions as separate plugins (named `@dsh-external/dsh-file-explorer-preview-<domain>`) without touching the core.
 
 ```typescript
 // preview plugin client entry

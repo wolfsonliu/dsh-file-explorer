@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readFile, readdir, realpath, stat } from 'node:fs/promises'
-import { dirname, extname, relative, resolve, sep } from 'node:path'
+import { readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises'
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import {
   FILE_EXPLORER_ROUTE,
   type ApiResponse,
@@ -49,8 +49,14 @@ const IMAGE_MIME: Record<string, string> = {
 // inside — resolve a workspace-relative input to an absolute path, rejecting
 // any path that escapes the workspace.
 // ---------------------------------------------------------------------------
-async function inside(root: string, input = ''): Promise<{ absolute: string; path: string }> {
-  const absolute = await realpath(resolve(root, input || '.'))
+async function inside(root: string, input = '', opts?: { allowMissing?: boolean }): Promise<{ absolute: string; path: string }> {
+  const resolved = resolve(root, input || '.')
+  // realpath resolves symlinks but requires the path to exist. A write may
+  // target a new file, so with allowMissing we resolve only the parent (which
+  // must exist) and keep the final component literal.
+  const absolute = opts?.allowMissing
+    ? join(await realpath(dirname(resolved)), basename(resolved))
+    : await realpath(resolved)
   const path = relative(root, absolute)
   if (path === '..' || path.startsWith(`..${sep}`) || resolve(path) === path) {
     throw new Error('path is outside the configured workspace')
@@ -110,6 +116,15 @@ async function preview(
 }
 
 // ---------------------------------------------------------------------------
+// write — write UTF-8 text to a workspace file, rejecting escapes.
+// ---------------------------------------------------------------------------
+async function write(root: string, input: string, content: string): Promise<string> {
+  const target = await inside(root, input, { allowMissing: true })
+  await writeFile(target.absolute, content, 'utf8')
+  return target.path
+}
+
+// ---------------------------------------------------------------------------
 // json — send a JSON response.
 // ---------------------------------------------------------------------------
 function json(res: ServerResponse, status: number, body: ApiResponse): void {
@@ -119,6 +134,21 @@ function json(res: ServerResponse, status: number, body: ApiResponse): void {
     'x-content-type-options': 'nosniff',
   })
   res.end(JSON.stringify(body))
+}
+
+// ---------------------------------------------------------------------------
+// requestBody — read a JSON request body (bounded).
+// ---------------------------------------------------------------------------
+async function requestBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const chunks: Buffer[] = []
+  let size = 0
+  for await (const chunk of req) {
+    const value = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    size += value.length
+    if (size > 3 * 1024 * 1024) throw new Error('request body is too large')
+    chunks.push(value)
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>
 }
 
 // ---------------------------------------------------------------------------
@@ -135,14 +165,15 @@ export function apply(ctx: HostContext, config: Config = {}): void {
       handler: async (req: IncomingMessage, res: ServerResponse) => {
         try {
           const url = new URL(req.url ?? FILE_EXPLORER_ROUTE, 'http://localhost')
-          const sessionId = url.searchParams.get('sessionId')
+          const body = req.method === 'POST' ? await requestBody(req) : {}
+          const sessionId = typeof body.sessionId === 'string' ? body.sessionId : url.searchParams.get('sessionId')
           if (sessionId === null || sessionId === '') throw new Error('sessionId is required')
           const session = ctx.sessions.get(sessionId)
           const cwd = session?.header.cwd
           if (cwd === undefined) throw new Error('current session has no workspace')
           const root = resolve(cwd)
-          const path = url.searchParams.get('path') ?? ''
-          const action = url.searchParams.get('action') ?? 'list'
+          const path = typeof body.path === 'string' ? body.path : url.searchParams.get('path') ?? ''
+          const action = typeof body.action === 'string' ? body.action : url.searchParams.get('action') ?? 'list'
           if (action === 'list') return json(res, 200, { ok: true, root, entries: await list(root, path) })
           if (action === 'preview') return json(res, 200, { ok: true, preview: await preview(root, path, maxText, maxImage) })
           if (action === 'resolve-path') {
@@ -152,6 +183,11 @@ export function apply(ctx: HostContext, config: Config = {}): void {
               path: target.absolute,
               parentPath: dirname(target.absolute),
             })
+          }
+          if (action === 'write') {
+            if (typeof body.content !== 'string') throw new Error('content is required')
+            const saved = await write(root, path, body.content)
+            return json(res, 200, { ok: true, saved })
           }
           return json(res, 400, { ok: false, error: 'unknown action' })
         } catch (error) {
@@ -168,4 +204,4 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 // ---------------------------------------------------------------------------
 // Exported for testing
 // ---------------------------------------------------------------------------
-export { inside, list, preview }
+export { inside, list, preview, write }

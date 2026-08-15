@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { mkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { inside, list, preview, apply } from '../src/index.ts'
+import { inside, list, preview, write, apply } from '../src/index.ts'
 import type { Config } from '../src/protocol.ts'
 
 let root: string
@@ -223,6 +223,22 @@ describe('preview', () => {
 
   test('rejects symlink pointing outside workspace', async () => {
     await expect(preview(root, 'escape', 1024, 1024)).rejects.toThrow('path is outside the configured workspace')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// write
+// ---------------------------------------------------------------------------
+describe('write', () => {
+  test('writes UTF-8 content to a workspace file and returns its path', async () => {
+    const saved = await write(root, 'new.txt', 'hello write')
+    expect(saved).toBe('new.txt')
+    const content = await import('node:fs/promises').then(fs => fs.readFile(join(root, 'new.txt'), 'utf8'))
+    expect(content).toBe('hello write')
+  })
+
+  test('rejects path escaping the workspace', async () => {
+    await expect(write(root, '../outside.txt', 'x')).rejects.toThrow('path is outside the configured workspace')
   })
 })
 

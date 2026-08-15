@@ -44,9 +44,25 @@ export function apply(ctx: ClientContext): void {
   registerBuiltinPreviews()
   registerBuiltinFileActions()
 
+  // Write UTF-8 text to a workspace file (for preview plugins that edit).
+  const writeFile = async (path: string, content: string): Promise<void> => {
+    const sessionId = ctx.sessions.list.getSnapshot().current
+    if (sessionId === undefined) throw new Error('no current session')
+    const res = await fetch(
+      `${FILE_EXPLORER_ROUTE}?action=write&sessionId=${encodeURIComponent(sessionId)}`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ path, content }),
+      },
+    )
+    const data = await res.json()
+    if (!data.ok) throw new Error(data.error)
+  }
+
   // Expose the registration services so external plugins can contribute
-  // previewers and file-row actions (and override built-ins by priority).
-  ctx.reflect.provide('fileExplorer', { registerPreview, registerFileAction })
+  // previewers, file-row actions, and file writes (override built-ins by priority).
+  ctx.reflect.provide('fileExplorer', { registerPreview, registerFileAction, writeFile })
 
   // Inject panel styles (an external plugin cannot import a CSS module).
   const styleEl = document.createElement('style')

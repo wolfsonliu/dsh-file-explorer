@@ -53,6 +53,7 @@ dsh web
 - `list`：列出一级目录（目录在前、按名称排序），返回 `BrowserEntry[]`。
 - `preview`：读取单个文件，返回判别式 `FilePreview`（`text` / `image` / `empty` / `binary` / `too-large`）。
 - `resolve-path`：解析工作区相对路径为绝对路径与父路径。
+- `write`：把 UTF-8 文本写入工作区文件（POST body `{ path, content }`），返回保存的相对路径。
 
 所有路径经 `inside(root, input)` 工作区包含校验（含 `realpath` 符号链接解析），越界路径一律拒绝。文本/二进制通过 NUL 字节扫描判别，图片按扩展名映射 MIME 并返回 data URL。
 
@@ -70,7 +71,7 @@ dsh web
 
 ## 开发预览插件
 
-`dsh-file-explorer` 通过 cordis 服务 `fileExplorer` 暴露注册入口：`registerPreview`（新增预览器）与 `registerFileAction`（新增文件行菜单项）。领域专家可把扩展做成独立插件（命名 `@dsh-external/dsh-file-explorer-preview-<domain>`），无需改动核心。
+`dsh-file-explorer` 通过 cordis 服务 `fileExplorer` 暴露注册入口：`registerPreview`（新增预览器）、`registerFileAction`（新增文件行菜单项）与 `writeFile`（把 UTF-8 文本写回工作区文件）。领域专家可把扩展做成独立插件（命名 `@dsh-external/dsh-file-explorer-preview-<domain>`），无需改动核心。
 
 ```typescript
 // preview 插件 client 入口

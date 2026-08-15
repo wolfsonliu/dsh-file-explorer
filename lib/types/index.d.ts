@@ -18,11 +18,14 @@ interface HostContext {
     effect(callback: () => (() => void), label?: string): void;
 }
 export declare const inject: string[];
-declare function inside(root: string, input?: string): Promise<{
+declare function inside(root: string, input?: string, opts?: {
+    allowMissing?: boolean;
+}): Promise<{
     absolute: string;
     path: string;
 }>;
 declare function list(root: string, input: string): Promise<BrowserEntry[]>;
 declare function preview(root: string, input: string, maxText: number, maxImage: number): Promise<FilePreview>;
+declare function write(root: string, input: string, content: string): Promise<string>;
 export declare function apply(ctx: HostContext, config?: Config): void;
-export { inside, list, preview };
+export { inside, list, preview, write };

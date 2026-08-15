@@ -28,4 +28,12 @@ export interface FileExplorerService {
    * @returns disposer that removes this registration (idempotent).
    */
   registerFileAction(action: FileAction): () => void
+
+  /**
+   * Write UTF-8 text to a workspace file (resolved against the current
+   * session's workspace).
+   * @param path    Workspace-relative file path.
+   * @param content The full new file content.
+   */
+  writeFile(path: string, content: string): Promise<void>
 }

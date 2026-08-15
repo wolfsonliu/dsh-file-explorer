@@ -44,6 +44,9 @@ export type ApiResponse = {
     path: string;
     parentPath: string;
 } | {
+    ok: true;
+    saved: string;
+} | {
     ok: false;
     error: string;
 };

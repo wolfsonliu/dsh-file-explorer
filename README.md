@@ -23,7 +23,14 @@ A file explorer for DSH Web. A floating "Files" button opens a left drawer (work
 
 ## Install
 
-From a local checkout:
+From the git repository (recommended):
+
+```sh
+dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer
+dsh web
+```
+
+Or from a local checkout:
 
 ```sh
 git clone https://github.com/wolfsonliu/dsh-file-explorer

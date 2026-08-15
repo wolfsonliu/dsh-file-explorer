@@ -23,7 +23,14 @@ DSH Web 的文件浏览器。页面边缘有一个浮动「文件」按钮，点
 
 ## 安装
 
-从本地目录安装：
+从 git 仓库安装（推荐）：
+
+```sh
+dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer
+dsh web
+```
+
+或从本地目录安装：
 
 ```sh
 git clone https://github.com/wolfsonliu/dsh-file-explorer

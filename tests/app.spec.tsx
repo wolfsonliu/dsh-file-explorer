@@ -174,6 +174,21 @@ describe('FileExplorerApp', () => {
     expect(container.textContent).toContain('hello world')
   })
 
+  test('preview panel title shows the opened file name', async () => {
+    const props = makeProps()
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('notes.txt'))
+    await flush()
+
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    expect(panel).not.toBeNull()
+    const title = panel.querySelector('.dsh-fe-title-text') as HTMLElement
+    expect(title).not.toBeNull()
+    expect(title.textContent).toBe('notes.txt')
+  })
+
   test('preview panel close button hides the panel', async () => {
     const props = makeProps()
     const ref = createRef<FileExplorerAppHandle>()

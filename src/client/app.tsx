@@ -46,6 +46,11 @@ function extensionOf(filePath: string): string {
   return filePath.slice(lastDot + 1)
 }
 
+/** Extract the basename (last path segment) of a workspace-relative path. */
+function basenameOf(filePath: string): string {
+  return filePath.split('/').at(-1) ?? filePath
+}
+
 // ---------------------------------------------------------------------------
 // FileExplorerApp
 // ---------------------------------------------------------------------------
@@ -142,6 +147,8 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       previewChildren = <PreviewComponent {...previewProps} />
     }
 
+    const panelTitle = previewData?.name ?? (selectedPath ? basenameOf(selectedPath) : undefined)
+
     return (
       <>
         <FloatingFileButton onClick={toggleDrawer} t={t} />
@@ -159,7 +166,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
             t={t}
           />
         </FileExplorerDrawer>
-        <FileExplorerPanel ref={previewPanelRef} t={t}>
+        <FileExplorerPanel ref={previewPanelRef} title={panelTitle} t={t}>
           {previewChildren}
         </FileExplorerPanel>
       </>

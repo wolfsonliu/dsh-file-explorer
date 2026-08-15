@@ -26,7 +26,7 @@ A file explorer for DSH Web. A floating "Files" button opens a left drawer (work
 From a local checkout:
 
 ```sh
-git clone <this-repo>
+git clone https://github.com/wolfsonliu/dsh-file-explorer
 cd dsh-file-explorer
 npm install
 npm run build
@@ -104,6 +104,17 @@ Notes:
 - **Priority**: higher wins; built-ins use `0`, use `10` to override. Later registration wins on ties.
 - **Contract types**: `import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'`.
 - **registerPreview returns a disposer**: call it in `ctx.effect` cleanup to unregister on unload/HMR.
+
+## Extensions
+
+`dsh-file-explorer` is designed for extension through the `fileExplorer` service. Known extensions:
+
+| Extension | Description | Repository |
+| --------- | ----------- | ---------- |
+| `dsh-file-explorer-preview-code` | CodeMirror 6 code preview with editing | [wolfsonliu/dsh-file-explorer-preview-code](https://github.com/wolfsonliu/dsh-file-explorer-preview-code) |
+| `dsh-file-explorer-preview-molstar` | Mol* molecular-structure preview (`.cif` / `.pdb`) | [wolfsonliu/dsh-file-explorer-preview-molstar](https://github.com/wolfsonliu/dsh-file-explorer-preview-molstar) |
+
+More extensions are welcome — build your own by following [Developing preview plugins](#developing-preview-plugins).
 
 ## Development
 

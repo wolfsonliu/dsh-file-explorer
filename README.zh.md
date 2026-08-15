@@ -26,7 +26,7 @@ DSH Web 的文件浏览器。页面边缘有一个浮动「文件」按钮，点
 从本地目录安装：
 
 ```sh
-git clone <this-repo>
+git clone https://github.com/wolfsonliu/dsh-file-explorer
 cd dsh-file-explorer
 npm install
 npm run build
@@ -104,6 +104,17 @@ function CifPreview(props: PreviewProps) {
 - **优先级**：数值越大越优先；内置预览为 `0`，外部用 `10` 即可覆盖。同优先级后注册者胜。
 - **契约类型**：`import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'` 获得类型提示。
 - **registerPreview 返回 disposer**：在 `ctx.effect` 的清理里调用以卸载/HMR 时移除注册。
+
+## 扩展
+
+`dsh-file-explorer` 通过 `fileExplorer` 服务支持扩展。已有的扩展：
+
+| 扩展 | 说明 | 仓库 |
+| ---- | ---- | ---- |
+| `dsh-file-explorer-preview-code` | 基于 CodeMirror 6 的代码预览与编辑 | [wolfsonliu/dsh-file-explorer-preview-code](https://github.com/wolfsonliu/dsh-file-explorer-preview-code) |
+| `dsh-file-explorer-preview-molstar` | 基于 Mol* 的分子结构预览（`.cif` / `.pdb`） | [wolfsonliu/dsh-file-explorer-preview-molstar](https://github.com/wolfsonliu/dsh-file-explorer-preview-molstar) |
+
+欢迎增加更多扩展——参照 [开发预览插件](#开发预览插件) 自行开发即可。
 
 ## 开发
 

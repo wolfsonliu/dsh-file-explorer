@@ -120,6 +120,7 @@ function CifPreview(props: PreviewProps) {
 | ---- | ---- | ---- |
 | `dsh-file-explorer-preview-code` | 基于 CodeMirror 6 的代码预览与编辑 | [wolfsonliu/dsh-file-explorer-preview-code](https://github.com/wolfsonliu/dsh-file-explorer-preview-code) |
 | `dsh-file-explorer-preview-molstar` | 基于 Mol* 的分子结构预览（`.cif` / `.pdb`） | [wolfsonliu/dsh-file-explorer-preview-molstar](https://github.com/wolfsonliu/dsh-file-explorer-preview-molstar) |
+| `dsh-file-explorer-preview-sequence` | 基于 SeqViz 的序列查看器预览（FASTA / GenBank / JBEI / SnapGene / SBOL） | [wolfsonliu/dsh-file-explorer-preview-sequence](https://github.com/wolfsonliu/dsh-file-explorer-preview-sequence) |
 
 欢迎增加更多扩展——参照 [开发预览插件](#开发预览插件) 自行开发即可。
 

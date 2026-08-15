@@ -120,6 +120,7 @@ Notes:
 | --------- | ----------- | ---------- |
 | `dsh-file-explorer-preview-code` | CodeMirror 6 code preview with editing | [wolfsonliu/dsh-file-explorer-preview-code](https://github.com/wolfsonliu/dsh-file-explorer-preview-code) |
 | `dsh-file-explorer-preview-molstar` | Mol* molecular-structure preview (`.cif` / `.pdb`) | [wolfsonliu/dsh-file-explorer-preview-molstar](https://github.com/wolfsonliu/dsh-file-explorer-preview-molstar) |
+| `dsh-file-explorer-preview-sequence` | SeqViz sequence viewer preview (FASTA / GenBank / JBEI / SnapGene / SBOL) | [wolfsonliu/dsh-file-explorer-preview-sequence](https://github.com/wolfsonliu/dsh-file-explorer-preview-sequence) |
 
 More extensions are welcome — build your own by following [Developing preview plugins](#developing-preview-plugins).
 

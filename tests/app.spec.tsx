@@ -243,6 +243,74 @@ describe('FileExplorerApp', () => {
     expect(container.textContent).toContain('hello world')
   })
 
+  test('"open-as-text" fetches text mode and renders built-in TextPreview', async () => {
+    const props = makeProps()
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.toggleDrawer())
+    await flush()
+
+    const row = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find(
+      (r) => r.textContent!.includes('notes.txt'),
+    ) as HTMLElement
+    const btn = row.querySelector('[data-fe-action-button]') as HTMLElement
+    act(() => btn.click())
+
+    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    const item = Array.from(menu.querySelectorAll('[role="menuitem"]')).find(
+      (el) => el.textContent!.includes('openAsText'),
+    ) as HTMLElement
+    expect(item).toBeTruthy()
+
+    act(() => item.click())
+    await flush()
+
+    expect(props.fetchPreview).toHaveBeenCalledWith('s1', 'notes.txt', 'text')
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    expect(panel).not.toBeNull()
+    // Built-in TextPreview renders a <pre>; the registered TxtPreview would render data-fe-preview="text".
+    expect(panel.querySelector('pre')).not.toBeNull()
+    expect(panel.querySelector('[data-fe-preview="text"]')).toBeNull()
+  })
+
+  test('"open-as-binary" fetches binary mode and renders binary status', async () => {
+    const props = makeProps()
+    props.fetchPreview = vi.fn().mockImplementation((_sid: string, _path: string, mode?: string) =>
+      Promise.resolve(
+        mode === 'binary'
+          ? { kind: 'binary', name: 'notes.txt', size: 11 } as FilePreview
+          : cannedPreview,
+      ),
+    )
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.toggleDrawer())
+    await flush()
+
+    const row = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find(
+      (r) => r.textContent!.includes('notes.txt'),
+    ) as HTMLElement
+    const btn = row.querySelector('[data-fe-action-button]') as HTMLElement
+    act(() => btn.click())
+
+    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    const item = Array.from(menu.querySelectorAll('[role="menuitem"]')).find(
+      (el) => el.textContent!.includes('openAsBinary'),
+    ) as HTMLElement
+    expect(item).toBeTruthy()
+
+    act(() => item.click())
+    await flush()
+
+    expect(props.fetchPreview).toHaveBeenCalledWith('s1', 'notes.txt', 'binary')
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    expect(panel).not.toBeNull()
+    // BinaryPreview renders StatusPreview → t('binary') == 'binary' with the identity translator.
+    expect(panel.textContent).toContain('binary')
+  })
+
   test('copy absolute path fetches resolve-path and writes the resolved path to clipboard', async () => {
     vi.stubGlobal(
       'fetch',

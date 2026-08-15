@@ -21,6 +21,8 @@ beforeAll(() => {
 function makeHelpers(): FileActionHelpers {
   return {
     openFile: vi.fn(),
+    openFileAsText: vi.fn(),
+    openFileAsBinary: vi.fn(),
     copyAbsolutePath: vi.fn().mockResolvedValue(undefined),
     copyRelativePath: vi.fn().mockResolvedValue(undefined),
   }
@@ -313,7 +315,7 @@ describe('FileTree', () => {
     }
   })
 
-  test('clicking the ellipsis button opens a menu with 3 items for a file row', async () => {
+  test('clicking the ellipsis button opens a menu with 5 items for a file row', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
     const helpers = makeHelpers()
 
@@ -331,10 +333,12 @@ describe('FileTree', () => {
     expect(menu).not.toBeNull()
 
     const items = menu!.querySelectorAll('[role="menuitem"]')
-    expect(items.length).toBe(3)
+    expect(items.length).toBe(5)
     expect(items[0].textContent).toContain('open')
-    expect(items[1].textContent).toContain('copyAbsolutePath')
-    expect(items[2].textContent).toContain('copyRelativePath')
+    expect(items[1].textContent).toContain('openAsText')
+    expect(items[2].textContent).toContain('openAsBinary')
+    expect(items[3].textContent).toContain('copyAbsolutePath')
+    expect(items[4].textContent).toContain('copyRelativePath')
   })
 
   test('clicking the ellipsis button opens a menu with 2 items for a directory row', async () => {

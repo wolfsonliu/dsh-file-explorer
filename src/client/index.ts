@@ -99,10 +99,11 @@ export function apply(ctx: ClientContext): void {
             return []
           }
         },
-        fetchPreview: async (sid, path) => {
+        fetchPreview: async (sid, path, mode) => {
           try {
+            const modeParam = mode && mode !== 'auto' ? `&mode=${encodeURIComponent(mode)}` : ''
             const res = await fetch(
-              `${FILE_EXPLORER_ROUTE}?action=preview&sessionId=${encodeURIComponent(sid)}&path=${encodeURIComponent(path)}`,
+              `${FILE_EXPLORER_ROUTE}?action=preview&sessionId=${encodeURIComponent(sid)}&path=${encodeURIComponent(path)}${modeParam}`,
             )
             const data = await res.json()
             return data.preview ?? null

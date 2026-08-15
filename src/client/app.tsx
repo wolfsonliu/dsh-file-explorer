@@ -6,12 +6,12 @@ import React, {
   useState,
   type ReactNode,
 } from 'react'
-import { FILE_EXPLORER_ROUTE, type BrowserEntry, type FilePreview } from '../protocol.ts'
+import { FILE_EXPLORER_ROUTE, type BrowserEntry, type FilePreview, type PreviewMode } from '../protocol.ts'
 import { FileExplorerDrawer, FloatingFileButton } from './drawer.tsx'
 import { FileTree, type FileTreeHandle } from './file-tree.tsx'
 import type { FileActionHelpers } from './file-action.ts'
 import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
-import { resolvePreviewFor } from './preview/index.ts'
+import { BinaryPreview, resolvePreviewFor, TextPreview } from './preview/index.ts'
 import type { PreviewProps } from './preview/registry.ts'
 import type { Translate } from './locale.ts'
 
@@ -23,7 +23,7 @@ export interface FileExplorerAppProps {
   sessionId: string | undefined
   fetchList: (sessionId: string, path: string) => Promise<BrowserEntry[]>
   /** Fetch one file's preview (injectable for tests). */
-  fetchPreview: (sessionId: string, path: string) => Promise<FilePreview | null>
+  fetchPreview: (sessionId: string, path: string, mode?: PreviewMode) => Promise<FilePreview | null>
   /** Translator for localized UI copy. */
   t: Translate
 }
@@ -56,6 +56,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [selectedPath, setSelectedPath] = useState<string | null>(null)
     const [previewData, setPreviewData] = useState<FilePreview | null>(null)
+    const [viewMode, setViewMode] = useState<PreviewMode>('auto')
 
     const previewPanelRef = useRef<FileExplorerPanelHandle>(null)
     const treeRef = useRef<FileTreeHandle>(null)
@@ -64,11 +65,15 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     const closeDrawer = useCallback(() => setDrawerOpen(false), [])
     const toggleDrawer = useCallback(() => setDrawerOpen((prev) => !prev), [])
 
-    const openFile = useCallback(
-      (path: string) => {
+    const openFileWithMode = useCallback(
+      (path: string, mode: PreviewMode) => {
         setSelectedPath(path)
+        setViewMode(mode)
         if (sessionId === undefined) return
-        void fetchPreview(sessionId, path)
+        const request = mode === 'auto'
+          ? fetchPreview(sessionId, path)
+          : fetchPreview(sessionId, path, mode)
+        void request
           .then((preview) => {
             setPreviewData(preview)
             setDrawerOpen(true)
@@ -80,6 +85,10 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       },
       [sessionId, fetchPreview],
     )
+
+    const openFile = useCallback((path: string) => openFileWithMode(path, 'auto'), [openFileWithMode])
+    const openFileAsText = useCallback((path: string) => openFileWithMode(path, 'text'), [openFileWithMode])
+    const openFileAsBinary = useCallback((path: string) => openFileWithMode(path, 'binary'), [openFileWithMode])
 
     const copyAbsolutePath = useCallback(
       async (path: string) => {
@@ -101,7 +110,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       await navigator.clipboard.writeText(path)
     }, [])
 
-    const helpers: FileActionHelpers = { openFile, copyAbsolutePath, copyRelativePath }
+    const helpers: FileActionHelpers = { openFile, openFileAsText, openFileAsBinary, copyAbsolutePath, copyRelativePath }
 
     useImperativeHandle(
       ref,
@@ -118,7 +127,12 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     if (previewData === null) {
       previewChildren = <div className="dsh-fe-placeholder">{t('selectFile')}</div>
     } else {
-      const PreviewComponent = resolvePreviewFor(previewData, extensionOf(selectedPath ?? ''))
+      const PreviewComponent =
+        viewMode === 'text'
+          ? TextPreview
+          : viewMode === 'binary'
+            ? BinaryPreview
+            : resolvePreviewFor(previewData, extensionOf(selectedPath ?? ''))
       const previewProps: PreviewProps = {
         preview: previewData,
         filePath: selectedPath ?? '',

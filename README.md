@@ -30,8 +30,6 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer
 dsh web
 ```
 
-> **pnpm ≥ 10 note**: pnpm blocks a git dependency's `prepare` (build) script until allowlisted. If the install fails with a build-block message, add the key it prints under `allowBuilds` in `~/.dsh/profiles/web/pnpm-workspace.yaml` and re-run.
-
 Or from a local checkout:
 
 ```sh

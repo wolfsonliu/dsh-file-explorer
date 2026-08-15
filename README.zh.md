@@ -30,8 +30,6 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer
 dsh web
 ```
 
-> **pnpm ≥ 10 说明**：pnpm 默认会拦截 git 依赖的 `prepare`（构建）脚本。如果安装时报 build-block 之类的错误，把打印出来的 key 加到 `~/.dsh/profiles/web/pnpm-workspace.yaml` 的 `allowBuilds` 下，再重跑。
-
 或从本地目录安装：
 
 ```sh

@@ -15,7 +15,7 @@ export const MarkdownPreview: ComponentType<PreviewProps> = (props) => {
     }
 
     const html = DOMPurify.sanitize(marked.parse(props.preview.content) as string)
-    return <div dangerouslySetInnerHTML={{ __html: html }} />
+    return <div className="dsh-fe-md-content" dangerouslySetInnerHTML={{ __html: html }} />
   }
 
   return <StatusPreview {...props} />

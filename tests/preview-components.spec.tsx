@@ -140,6 +140,21 @@ describe('MarkdownPreview', () => {
     expect(h1!.textContent).toBe('Hi')
   })
 
+  test('renders preview content inside a .dsh-fe-md-content wrapper', () => {
+    const p = {
+      ...props({
+        kind: 'text',
+        name: 'readme.md',
+        content: '# Hi',
+        extension: 'md',
+        size: 4,
+      }),
+      activeView: 'preview' as const,
+    }
+    const container = render(<MarkdownPreview {...p} />)
+    expect(container.querySelector('.dsh-fe-md-content')).toBeTruthy()
+  })
+
   test('renders raw # Hi when activeView is source', () => {
     const p = {
       ...props({

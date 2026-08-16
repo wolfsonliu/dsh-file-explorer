@@ -520,6 +520,7 @@ describe('FileExplorerApp', () => {
     await flush()
 
     // The other file's preview must NOT be overwritten with the old draft.
+    expect(writeFile).toHaveBeenCalledTimes(1)
     expect(container.textContent).toContain('other')
     expect(container.textContent).not.toContain('# Edited')
   })

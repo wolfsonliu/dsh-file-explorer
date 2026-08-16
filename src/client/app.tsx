@@ -98,14 +98,17 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       const targetPath = selectedPath
       setSaving(true)
       setSaveError(null)
+      setDirty(false)
       try {
         await writeFile(targetPath, draft)
         if (selectedPathRef.current === targetPath) {
           setPreviewData((prev) => (prev && prev.kind === 'text' ? { ...prev, content: draft } : prev))
-          setDirty(false)
         }
       } catch (error) {
-        setSaveError(error instanceof Error ? error.message : String(error))
+        if (selectedPathRef.current === targetPath) {
+          setDirty(true)
+          setSaveError(error instanceof Error ? error.message : String(error))
+        }
         throw error
       } finally {
         setSaving(false)

@@ -151,7 +151,10 @@ describe('FileExplorerPanel', () => {
   })
 
   test('calls onClose before closing when the close button is clicked', () => {
-    const onClose = vi.fn()
+    let panelMountedAtClose = false
+    const onClose = vi.fn(() => {
+      panelMountedAtClose = container.querySelector('[data-visible]') !== null
+    })
     const container = render(
       <FileExplorerPanel initialVisible t={t} onClose={onClose}>
         <span>Preview</span>
@@ -164,6 +167,7 @@ describe('FileExplorerPanel', () => {
     act(() => closeBtn.click())
 
     expect(onClose).toHaveBeenCalledTimes(1)
+    expect(panelMountedAtClose).toBe(true)
     expect(container.querySelector('[data-visible]')).toBeNull()
   })
 

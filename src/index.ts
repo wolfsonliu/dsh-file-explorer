@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises'
+import { open, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import {
   FILE_EXPLORER_ROUTE,
@@ -89,6 +89,30 @@ async function list(root: string, input: string): Promise<BrowserEntry[]> {
   )
 }
 
+/** Read the first `maxBytes` bytes of a file (bounded; never reads more). */
+async function readHead(absolute: string, maxBytes: number): Promise<Buffer> {
+  const handle = await open(absolute, 'r')
+  try {
+    const buffer = Buffer.alloc(maxBytes)
+    const { bytesRead } = await handle.read(buffer, 0, maxBytes, 0)
+    return buffer.subarray(0, bytesRead)
+  } finally {
+    await handle.close()
+  }
+}
+
+/** Build a binary preview (hexdump payload) from a byte buffer, capped to `maxBinary`. */
+function binaryFrom(name: string, size: number, bytes: Buffer, maxBinary: number): FilePreview {
+  const head = bytes.subarray(0, Math.min(maxBinary, bytes.length))
+  return {
+    kind: 'binary',
+    name,
+    size,
+    bytes: head.toString('base64'),
+    truncated: size > maxBinary,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // preview — read one file and return a discriminated preview.
 // ---------------------------------------------------------------------------
@@ -98,6 +122,7 @@ async function preview(
   maxText: number,
   maxImage: number,
   mode: PreviewMode = 'auto',
+  maxBinary = 64 * 1024,
 ): Promise<FilePreview> {
   const target = await inside(root, input)
   const info = await stat(target.absolute)
@@ -105,7 +130,10 @@ async function preview(
   const name = target.path.split('/').at(-1) ?? target.path
   const extension = extname(name).toLowerCase()
   if (info.size === 0) return { kind: 'empty', name, size: 0 }
-  if (mode === 'binary') return { kind: 'binary', name, size: info.size }
+  if (mode === 'binary') {
+    const head = await readHead(target.absolute, maxBinary)
+    return binaryFrom(name, info.size, head, maxBinary)
+  }
   if (mode === 'text') {
     if (info.size > maxText) return { kind: 'too-large', name, size: info.size }
     const body = await readFile(target.absolute)
@@ -117,9 +145,13 @@ async function preview(
     const body = await readFile(target.absolute)
     return { kind: 'image', name, mime, dataUrl: `data:${mime};base64,${body.toString('base64')}`, size: info.size }
   }
-  if (info.size > maxText) return { kind: 'too-large', name, size: info.size }
+  if (info.size > maxText) {
+    const head = await readHead(target.absolute, maxBinary)
+    if (head.includes(0)) return binaryFrom(name, info.size, head, maxBinary)
+    return { kind: 'too-large', name, size: info.size }
+  }
   const body = await readFile(target.absolute)
-  if (body.includes(0)) return { kind: 'binary', name, size: info.size }
+  if (body.includes(0)) return binaryFrom(name, info.size, body, maxBinary)
   return { kind: 'text', name, extension, content: body.toString('utf8'), size: info.size }
 }
 
@@ -165,6 +197,7 @@ async function requestBody(req: IncomingMessage): Promise<Record<string, unknown
 export function apply(ctx: HostContext, config: Config = {}): void {
   const maxText = config.maxTextBytes ?? 2 * 1024 * 1024
   const maxImage = config.maxImageBytes ?? 10 * 1024 * 1024
+  const maxBinary = config.maxBinaryBytes ?? 64 * 1024
 
   ctx.effect(() => {
     const disposeRoute = ctx.webServer.register({
@@ -188,7 +221,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
             if (mode !== 'auto' && mode !== 'text' && mode !== 'binary') {
               return json(res, 400, { ok: false, error: 'unknown mode' })
             }
-            return json(res, 200, { ok: true, preview: await preview(root, path, maxText, maxImage, mode as PreviewMode) })
+            return json(res, 200, { ok: true, preview: await preview(root, path, maxText, maxImage, mode as PreviewMode, maxBinary) })
           }
           if (action === 'resolve-path') {
             const target = await inside(root, path)

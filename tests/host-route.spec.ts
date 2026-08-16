@@ -192,11 +192,13 @@ describe('preview', () => {
     expect(result.size).toBe(8)
   })
 
-  test('returns binary for content with a NUL byte', async () => {
+  test('returns binary with hexdump bytes for content with a NUL byte', async () => {
     const result = await preview(root, 'binary.bin', 1024, 1024)
     expect(result.kind).toBe('binary')
     expect(result.name).toBe('binary.bin')
     expect(result.size).toBe(3)
+    expect(result.bytes).toBe('AAEC') // [0x00, 0x01, 0x02]
+    expect(result.truncated).toBe(false)
   })
 
   test('returns too-large for a file over the text cap', async () => {
@@ -213,16 +215,33 @@ describe('preview', () => {
     expect(result.size).toBe(8)
   })
 
-  test('mode binary returns binary for a text file', async () => {
+  test('mode binary returns binary hexdump bytes for a text file', async () => {
     const result = await preview(root, 'a.txt', 1024, 1024, 'binary')
     expect(result.kind).toBe('binary')
     expect(result.name).toBe('a.txt')
     expect(result.size).toBe(5)
+    expect(result.bytes).toBe('aGVsbG8=') // 'hello'
+    expect(result.truncated).toBe(false)
   })
 
   test('mode binary returns empty for a zero-byte file', async () => {
     const result = await preview(root, 'empty.txt', 1024, 1024, 'binary')
     expect(result.kind).toBe('empty')
+  })
+
+  test('binary file larger than the text cap returns hexdump, not too-large', async () => {
+    // binary.bin is 3 bytes; maxText=2 forces the >cap sniff path.
+    const result = await preview(root, 'binary.bin', 2, 1024)
+    expect(result.kind).toBe('binary')
+    expect(result.bytes).toBe('AAEC')
+    expect(result.truncated).toBe(false)
+  })
+
+  test('binary preview truncates to the maxBinary cap', async () => {
+    const result = await preview(root, 'binary.bin', 1024, 1024, 'auto', 2)
+    expect(result.kind).toBe('binary')
+    expect(result.bytes).toBe('AAE=') // [0x00, 0x01]
+    expect(result.truncated).toBe(true)
   })
 
   test('mode text reads a binary file as UTF-8 text', async () => {

@@ -13,7 +13,7 @@ export type FilePreview =
   | { kind: 'text'; name: string; extension: string; content: string; size: number }
   | { kind: 'image'; name: string; mime: string; dataUrl: string; size: number }
   | { kind: 'empty'; name: string; size: 0 }
-  | { kind: 'binary'; name: string; size: number }
+  | { kind: 'binary'; name: string; size: number; bytes: string /* base64 */; truncated: boolean }
   | { kind: 'too-large'; name: string; size: number }
 
 export type ApiResponse =
@@ -28,6 +28,8 @@ export interface Config {
   maxTextBytes?: number
   /** Single image-file read cap in bytes (default 10 MiB). */
   maxImageBytes?: number
+  /** Single binary-file hexdump read cap in bytes (default 64 KiB). */
+  maxBinaryBytes?: number
 }
 
 export type PreviewMode = 'auto' | 'text' | 'binary'

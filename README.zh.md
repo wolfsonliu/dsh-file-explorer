@@ -16,7 +16,7 @@ DSH Web 的文件浏览器。页面边缘有一个浮动「文件」按钮，点
 2. **左抽屉**：左侧全高抽屉（fixed），标题栏带刷新 + 关闭按钮，内含工作区文件树。
 3. **文件浏览**：懒加载目录树，跟随当前会话的工作区根目录，切换会话时自动刷新。
 4. **悬浮预览框**：点文件在右侧浮出可拖拽/缩放/最小化/关闭的预览框。
-5. **文件预览**：内置文本（源码）、Markdown（渲染 + 源码切换）、图片（data URL）、二进制（文件信息）预览。
+5. **文件预览**：内置文本（源码）、Markdown（渲染 + 源码切换 + 行内编辑）、图片（data URL）、二进制（hexdump）预览。
 6. **可扩展预览**：通过 `fileExplorer` 服务按扩展名注册预览器，未注册的扩展名回退到 `binary` 预览。新增蛋白质结构（`.cif`/`.pdb` → Mol*）、CSV、PDF 等预览器无需改动核心。
 7. **行操作菜单**：hover 文件/目录行末尾出现「···」菜单（打开 / 复制绝对路径 / 复制相对路径）。
 8. **快捷键**：`Ctrl/Cmd+Shift+E` 开关文件浏览器抽屉。
@@ -52,12 +52,14 @@ dsh web
       config:
         maxTextBytes: 2097152
         maxImageBytes: 10485760
+        maxBinaryBytes: 65536
 ```
 
-| 配置项          | 默认值 | 说明                               |
-| --------------- | -----: | ---------------------------------- |
-| `maxTextBytes`  |  2 MiB | 可预览的单个文本文件大小上限       |
-| `maxImageBytes` | 10 MiB | 可预览的单个图片大小上限           |
+| 配置项           | 默认值 | 说明                                   |
+| ---------------- | -----: | -------------------------------------- |
+| `maxTextBytes`   |  2 MiB | 可预览的单个文本文件大小上限           |
+| `maxImageBytes`  | 10 MiB | 可预览的单个图片大小上限               |
+| `maxBinaryBytes` | 64 KiB | 二进制文件 hexdump 读取的字节数上限    |
 
 ## 数据层
 
@@ -68,7 +70,7 @@ dsh web
 - `resolve-path`：解析工作区相对路径为绝对路径与父路径。
 - `write`：把 UTF-8 文本写入工作区文件（POST body `{ path, content }`），返回保存的相对路径。
 
-所有路径经 `inside(root, input)` 工作区包含校验（含 `realpath` 符号链接解析），越界路径一律拒绝。文本/二进制通过 NUL 字节扫描判别，图片按扩展名映射 MIME 并返回 data URL。
+所有路径经 `inside(root, input)` 工作区包含校验（含 `realpath` 符号链接解析），越界路径一律拒绝。文本/二进制通过 NUL 字节扫描判别，图片按扩展名映射 MIME 并返回 data URL。二进制预览返回前 `maxBinaryBytes` 字节的 base64（附带 `truncated` 标志），用于 `hexdump -C` 风格的十六进制转储。
 
 ## Model Experience
 
@@ -76,11 +78,11 @@ dsh web
 
 ## Known Limitations and Deferred Work
 
-- **仅预览，无编辑**：文本编辑（CodeMirror 6）与自动保存属于后续阶段。
+- **仅 Markdown 支持编辑**：内置 Markdown 预览支持行内编辑/保存（切换文件或关闭面板时自动保存）；全文件类型的 CodeMirror 文本编辑属于后续阶段。
 - **单文件预览**：无多标签页、无行内 diff。
 - **不轮询刷新**：目录树仅手动刷新（↻），切换会话时自动刷新。
 - **文件链接拦截为 best-effort**：依赖 DSH 会话区的 CSS 类名（`_fileLink`、`data-produced-files-row`），上游 UI 结构调整时需同步选择器。
-- **大文件**：整文件读取受 `maxTextBytes`/`maxImageBytes` 上限约束，流式读取未实现。
+- **大文件**：文本/图片读取受 `maxTextBytes`/`maxImageBytes` 上限约束，二进制 hexdump 只读取前 `maxBinaryBytes` 字节；流式读取未实现。
 
 ## 开发预览插件
 

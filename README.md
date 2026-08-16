@@ -16,7 +16,7 @@ A file explorer for DSH Web. A floating "Files" button opens a left drawer (work
 2. **Left drawer**: a full-height fixed drawer with a title bar (refresh + close buttons) holding the workspace file tree.
 3. **File browsing**: a lazy-loading directory tree that follows the current session's workspace root and refreshes on session switch.
 4. **Floating preview**: clicking a file floats a draggable/resizable/minimizable/closable preview box on the right.
-5. **Previewers**: built-in text (source), Markdown (rendered + source toggle), image (data URL), and binary (file info) previews.
+5. **Previewers**: built-in text (source), Markdown (rendered + source toggle + inline edit), image (data URL), and binary (hexdump) previews.
 6. **Extensible previews**: register previewers by extension through the `fileExplorer` service; unregistered extensions fall back to the `binary` preview. Add protein-structure (`.cif`/`.pdb` → Mol*), CSV, PDF, etc. previewers without touching the core.
 7. **Row actions menu**: hover a file/directory row to reveal a "···" menu (Open / Copy absolute path / Copy relative path).
 8. **Shortcut**: `Ctrl/Cmd+Shift+E` toggles the file drawer.
@@ -52,12 +52,14 @@ The bundle enables the following defaults:
       config:
         maxTextBytes: 2097152
         maxImageBytes: 10485760
+        maxBinaryBytes: 65536
 ```
 
-| Config          | Default | Description                                 |
-| --------------- | ------: | ------------------------------------------- |
-| `maxTextBytes`  |   2 MiB | Max size of a single text file to preview   |
-| `maxImageBytes` |  10 MiB | Max size of a single image file to preview  |
+| Config           | Default | Description                                        |
+| ---------------- | ------: | -------------------------------------------------- |
+| `maxTextBytes`   |   2 MiB | Max size of a single text file to preview          |
+| `maxImageBytes`  |  10 MiB | Max size of a single image file to preview         |
+| `maxBinaryBytes` |  64 KiB | Max bytes of a binary file to read for its hexdump |
 
 ## Data layer
 
@@ -68,7 +70,7 @@ The host half registers a `/file-explorer/api` exact route via `ctx.webServer.re
 - `resolve-path`: resolves a workspace-relative path to an absolute path and parent path.
 - `write`: writes UTF-8 text to a workspace file (POST body `{ path, content }`), returning the saved relative path.
 
-All paths pass a workspace-containment check (`inside(root, input)`, including `realpath` symlink resolution); out-of-workspace paths are rejected. Text/binary is detected by a NUL-byte scan; images map extensions to MIME and return a data URL.
+All paths pass a workspace-containment check (`inside(root, input)`, including `realpath` symlink resolution); out-of-workspace paths are rejected. Text/binary is detected by a NUL-byte scan; images map extensions to MIME and return a data URL. Binary previews return the first `maxBinaryBytes` as base64 (plus a `truncated` flag) for a `hexdump -C`-style hex dump.
 
 ## Model Experience
 
@@ -76,11 +78,11 @@ This plugin is a pure UI surface — it emits no session events and does not mod
 
 ## Known Limitations and Deferred Work
 
-- **Preview only, no editing**: text editing (CodeMirror 6) and autosave are a later phase.
+- **Markdown-only editing**: built-in Markdown previews support inline edit/save (with autosave on file switch and panel close); full CodeMirror text editing across all files is a later phase.
 - **Single-file preview**: no multi-tab or inline diff.
 - **No polling refresh**: the tree only refreshes manually (↻) or on session switch.
 - **File-link interception is best-effort**: it relies on DSH's CSS class names (`_fileLink`, `data-produced-files-row`); update the selectors if the upstream UI changes.
-- **Large files**: whole-file reads are bounded by `maxTextBytes`/`maxImageBytes`; streaming is not implemented.
+- **Large files**: text/image reads are bounded by `maxTextBytes`/`maxImageBytes`, and binary hexdumps read only the first `maxBinaryBytes`; streaming is not implemented.
 
 ## Developing preview plugins
 

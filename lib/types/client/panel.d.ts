@@ -13,5 +13,7 @@ export interface FileExplorerPanelProps {
     /** Preview content rendered in the body. */
     children: ReactNode;
     initialVisible?: boolean;
+    /** Called synchronously just before the panel is closed via the close button. */
+    onClose?: () => void;
 }
 export declare const FileExplorerPanel: React.ForwardRefExoticComponent<FileExplorerPanelProps & React.RefAttributes<FileExplorerPanelHandle>>;

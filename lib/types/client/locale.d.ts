@@ -18,6 +18,12 @@ export declare const ZH: {
     readonly emptyFile: "空文件";
     readonly binary: "无法预览此文件（二进制）";
     readonly tooLarge: "文件过大，无法预览";
+    readonly edit: "编辑";
+    readonly save: "保存";
+    readonly cancel: "取消";
+    readonly mdPreview: "预览";
+    readonly saving: "保存中…";
+    readonly saveFailed: "保存失败";
 };
 export declare const EN: {
     readonly title: "File Explorer";
@@ -37,6 +43,12 @@ export declare const EN: {
     readonly emptyFile: "Empty file";
     readonly binary: "Cannot preview binary file";
     readonly tooLarge: "File too large to preview";
+    readonly edit: "Edit";
+    readonly save: "Save";
+    readonly cancel: "Cancel";
+    readonly mdPreview: "Preview";
+    readonly saving: "Saving…";
+    readonly saveFailed: "Save failed";
 };
 /** Register the plugin's dictionaries; returns a disposer for both locales. */
 export declare function registerFileExplorerLocale(ctx: {

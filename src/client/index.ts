@@ -88,6 +88,7 @@ export function apply(ctx: ClientContext): void {
         ref: appRef,
         sessionId,
         t,
+        writeFile,
         fetchList: async (sid, path) => {
           try {
             const res = await fetch(

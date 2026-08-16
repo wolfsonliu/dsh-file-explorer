@@ -304,4 +304,47 @@ describe('apply', () => {
       expect(dispose).toHaveBeenCalledTimes(1)
     }
   })
+
+  test('injects writeFile so the markdown edit button appears for a .md file', async () => {
+    // Override the global fetch stub: markdown preview returns text/md.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: unknown) => {
+        const u = String(url)
+        if (u.includes('action=list')) {
+          return Promise.resolve({ json: () => Promise.resolve({ entries: [] }) })
+        }
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              preview: { kind: 'text', name: 'readme.md', extension: 'md', content: '# Hi', size: 4 },
+            }),
+        })
+      }),
+    )
+
+    const fakeCtx = createFakeCtx()
+    await act(async () => {
+      apply(fakeCtx)
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = `
+    <div data-produced-files-row>
+      <button class="md_file" title="readme.md">📄</button>
+    </div>
+  `
+    document.body.appendChild(container)
+
+    const button = container.querySelector('button') as HTMLButtonElement
+    await act(async () => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    })
+    await flush()
+
+    const panel = document.querySelector('[data-fe-host] [data-visible]')
+    expect(panel).not.toBeNull()
+    // writeFile 被注入 → 编辑入口出现（否则不会渲染 [data-fe-edit="edit"]）。
+    expect(panel!.querySelector('[data-fe-edit="edit"]')).not.toBeNull()
+  })
 })

@@ -4,3 +4,4 @@
       config:
         maxTextBytes: 2097152
         maxImageBytes: 10485760
+        maxBinaryBytes: 65536

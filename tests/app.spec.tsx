@@ -523,4 +523,26 @@ describe('FileExplorerApp', () => {
     expect(container.textContent).toContain('other')
     expect(container.textContent).not.toContain('# Edited')
   })
+
+  test('preview button saves the draft and switches back to rendered markdown', async () => {
+    const props = makeProps({ fetchPreview: vi.fn().mockResolvedValue(cannedMdPreview) })
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    act(() => (container.querySelector('[data-fe-edit="edit"]') as HTMLElement).click())
+    setTextarea(container, '# Edited')
+
+    const previewBtn = container.querySelector('[data-fe-edit="preview"]') as HTMLElement
+    expect(previewBtn).not.toBeNull()
+    act(() => previewBtn.click())
+    await flush()
+
+    expect(props.writeFile).toHaveBeenCalledWith('readme.md', '# Edited')
+    // 切回渲染视图：textarea 消失，渲染出 <h1>Edited</h1>。
+    expect(container.querySelector('[data-fe-edit="textarea"]')).toBeNull()
+    expect(container.querySelector('h1')!.textContent).toBe('Edited')
+  })
 })

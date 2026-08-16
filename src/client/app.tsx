@@ -151,6 +151,15 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       void saveDraft().catch(() => {})
     }, [saveDraft])
 
+    const previewEditing = useCallback(async () => {
+      try {
+        await saveDraft()
+      } catch {
+        return
+      }
+      setEditing(false)
+    }, [saveDraft])
+
     const helpers: FileActionHelpers = { openFile, openFileAsText, openFileAsBinary, copyAbsolutePath, copyRelativePath }
 
     useImperativeHandle(
@@ -187,6 +196,9 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
                 </button>
                 <button className="dsh-fe-md-btn" data-fe-edit="save" onClick={handleSave} disabled={saving}>
                   {saving ? t('saving') : t('save')}
+                </button>
+                <button className="dsh-fe-md-btn" data-fe-edit="preview" onClick={() => { void previewEditing() }} disabled={saving}>
+                  {t('mdPreview')}
                 </button>
               </>
             ) : (

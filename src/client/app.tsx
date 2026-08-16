@@ -73,6 +73,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     const previewPanelRef = useRef<FileExplorerPanelHandle>(null)
     const treeRef = useRef<FileTreeHandle>(null)
     const selectedPathRef = useRef<string | null>(null)
+    const saveRef = useRef<{ path: string; promise: Promise<void> } | null>(null)
 
     const openDrawer = useCallback(() => setDrawerOpen(true), [])
     const closeDrawer = useCallback(() => setDrawerOpen(false), [])
@@ -93,26 +94,36 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       setDirty(false)
     }, [])
 
-    const saveDraft = useCallback(async (): Promise<void> => {
-      if (writeFile === undefined || selectedPath === null) return
+    const saveDraft = useCallback((): Promise<void> => {
+      if (writeFile === undefined || selectedPath === null) return Promise.resolve()
       const targetPath = selectedPath
+      if (saveRef.current !== null && saveRef.current.path === targetPath) {
+        return saveRef.current.promise
+      }
       setSaving(true)
       setSaveError(null)
-      setDirty(false)
-      try {
-        await writeFile(targetPath, draft)
-        if (selectedPathRef.current === targetPath) {
-          setPreviewData((prev) => (prev && prev.kind === 'text' ? { ...prev, content: draft } : prev))
+      const promise = (async (): Promise<void> => {
+        try {
+          await writeFile(targetPath, draft)
+          if (selectedPathRef.current === targetPath) {
+            setPreviewData((prev) => (prev && prev.kind === 'text' ? { ...prev, content: draft } : prev))
+            setDirty(false)
+          }
+        } catch (error) {
+          if (selectedPathRef.current === targetPath) {
+            setDirty(true)
+            setSaveError(error instanceof Error ? error.message : String(error))
+          }
+          throw error
+        } finally {
+          if (saveRef.current !== null && saveRef.current.path === targetPath) {
+            saveRef.current = null
+            setSaving(false)
+          }
         }
-      } catch (error) {
-        if (selectedPathRef.current === targetPath) {
-          setDirty(true)
-          setSaveError(error instanceof Error ? error.message : String(error))
-        }
-        throw error
-      } finally {
-        setSaving(false)
-      }
+      })()
+      saveRef.current = { path: targetPath, promise }
+      return promise
     }, [writeFile, selectedPath, draft])
 
     const handleSave = useCallback(() => {
@@ -136,6 +147,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       // The edit session ends when the panel closes, regardless of save outcome.
       setEditing(false)
       setDirty(false)
+      setSaving(false)
       setDraft('')
       setSaveError(null)
     }, [editing, dirty, writeFile, saveDraft])

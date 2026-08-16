@@ -669,4 +669,39 @@ describe('FileExplorerApp', () => {
 
     expect(props.fetchPreview).toHaveBeenCalledWith('s1', 'other.txt')
   })
+
+  test('a switch during a failing in-flight save aborts and preserves the draft', async () => {
+    let rejectWrite: ((e: Error) => void) | undefined
+    const writeFile = vi.fn().mockImplementation(
+      () => new Promise<void>((_resolve, reject) => { rejectWrite = reject }),
+    )
+    const props = makeProps({
+      writeFile,
+      fetchPreview: vi.fn().mockImplementation((_sid: string, path: string) =>
+        Promise.resolve(path === 'readme.md' ? cannedMdPreview : otherPreview),
+      ),
+    })
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    act(() => (container.querySelector('[data-fe-edit="edit"]') as HTMLElement).click())
+    setTextarea(container, '# Edited')
+
+    // Start a save (write pending), then switch files while it is in flight.
+    act(() => (container.querySelector('[data-fe-edit="save"]') as HTMLElement).click())
+    act(() => ref.current!.openFile('other.txt'))
+    await flush()
+
+    // The in-flight save now fails.
+    await act(async () => { rejectWrite!(new Error('disk full')) })
+    await flush()
+
+    // Switch aborted: target not fetched, still editing, error shown.
+    expect(props.fetchPreview).not.toHaveBeenCalledWith('s1', 'other.txt')
+    expect(container.querySelector('[data-fe-edit="textarea"]')).not.toBeNull()
+    expect(container.textContent).toContain('disk full')
+  })
 })

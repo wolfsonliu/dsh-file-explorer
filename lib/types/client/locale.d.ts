@@ -18,6 +18,7 @@ export declare const ZH: {
     readonly emptyFile: "空文件";
     readonly binary: "无法预览此文件（二进制）";
     readonly tooLarge: "文件过大，无法预览";
+    readonly hexTruncated: "文件较大，仅显示前 {shown} / {total}";
     readonly edit: "编辑";
     readonly save: "保存";
     readonly cancel: "取消";
@@ -43,6 +44,7 @@ export declare const EN: {
     readonly emptyFile: "Empty file";
     readonly binary: "Cannot preview binary file";
     readonly tooLarge: "File too large to preview";
+    readonly hexTruncated: "Showing first {shown} of {total}";
     readonly edit: "Edit";
     readonly save: "Save";
     readonly cancel: "Cancel";

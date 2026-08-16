@@ -27,6 +27,8 @@ export type FilePreview = {
     kind: 'binary';
     name: string;
     size: number;
+    bytes: string;
+    truncated: boolean;
 } | {
     kind: 'too-large';
     name: string;
@@ -55,5 +57,7 @@ export interface Config {
     maxTextBytes?: number;
     /** Single image-file read cap in bytes (default 10 MiB). */
     maxImageBytes?: number;
+    /** Single binary-file hexdump read cap in bytes (default 64 KiB). */
+    maxBinaryBytes?: number;
 }
 export type PreviewMode = 'auto' | 'text' | 'binary';

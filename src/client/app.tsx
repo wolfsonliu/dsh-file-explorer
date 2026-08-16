@@ -11,7 +11,7 @@ import { FileExplorerDrawer, FloatingFileButton } from './drawer.tsx'
 import { FileTree, type FileTreeHandle } from './file-tree.tsx'
 import type { FileActionHelpers } from './file-action.ts'
 import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
-import { BinaryPreview, resolvePreviewFor, TextPreview } from './preview/index.ts'
+import { BinaryPreview, MarkdownPreview, resolvePreviewFor, TextPreview } from './preview/index.ts'
 import type { PreviewProps } from './preview/registry.ts'
 import type { Translate } from './locale.ts'
 
@@ -26,6 +26,8 @@ export interface FileExplorerAppProps {
   fetchPreview: (sessionId: string, path: string, mode?: PreviewMode) => Promise<FilePreview | null>
   /** Translator for localized UI copy. */
   t: Translate
+  /** Write a file back (injectable for tests); enables built-in markdown editing. */
+  writeFile?: (path: string, content: string) => Promise<void>
 }
 
 export interface FileExplorerAppHandle {
@@ -57,11 +59,13 @@ function basenameOf(filePath: string): string {
 
 /** Composes the floating button, left drawer, and floating preview box. */
 export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerAppProps>(
-  function FileExplorerApp({ sessionId, fetchList, fetchPreview, t }, ref) {
+  function FileExplorerApp({ sessionId, fetchList, fetchPreview, t, writeFile }, ref) {
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [selectedPath, setSelectedPath] = useState<string | null>(null)
     const [previewData, setPreviewData] = useState<FilePreview | null>(null)
     const [viewMode, setViewMode] = useState<PreviewMode>('auto')
+    const [editing, setEditing] = useState(false)
+    const [draft, setDraft] = useState('')
 
     const previewPanelRef = useRef<FileExplorerPanelHandle>(null)
     const treeRef = useRef<FileTreeHandle>(null)
@@ -115,6 +119,16 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       await navigator.clipboard.writeText(path)
     }, [])
 
+    const startEditing = useCallback(() => {
+      if (previewData?.kind !== 'text') return
+      setDraft(previewData.content)
+      setEditing(true)
+    }, [previewData])
+
+    const cancelEditing = useCallback(() => {
+      setEditing(false)
+    }, [])
+
     const helpers: FileActionHelpers = { openFile, openFileAsText, openFileAsBinary, copyAbsolutePath, copyRelativePath }
 
     useImperativeHandle(
@@ -128,9 +142,42 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       [openDrawer, closeDrawer, toggleDrawer, openFile],
     )
 
+    const isEditableMarkdown =
+      writeFile !== undefined &&
+      viewMode === 'auto' &&
+      previewData !== null &&
+      previewData.kind === 'text' &&
+      resolvePreviewFor(previewData, extensionOf(selectedPath ?? '')) === MarkdownPreview
+
     let previewChildren: ReactNode
     if (previewData === null) {
       previewChildren = <div className="dsh-fe-placeholder">{t('selectFile')}</div>
+    } else if (isEditableMarkdown) {
+      previewChildren = (
+        <div className="dsh-fe-md">
+          <div className="dsh-fe-md-toolbar">
+            {editing ? (
+              <button className="dsh-fe-md-btn" data-fe-edit="cancel" onClick={cancelEditing}>
+                {t('cancel')}
+              </button>
+            ) : (
+              <button className="dsh-fe-md-btn" data-fe-edit="edit" onClick={startEditing}>
+                {t('edit')}
+              </button>
+            )}
+          </div>
+          {editing ? (
+            <textarea
+              className="dsh-fe-md-editor"
+              data-fe-edit="textarea"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+          ) : (
+            <MarkdownPreview preview={previewData} filePath={selectedPath ?? ''} activeView="preview" t={t} />
+          )}
+        </div>
+      )
     } else {
       const PreviewComponent =
         viewMode === 'text'

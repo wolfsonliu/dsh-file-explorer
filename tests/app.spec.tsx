@@ -3,9 +3,10 @@ import { describe, expect, test, vi, beforeAll, beforeEach, afterEach } from 'vi
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React, { createRef } from 'react'
-import { FileExplorerApp, type FileExplorerAppHandle } from '../src/client/app.tsx'
+import { FileExplorerApp, type FileExplorerAppHandle, type FileExplorerAppProps } from '../src/client/app.tsx'
 import { registerPreview } from '../src/client/preview/registry.ts'
 import type { PreviewProps } from '../src/client/preview/registry.ts'
+import { MarkdownPreview } from '../src/client/preview/markdown.tsx'
 import { registerBuiltinFileActions } from '../src/client/file-action.ts'
 import type { BrowserEntry, FilePreview } from '../src/protocol.ts'
 
@@ -25,6 +26,14 @@ const cannedPreview: FilePreview = {
   size: 11,
 }
 
+const cannedMdPreview: FilePreview = {
+  kind: 'text',
+  name: 'readme.md',
+  extension: 'md',
+  content: '# Hi',
+  size: 4,
+}
+
 /** Stub preview component rendering a stable marker plus the text content. */
 const TxtPreview = ({ preview }: PreviewProps) => {
   if (preview.kind === 'text') {
@@ -35,6 +44,8 @@ const TxtPreview = ({ preview }: PreviewProps) => {
 
 // Register the stub so `resolvePreview('txt')` resolves to it for this suite.
 registerPreview('txt', TxtPreview)
+
+registerPreview('md', MarkdownPreview)
 
 // Register built-in file actions once for this whole spec file (the registry
 // is module-level and not idempotent).
@@ -79,12 +90,14 @@ async function flush(): Promise<void> {
   })
 }
 
-function makeProps() {
+function makeProps(overrides: Partial<FileExplorerAppProps> = {}) {
   return {
     sessionId: 's1' as string | undefined,
     fetchList: vi.fn().mockResolvedValue(rootEntries),
     fetchPreview: vi.fn().mockResolvedValue(cannedPreview),
     t: (key: string) => key,
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
   }
 }
 
@@ -391,5 +404,50 @@ describe('FileExplorerApp', () => {
     await flush()
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('notes.txt')
+  })
+
+  test('markdown preview shows an edit button; entering edit prefills a textarea and cancel returns to preview', async () => {
+    const props = makeProps({ fetchPreview: vi.fn().mockResolvedValue(cannedMdPreview) })
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    const editBtn = container.querySelector('[data-fe-edit="edit"]') as HTMLElement
+    expect(editBtn).not.toBeNull()
+
+    act(() => editBtn.click())
+    const textarea = container.querySelector('[data-fe-edit="textarea"]') as HTMLTextAreaElement
+    expect(textarea).not.toBeNull()
+    expect(textarea.value).toBe('# Hi')
+
+    const cancelBtn = container.querySelector('[data-fe-edit="cancel"]') as HTMLElement
+    act(() => cancelBtn.click())
+    expect(container.querySelector('[data-fe-edit="textarea"]')).toBeNull()
+    expect(container.querySelector('h1')!.textContent).toBe('Hi')
+    expect(props.writeFile).not.toHaveBeenCalled()
+  })
+
+  test('non-markdown text preview has no edit button', async () => {
+    const props = makeProps()
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('notes.txt'))
+    await flush()
+
+    expect(container.querySelector('[data-fe-edit="edit"]')).toBeNull()
+  })
+
+  test('markdown preview has no edit button when writeFile is absent', async () => {
+    const props = makeProps({ fetchPreview: vi.fn().mockResolvedValue(cannedMdPreview), writeFile: undefined })
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    expect(container.querySelector('[data-fe-edit="edit"]')).toBeNull()
   })
 })

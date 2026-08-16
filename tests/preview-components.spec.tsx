@@ -111,6 +111,12 @@ describe('TextPreview', () => {
     expect(code!.textContent).toBe('const x = 1')
   })
 
+  test('renders a .dsh-fe-code pre wrapper', () => {
+    const p = props({ kind: 'text', name: 'hello.ts', content: 'const x = 1', extension: 'ts', size: 13 })
+    const container = render(<TextPreview {...p} />)
+    expect(container.querySelector('pre.dsh-fe-code')).toBeTruthy()
+  })
+
   test('renders StatusPreview for non-text kind', () => {
     const p = props({ kind: 'binary', name: 'data.bin', size: 100 })
     const container = render(<TextPreview {...p} />)
@@ -170,6 +176,21 @@ describe('MarkdownPreview', () => {
     const code = container.querySelector('code')
     expect(code).toBeTruthy()
     expect(code!.textContent).toBe('# Hi')
+  })
+
+  test('renders source view inside a .dsh-fe-code pre wrapper', () => {
+    const p = {
+      ...props({
+        kind: 'text',
+        name: 'readme.md',
+        content: '# Hi',
+        extension: 'md',
+        size: 4,
+      }),
+      activeView: 'source' as const,
+    }
+    const container = render(<MarkdownPreview {...p} />)
+    expect(container.querySelector('pre.dsh-fe-code')).toBeTruthy()
   })
 
   test('renders StatusPreview for non-text kind', () => {

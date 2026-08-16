@@ -162,6 +162,7 @@ export const PANEL_CSS = `
 .dsh-fe-preview-content { padding: 12px; }
 .dsh-fe-code {
   margin: 0;
+  padding: 16px;
   white-space: pre;
   tab-size: 2;
   font: 13px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;

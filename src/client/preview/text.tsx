@@ -5,7 +5,7 @@ import { StatusPreview } from './status.tsx'
 export const TextPreview: ComponentType<PreviewProps> = (props) => {
   if (props.preview.kind === 'text') {
     return (
-      <pre>
+      <pre className="dsh-fe-code">
         <code>{props.preview.content}</code>
       </pre>
     )

@@ -8,7 +8,7 @@ export const MarkdownPreview: ComponentType<PreviewProps> = (props) => {
   if (props.preview.kind === 'text') {
     if (props.activeView === 'source') {
       return (
-        <pre>
+        <pre className="dsh-fe-code">
           <code>{props.preview.content}</code>
         </pre>
       )

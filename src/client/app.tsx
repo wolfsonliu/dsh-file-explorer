@@ -133,6 +133,11 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       if (editing && dirty && writeFile !== undefined) {
         void saveDraft().catch(() => {})
       }
+      // The edit session ends when the panel closes, regardless of save outcome.
+      setEditing(false)
+      setDirty(false)
+      setDraft('')
+      setSaveError(null)
     }, [editing, dirty, writeFile, saveDraft])
 
     const openFileWithMode = useCallback(

@@ -639,4 +639,34 @@ describe('FileExplorerApp', () => {
     expect(props.writeFile).toHaveBeenCalledWith('readme.md', '# Edited')
     expect(container.querySelector('[data-visible]')).toBeNull()
   })
+
+  test('a failed close-save does not block subsequent navigation', async () => {
+    const props = makeProps({
+      fetchPreview: vi.fn().mockImplementation((_sid: string, path: string) =>
+        Promise.resolve(path === 'readme.md' ? cannedMdPreview : otherPreview),
+      ),
+    })
+    props.writeFile = vi.fn().mockRejectedValue(new Error('disk full'))
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    act(() => (container.querySelector('[data-fe-edit="edit"]') as HTMLElement).click())
+    setTextarea(container, '# Edited')
+
+    // Close the panel with a failing save.
+    act(() => (container.querySelector('[data-fe-action="close"]') as HTMLElement).click())
+    await flush()
+    expect(container.querySelector('[data-visible]')).toBeNull()
+
+    // Reopen and switch to another file: must not be blocked.
+    await act(async () => {
+      await ref.current!.openFile('other.txt')
+    })
+    await flush()
+
+    expect(props.fetchPreview).toHaveBeenCalledWith('s1', 'other.txt')
+  })
 })

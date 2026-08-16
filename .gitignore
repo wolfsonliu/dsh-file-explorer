@@ -6,8 +6,8 @@ node_modules/
 .dsh/
 
 # Design docs (to be polished and published in a separate repo later).
-docs/
+docs/specs/*
+docs/plans/*
 
 # Exploration clones — reference material only, not part of this project.
-dsh-source/
-dsh-side-panel-ref/
+ref/*

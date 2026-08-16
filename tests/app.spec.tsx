@@ -704,4 +704,29 @@ describe('FileExplorerApp', () => {
     expect(container.querySelector('[data-fe-edit="textarea"]')).not.toBeNull()
     expect(container.textContent).toContain('disk full')
   })
+
+  test('the editor is disabled while a save is in flight', async () => {
+    let resolveWrite: (() => void) | undefined
+    const writeFile = vi.fn().mockImplementation(() => new Promise<void>((resolve) => { resolveWrite = resolve }))
+    const props = makeProps({ writeFile, fetchPreview: vi.fn().mockResolvedValue(cannedMdPreview) })
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    act(() => (container.querySelector('[data-fe-edit="edit"]') as HTMLElement).click())
+    setTextarea(container, '# Hi!')
+
+    act(() => (container.querySelector('[data-fe-edit="save"]') as HTMLElement).click())
+
+    // Save is pending: the editor must be disabled so the draft cannot change.
+    const textarea = container.querySelector('[data-fe-edit="textarea"]') as HTMLTextAreaElement
+    expect(textarea.disabled).toBe(true)
+
+    await act(async () => { resolveWrite!() })
+    await flush()
+
+    expect(textarea.disabled).toBe(false)
+  })
 })

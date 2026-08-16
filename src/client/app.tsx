@@ -265,6 +265,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
               className="dsh-fe-md-editor"
               data-fe-edit="textarea"
               value={draft}
+              disabled={saving}
               onChange={(e) => {
                 setDraft(e.target.value)
                 setDirty(true)

@@ -94,8 +94,15 @@ async function readHead(absolute: string, maxBytes: number): Promise<Buffer> {
   const handle = await open(absolute, 'r')
   try {
     const buffer = Buffer.alloc(maxBytes)
-    const { bytesRead } = await handle.read(buffer, 0, maxBytes, 0)
-    return buffer.subarray(0, bytesRead)
+    // A single read may return fewer bytes than requested (short read), so loop
+    // until the buffer is full or EOF (bytesRead === 0).
+    let offset = 0
+    while (offset < maxBytes) {
+      const { bytesRead } = await handle.read(buffer, offset, maxBytes - offset, offset)
+      if (bytesRead === 0) break
+      offset += bytesRead
+    }
+    return buffer.subarray(0, offset)
   } finally {
     await handle.close()
   }
@@ -192,12 +199,20 @@ async function requestBody(req: IncomingMessage): Promise<Record<string, unknown
 }
 
 // ---------------------------------------------------------------------------
+// capBytes — normalize a byte cap to a positive integer, falling back to a
+// default when the configured value is missing or invalid.
+// ---------------------------------------------------------------------------
+function capBytes(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback
+}
+
+// ---------------------------------------------------------------------------
 // apply — register the HTTP route.
 // ---------------------------------------------------------------------------
 export function apply(ctx: HostContext, config: Config = {}): void {
-  const maxText = config.maxTextBytes ?? 2 * 1024 * 1024
-  const maxImage = config.maxImageBytes ?? 10 * 1024 * 1024
-  const maxBinary = config.maxBinaryBytes ?? 64 * 1024
+  const maxText = capBytes(config.maxTextBytes, 2 * 1024 * 1024)
+  const maxImage = capBytes(config.maxImageBytes, 10 * 1024 * 1024)
+  const maxBinary = capBytes(config.maxBinaryBytes, 64 * 1024)
 
   ctx.effect(() => {
     const disposeRoute = ctx.webServer.register({
@@ -251,4 +266,4 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 // ---------------------------------------------------------------------------
 // Exported for testing
 // ---------------------------------------------------------------------------
-export { inside, list, preview, write }
+export { capBytes, inside, list, preview, write }

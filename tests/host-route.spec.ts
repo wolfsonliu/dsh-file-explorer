@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { mkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { inside, list, preview, write, apply } from '../src/index.ts'
+import { inside, list, preview, write, apply, capBytes } from '../src/index.ts'
 import type { Config } from '../src/protocol.ts'
 
 let root: string
@@ -82,6 +82,30 @@ describe('inside', () => {
 
   test('rejects symlink pointing outside workspace', async () => {
     await expect(inside(root, 'escape')).rejects.toThrow('path is outside the configured workspace')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// capBytes
+// ---------------------------------------------------------------------------
+describe('capBytes', () => {
+  test('returns the fallback when value is undefined', () => {
+    expect(capBytes(undefined, 64 * 1024)).toBe(64 * 1024)
+  })
+
+  test('floors a positive fractional value', () => {
+    expect(capBytes(2.9, 64 * 1024)).toBe(2)
+  })
+
+  test('keeps a positive integer as-is', () => {
+    expect(capBytes(2, 64 * 1024)).toBe(2)
+  })
+
+  test('falls back for zero, negative, NaN, and Infinity', () => {
+    expect(capBytes(0, 64 * 1024)).toBe(64 * 1024)
+    expect(capBytes(-5, 64 * 1024)).toBe(64 * 1024)
+    expect(capBytes(NaN, 64 * 1024)).toBe(64 * 1024)
+    expect(capBytes(Infinity, 64 * 1024)).toBe(64 * 1024)
   })
 })
 
@@ -345,6 +369,39 @@ describe('apply / route handler', () => {
     expect(body.ok).toBe(true)
     expect(body.path).toBe(join(root, 'subdir'))
     expect(body.parentPath).toBe(dirname(join(root, 'subdir')))
+  })
+
+  test('preview action falls back for an invalid maxBinaryBytes config', async () => {
+    const server2 = createServer()
+    apply(
+      {
+        sessions: {
+          get(id: string) {
+            if (id === 'cap-session') return { header: { cwd: root } }
+            return undefined
+          },
+        },
+        webServer: {
+          register(route: { handler: (req: any, res: any) => Promise<void> }) {
+            server2.on('request', route.handler)
+            return () => {}
+          },
+        },
+        effect(cb: () => () => void) {
+          cb()
+        },
+      },
+      { maxBinaryBytes: -5 } as Config,
+    )
+    await new Promise<void>((resolve) => server2.listen(0, resolve))
+    const port = (server2.address() as AddressInfo).port
+    const res = await fetch(`http://localhost:${port}/file-explorer/api?sessionId=cap-session&action=preview&path=binary.bin&mode=binary`)
+    const body = await res.json() as any
+    expect(body.ok).toBe(true)
+    expect(body.preview.kind).toBe('binary')
+    expect(body.preview.bytes).toBe('AAEC') // fell back to the default 64 KiB cap
+    expect(body.preview.truncated).toBe(false)
+    await new Promise<void>((resolve) => server2.close(() => resolve()))
   })
 
   test('unknown action returns 400', async () => {

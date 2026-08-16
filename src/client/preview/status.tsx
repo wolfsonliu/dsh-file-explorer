@@ -25,18 +25,6 @@ export const StatusPreview: ComponentType<PreviewProps> = ({ preview, t }) => {
     )
   }
 
-  if (preview.kind === 'binary') {
-    return (
-      <div>
-        <p>
-          <strong>{preview.name}</strong>
-        </p>
-        <p>{t('binary')}</p>
-        <p>{sizeStr}</p>
-      </div>
-    )
-  }
-
   if (preview.kind === 'too-large') {
     return (
       <div>

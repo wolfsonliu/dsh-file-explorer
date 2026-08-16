@@ -6,7 +6,7 @@ export const ZH = {
   maximize: '最大化', restore: '还原',
   selectFile: '从文件树选择文件', noSession: '当前没有打开的会话',
   open: '打开', openAsText: '打开为文本', openAsBinary: '打开为二进制', copyPath: '复制路径', copyAbsolutePath: '复制绝对路径', copyRelativePath: '复制相对路径',
-  emptyFile: '空文件', binary: '无法预览此文件（二进制）', tooLarge: '文件过大，无法预览',
+  emptyFile: '空文件', tooLarge: '文件过大，无法预览',
   hexTruncated: '文件较大，仅显示前 {shown} / {total}',
   edit: '编辑', save: '保存', cancel: '取消', mdPreview: '预览', saving: '保存中…', saveFailed: '保存失败',
 } as const
@@ -15,7 +15,7 @@ export const EN = {
   maximize: 'Maximize', restore: 'Restore',
   selectFile: 'Select a file from the tree', noSession: 'No open session',
   open: 'Open', openAsText: 'Open as text', openAsBinary: 'Open as binary', copyPath: 'Copy path', copyAbsolutePath: 'Copy absolute path', copyRelativePath: 'Copy relative path',
-  emptyFile: 'Empty file', binary: 'Cannot preview binary file', tooLarge: 'File too large to preview',
+  emptyFile: 'Empty file', tooLarge: 'File too large to preview',
   hexTruncated: 'Showing first {shown} of {total}',
   edit: 'Edit', save: 'Save', cancel: 'Cancel', mdPreview: 'Preview', saving: 'Saving…', saveFailed: 'Save failed',
 } as const

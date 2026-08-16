@@ -61,9 +61,9 @@ describe('formatBytes', () => {
 })
 
 // ---------------------------------------------------------------------------
-// StatusPreview (via BinaryPreview)
+// BinaryPreview (hexdump; delegates empty/too-large to StatusPreview)
 // ---------------------------------------------------------------------------
-describe('StatusPreview', () => {
+describe('BinaryPreview', () => {
   // A marker translator proves StatusPreview calls `t` with the right key,
   // rather than rendering a hardcoded Chinese string.
   const t: PreviewProps['t'] = (key) => `T:${key}`
@@ -78,11 +78,11 @@ describe('StatusPreview', () => {
     expect(container.textContent).toContain('3 B')
   })
 
-  test('shows a truncation note when truncated', () => {
-    const t: PreviewProps['t'] = (key) => `T:${key}`
-    const p = props({ kind: 'binary', name: 'data.bin', size: 70000, bytes: 'AAEC', truncated: true }, t)
+  test('shows a truncation note with formatted shown/total sizes', () => {
+    const tWithParams: PreviewProps['t'] = (key, params) => `T:${key}:${String(params?.shown)}/${String(params?.total)}`
+    const p = props({ kind: 'binary', name: 'data.bin', size: 70000, bytes: 'AAEC', truncated: true }, tWithParams)
     const container = render(<BinaryPreview {...p} />)
-    expect(container.textContent).toContain('T:hexTruncated')
+    expect(container.textContent).toContain('T:hexTruncated:3 B/68.4 KB')
   })
 
   test('shows too-large message for {kind: "too-large"}', () => {
@@ -127,10 +127,10 @@ describe('TextPreview', () => {
   })
 
   test('renders StatusPreview for non-text kind', () => {
-    const p = props({ kind: 'binary', name: 'data.bin', size: 100 })
+    const p = props({ kind: 'too-large', name: 'big.txt', size: 1048576 })
     const container = render(<TextPreview {...p} />)
-    // Should fall back to StatusPreview, showing the translated binary message
-    expect(container.textContent).toContain('binary')
+    // Should fall back to StatusPreview, showing the translated too-large message
+    expect(container.textContent).toContain('tooLarge')
   })
 })
 
@@ -204,11 +204,11 @@ describe('MarkdownPreview', () => {
 
   test('renders StatusPreview for non-text kind', () => {
     const p = {
-      ...props({ kind: 'binary', name: 'data.bin', size: 100 }),
+      ...props({ kind: 'too-large', name: 'big.txt', size: 1048576 }),
       activeView: 'preview' as const,
     }
     const container = render(<MarkdownPreview {...p} />)
-    expect(container.textContent).toContain('binary')
+    expect(container.textContent).toContain('tooLarge')
   })
 })
 
@@ -232,9 +232,9 @@ describe('ImagePreview', () => {
   })
 
   test('renders StatusPreview for non-image kind', () => {
-    const p = props({ kind: 'binary', name: 'data.bin', size: 100 })
+    const p = props({ kind: 'too-large', name: 'big.txt', size: 1048576 })
     const container = render(<ImagePreview {...p} />)
-    expect(container.textContent).toContain('binary')
+    expect(container.textContent).toContain('tooLarge')
   })
 })
 

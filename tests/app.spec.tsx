@@ -34,6 +34,14 @@ const cannedMdPreview: FilePreview = {
   size: 4,
 }
 
+const otherPreview: FilePreview = {
+  kind: 'text',
+  name: 'other.txt',
+  extension: 'txt',
+  content: 'other',
+  size: 5,
+}
+
 /** Stub preview component rendering a stable marker plus the text content. */
 const TxtPreview = ({ preview }: PreviewProps) => {
   if (preview.kind === 'text') {
@@ -482,5 +490,37 @@ describe('FileExplorerApp', () => {
     const textarea = container.querySelector('[data-fe-edit="textarea"]') as HTMLTextAreaElement
     expect(textarea).not.toBeNull()
     expect(textarea.value).toBe('# Edited')
+  })
+
+  test('a save completing after switching files does not overwrite the new preview', async () => {
+    let resolveWrite: (() => void) | undefined
+    const writeFile = vi.fn().mockImplementation(() => new Promise<void>((resolve) => { resolveWrite = resolve }))
+    const props = makeProps({
+      writeFile,
+      fetchPreview: vi.fn().mockImplementation((_sid: string, path: string) =>
+        Promise.resolve(path === 'readme.md' ? cannedMdPreview : otherPreview),
+      ),
+    })
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    act(() => (container.querySelector('[data-fe-edit="edit"]') as HTMLElement).click())
+    setTextarea(container, '# Edited')
+    act(() => (container.querySelector('[data-fe-edit="save"]') as HTMLElement).click())
+
+    // While the save is pending, switch to another file.
+    act(() => ref.current!.openFile('other.txt'))
+    await flush()
+
+    // Now complete the pending save.
+    await act(async () => { resolveWrite!() })
+    await flush()
+
+    // The other file's preview must NOT be overwritten with the old draft.
+    expect(container.textContent).toContain('other')
+    expect(container.textContent).not.toContain('# Edited')
   })
 })

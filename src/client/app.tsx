@@ -133,14 +133,19 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
 
     const saveDraft = useCallback(async (): Promise<void> => {
       if (writeFile === undefined || selectedPath === null) return
+      const targetName = previewData?.name ?? null
       setSaving(true)
       try {
         await writeFile(selectedPath, draft)
-        setPreviewData((prev) => (prev && prev.kind === 'text' ? { ...prev, content: draft } : prev))
+        setPreviewData((prev) =>
+          prev && prev.kind === 'text' && prev.name === targetName
+            ? { ...prev, content: draft }
+            : prev,
+        )
       } finally {
         setSaving(false)
       }
-    }, [writeFile, selectedPath, draft])
+    }, [writeFile, selectedPath, draft, previewData])
 
     const handleSave = useCallback(() => {
       void saveDraft().catch(() => {})

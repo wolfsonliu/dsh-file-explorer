@@ -545,4 +545,25 @@ describe('FileExplorerApp', () => {
     expect(container.querySelector('[data-fe-edit="textarea"]')).toBeNull()
     expect(container.querySelector('h1')!.textContent).toBe('Edited')
   })
+
+  test('save failure shows an error and stays in edit mode', async () => {
+    const props = makeProps({ fetchPreview: vi.fn().mockResolvedValue(cannedMdPreview) })
+    props.writeFile = vi.fn().mockRejectedValue(new Error('disk full'))
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    act(() => (container.querySelector('[data-fe-edit="edit"]') as HTMLElement).click())
+    setTextarea(container, '# Edited')
+
+    act(() => (container.querySelector('[data-fe-edit="save"]') as HTMLElement).click())
+    await flush()
+
+    // 仍在编辑态，且显示错误文案。
+    expect(container.querySelector('[data-fe-edit="textarea"]')).not.toBeNull()
+    expect(container.textContent).toContain('saveFailed')
+    expect(container.textContent).toContain('disk full')
+  })
 })

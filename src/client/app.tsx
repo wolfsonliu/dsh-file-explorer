@@ -67,6 +67,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     const [editing, setEditing] = useState(false)
     const [draft, setDraft] = useState('')
     const [saving, setSaving] = useState(false)
+    const [saveError, setSaveError] = useState<string | null>(null)
 
     const previewPanelRef = useRef<FileExplorerPanelHandle>(null)
     const treeRef = useRef<FileTreeHandle>(null)
@@ -129,12 +130,14 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     const cancelEditing = useCallback(() => {
       setEditing(false)
       setSaving(false)
+      setSaveError(null)
     }, [])
 
     const saveDraft = useCallback(async (): Promise<void> => {
       if (writeFile === undefined || selectedPath === null) return
       const targetName = previewData?.name ?? null
       setSaving(true)
+      setSaveError(null)
       try {
         await writeFile(selectedPath, draft)
         setPreviewData((prev) =>
@@ -142,6 +145,9 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
             ? { ...prev, content: draft }
             : prev,
         )
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : String(error))
+        throw error
       } finally {
         setSaving(false)
       }
@@ -207,6 +213,9 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
               </button>
             )}
           </div>
+          {saveError !== null && (
+            <div className="dsh-fe-md-error">{t('saveFailed')}: {saveError}</div>
+          )}
           {editing ? (
             <textarea
               className="dsh-fe-md-editor"

@@ -203,5 +203,5 @@ export const PANEL_CSS = `
   background: var(--fe-bg);
   color: var(--fe-title-fg);
 }
-.dsh-fe-md-error { padding: 8px 12px; color: #c0392b; font-size: 13px; }
+.dsh-fe-md-error { padding: 8px 12px; color: var(--dsw-alias-state-danger, #c0392b); font-size: 13px; }
 `

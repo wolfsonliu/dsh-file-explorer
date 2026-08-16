@@ -1,8 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { createReadStream } from 'node:fs'
 import { open, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import {
   FILE_EXPLORER_ROUTE,
+  PDF_ACTION,
   type ApiResponse,
   type BrowserEntry,
   type Config,
@@ -44,6 +46,11 @@ const IMAGE_MIME: Record<string, string> = {
   '.png': 'image/png',
   '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
+}
+
+/** Extensions streamed inline for the browser's native viewer (whitelist). */
+const INLINE_MIME: Record<string, string> = {
+  '.pdf': 'application/pdf',
 }
 
 // ---------------------------------------------------------------------------
@@ -172,6 +179,28 @@ async function write(root: string, input: string, content: string): Promise<stri
 }
 
 // ---------------------------------------------------------------------------
+// servePdf — stream one inline-capable file (whitelisted MIME) to the response.
+// All validation runs before writeHead so a rejection can still send JSON.
+// ---------------------------------------------------------------------------
+async function servePdf(root: string, input: string, res: ServerResponse): Promise<void> {
+  const target = await inside(root, input)
+  const info = await stat(target.absolute)
+  if (!info.isFile()) throw new Error('path is not a file')
+  const mime = INLINE_MIME[extname(target.path).toLowerCase()]
+  if (mime === undefined) throw new Error('unsupported file type')
+  const name = target.path.split('/').at(-1) ?? target.path
+  res.writeHead(200, {
+    'content-type': mime,
+    'content-disposition': `inline; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+    'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
+  })
+  const stream = createReadStream(target.absolute)
+  stream.on('error', () => res.destroy())
+  stream.pipe(res)
+}
+
+// ---------------------------------------------------------------------------
 // json — send a JSON response.
 // ---------------------------------------------------------------------------
 function json(res: ServerResponse, status: number, body: ApiResponse): void {
@@ -245,6 +274,9 @@ export function apply(ctx: HostContext, config: Config = {}): void {
               path: target.absolute,
               parentPath: dirname(target.absolute),
             })
+          }
+          if (action === PDF_ACTION) {
+            return await servePdf(root, path, res)
           }
           if (action === 'write') {
             if (typeof body.content !== 'string') throw new Error('content is required')

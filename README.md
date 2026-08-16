@@ -17,9 +17,10 @@ A file explorer for DSH Web. A floating "Files" button opens a left drawer (work
 3. **File browsing**: a lazy-loading directory tree that follows the current session's workspace root and refreshes on session switch.
 4. **Floating preview**: clicking a file floats a draggable/resizable/minimizable/closable preview box on the right.
 5. **Previewers**: built-in text (source), Markdown (rendered + source toggle + inline edit), image (data URL), and binary (hexdump) previews.
-6. **Extensible previews**: register previewers by extension through the `fileExplorer` service; unregistered extensions fall back to the `binary` preview. Add protein-structure (`.cif`/`.pdb` → Mol*), CSV, PDF, etc. previewers without touching the core.
-7. **Row actions menu**: hover a file/directory row to reveal a "···" menu (Open / Copy absolute path / Copy relative path).
-8. **Shortcut**: `Ctrl/Cmd+Shift+E` toggles the file drawer.
+6. **Extensible previews**: register previewers by extension through the `fileExplorer` service; unregistered extensions fall back to the `binary` preview. Add protein-structure (`.cif`/`.pdb` → Mol*), CSV, etc. previewers without touching the core.
+7. **PDF in a new tab**: clicking a `.pdf` file opens it in a new browser tab with the browser's native PDF viewer (no PDF previewer needed).
+8. **Row actions menu**: hover a file/directory row to reveal a "···" menu (Open / Copy absolute path / Copy relative path).
+9. **Shortcut**: `Ctrl/Cmd+Shift+E` toggles the file drawer.
 
 ## Install
 
@@ -67,6 +68,7 @@ The host half registers a `/file-explorer/api` exact route via `ctx.webServer.re
 
 - `list`: lists one directory level (directories first, by name), returning `BrowserEntry[]`.
 - `preview`: reads one file, returning a discriminated `FilePreview` (`text` / `image` / `empty` / `binary` / `too-large`).
+- `pdf`: streams a `.pdf` file inline (`Content-Type: application/pdf`) so the browser's native viewer renders it in a new tab.
 - `resolve-path`: resolves a workspace-relative path to an absolute path and parent path.
 - `write`: writes UTF-8 text to a workspace file (POST body `{ path, content }`), returning the saved relative path.
 
@@ -83,6 +85,7 @@ This plugin is a pure UI surface — it emits no session events and does not mod
 - **No polling refresh**: the tree only refreshes manually (↻) or on session switch.
 - **File-link interception is best-effort**: it relies on DSH's CSS class names (`_fileLink`, `data-produced-files-row`); update the selectors if the upstream UI changes.
 - **Large files**: text/image reads are bounded by `maxTextBytes`/`maxImageBytes`, and binary hexdumps read only the first `maxBinaryBytes`; streaming is not implemented.
+- **PDF range requests**: the `pdf` action streams the whole file without `Range`/`206` support, so very large PDFs download fully before the native viewer renders; byte-range seeking is deferred.
 
 ## Developing preview plugins
 

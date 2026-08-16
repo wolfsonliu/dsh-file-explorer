@@ -34,6 +34,9 @@ beforeAll(async () => {
   await writeFile(join(root, 'binary.bin'), Buffer.from([0x00, 0x01, 0x02]))
   // big.txt: 100 bytes for testing too-large with a small cap
   await writeFile(join(root, 'big.txt'), Buffer.alloc(100, 'x'))
+  // PDF fixtures for the pdf action (opened in a new browser tab).
+  await writeFile(join(root, 'report.pdf'), Buffer.from('%PDF-1.4\n% test pdf\n'))
+  await writeFile(join(root, 'report-upper.PDF'), Buffer.from('%PDF-1.4\n% upper\n'))
   // symlink
   await symlink(join(root, 'a.txt'), join(root, 'symlink'))
   // escape symlink pointing outside the workspace
@@ -369,6 +372,39 @@ describe('apply / route handler', () => {
     expect(body.ok).toBe(true)
     expect(body.path).toBe(join(root, 'subdir'))
     expect(body.parentPath).toBe(dirname(join(root, 'subdir')))
+  })
+
+  test('pdf action streams the file with an application/pdf content type', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=pdf&path=report.pdf`
+    const res = await fetch(url)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/pdf')
+    expect(res.headers.get('content-disposition')).toContain('inline')
+    const body = Buffer.from(await res.arrayBuffer())
+    expect(body.toString('utf8')).toBe('%PDF-1.4\n% test pdf\n')
+  })
+
+  test('pdf action matches the extension case-insensitively', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=pdf&path=report-upper.PDF`
+    const res = await fetch(url)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/pdf')
+  })
+
+  test('pdf action rejects a non-pdf extension', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=pdf&path=a.txt`
+    const res = await fetch(url)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.ok).toBe(false)
+  })
+
+  test('pdf action rejects a path escaping the workspace', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=pdf&path=escape`
+    const res = await fetch(url)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.ok).toBe(false)
   })
 
   test('preview action falls back for an invalid maxBinaryBytes config', async () => {

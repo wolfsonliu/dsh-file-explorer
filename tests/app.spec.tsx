@@ -205,6 +205,40 @@ describe('FileExplorerApp', () => {
     expect(container.textContent).toContain('hello world')
   })
 
+  test('opening a PDF opens a new browser tab instead of the preview panel', async () => {
+    const open = vi.fn().mockReturnValue({ opener: {} })
+    vi.stubGlobal('open', open)
+
+    const props = makeProps()
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('report.pdf'))
+    await flush()
+
+    expect(open).toHaveBeenCalledTimes(1)
+    const url = String(open.mock.calls[0][0])
+    expect(url).toContain('action=pdf')
+    expect(url).toContain('sessionId=s1')
+    expect(url).toContain('path=report.pdf')
+    expect(props.fetchPreview).not.toHaveBeenCalled()
+    expect(container.querySelector('[data-visible]')).toBeNull()
+  })
+
+  test('opening a PDF falls back to the preview panel when the new tab is blocked', async () => {
+    vi.stubGlobal('open', vi.fn().mockReturnValue(null))
+
+    const props = makeProps()
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('report.pdf'))
+    await flush()
+
+    expect(props.fetchPreview).toHaveBeenCalledWith('s1', 'report.pdf')
+    expect(container.querySelector('[data-visible]')).not.toBeNull()
+  })
+
   test('preview panel title shows the opened file name', async () => {
     const props = makeProps()
     const ref = createRef<FileExplorerAppHandle>()

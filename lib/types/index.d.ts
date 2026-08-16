@@ -27,5 +27,6 @@ declare function inside(root: string, input?: string, opts?: {
 declare function list(root: string, input: string): Promise<BrowserEntry[]>;
 declare function preview(root: string, input: string, maxText: number, maxImage: number, mode?: PreviewMode, maxBinary?: number): Promise<FilePreview>;
 declare function write(root: string, input: string, content: string): Promise<string>;
+declare function capBytes(value: number | undefined, fallback: number): number;
 export declare function apply(ctx: HostContext, config?: Config): void;
-export { inside, list, preview, write };
+export { capBytes, inside, list, preview, write };

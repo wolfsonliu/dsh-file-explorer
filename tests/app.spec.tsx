@@ -90,6 +90,16 @@ async function flush(): Promise<void> {
   })
 }
 
+/** Set a controlled <textarea>'s value and fire React's onChange. */
+function setTextarea(container: HTMLElement, value: string): void {
+  const ta = container.querySelector('textarea') as HTMLTextAreaElement
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')!.set!
+  act(() => {
+    setter.call(ta, value)
+    ta.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
 function makeProps(overrides: Partial<FileExplorerAppProps> = {}) {
   return {
     sessionId: 's1' as string | undefined,
@@ -449,5 +459,28 @@ describe('FileExplorerApp', () => {
     await flush()
 
     expect(container.querySelector('[data-fe-edit="edit"]')).toBeNull()
+  })
+
+  test('save button writes the draft and stays in edit mode', async () => {
+    const props = makeProps({ fetchPreview: vi.fn().mockResolvedValue(cannedMdPreview) })
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    act(() => (container.querySelector('[data-fe-edit="edit"]') as HTMLElement).click())
+    setTextarea(container, '# Edited')
+
+    const saveBtn = container.querySelector('[data-fe-edit="save"]') as HTMLElement
+    expect(saveBtn).not.toBeNull()
+    act(() => saveBtn.click())
+    await flush()
+
+    expect(props.writeFile).toHaveBeenCalledWith('readme.md', '# Edited')
+    // 仍处于编辑态（textarea 还在），且内容保留。
+    const textarea = container.querySelector('[data-fe-edit="textarea"]') as HTMLTextAreaElement
+    expect(textarea).not.toBeNull()
+    expect(textarea.value).toBe('# Edited')
   })
 })

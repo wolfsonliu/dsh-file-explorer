@@ -66,6 +66,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     const [viewMode, setViewMode] = useState<PreviewMode>('auto')
     const [editing, setEditing] = useState(false)
     const [draft, setDraft] = useState('')
+    const [saving, setSaving] = useState(false)
 
     const previewPanelRef = useRef<FileExplorerPanelHandle>(null)
     const treeRef = useRef<FileTreeHandle>(null)
@@ -127,7 +128,23 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
 
     const cancelEditing = useCallback(() => {
       setEditing(false)
+      setSaving(false)
     }, [])
+
+    const saveDraft = useCallback(async (): Promise<void> => {
+      if (writeFile === undefined || selectedPath === null) return
+      setSaving(true)
+      try {
+        await writeFile(selectedPath, draft)
+        setPreviewData((prev) => (prev && prev.kind === 'text' ? { ...prev, content: draft } : prev))
+      } finally {
+        setSaving(false)
+      }
+    }, [writeFile, selectedPath, draft])
+
+    const handleSave = useCallback(() => {
+      void saveDraft().catch(() => {})
+    }, [saveDraft])
 
     const helpers: FileActionHelpers = { openFile, openFileAsText, openFileAsBinary, copyAbsolutePath, copyRelativePath }
 
@@ -142,6 +159,8 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       [openDrawer, closeDrawer, toggleDrawer, openFile],
     )
 
+    // Built-in markdown editing only: a plugin overriding 'md' resolves to a
+    // different component, so the edit affordance is hidden in that case.
     const isEditableMarkdown =
       writeFile !== undefined &&
       viewMode === 'auto' &&
@@ -157,9 +176,14 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
         <div className="dsh-fe-md">
           <div className="dsh-fe-md-toolbar">
             {editing ? (
-              <button className="dsh-fe-md-btn" data-fe-edit="cancel" onClick={cancelEditing}>
-                {t('cancel')}
-              </button>
+              <>
+                <button className="dsh-fe-md-btn" data-fe-edit="cancel" onClick={cancelEditing} disabled={saving}>
+                  {t('cancel')}
+                </button>
+                <button className="dsh-fe-md-btn" data-fe-edit="save" onClick={handleSave} disabled={saving}>
+                  {saving ? t('saving') : t('save')}
+                </button>
+              </>
             ) : (
               <button className="dsh-fe-md-btn" data-fe-edit="edit" onClick={startEditing}>
                 {t('edit')}

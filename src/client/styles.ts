@@ -179,7 +179,7 @@ export const PANEL_CSS = `
 .dsh-fe-file-button:hover { width: 76px; }
 .dsh-fe-file-button-label { opacity: 0; transition: opacity 0.15s ease; }
 .dsh-fe-file-button:hover .dsh-fe-file-button-label { opacity: 1; }
-.dsh-fe-md { display: flex; flex-direction: column; min-height: 0; }
+.dsh-fe-md { display: flex; flex-direction: column; min-height: 0; height: 100%; }
 .dsh-fe-md-toolbar { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--fe-border); flex-shrink: 0; }
 .dsh-fe-md-btn {
   border: 1px solid var(--fe-border);

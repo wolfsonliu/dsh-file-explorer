@@ -566,4 +566,56 @@ describe('FileExplorerApp', () => {
     expect(container.textContent).toContain('saveFailed')
     expect(container.textContent).toContain('disk full')
   })
+
+  test('switching files auto-saves a dirty markdown draft first', async () => {
+    const props = makeProps({
+      fetchPreview: vi.fn().mockImplementation((_sid: string, path: string) =>
+        Promise.resolve(path === 'readme.md' ? cannedMdPreview : otherPreview),
+      ),
+    })
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    act(() => (container.querySelector('[data-fe-edit="edit"]') as HTMLElement).click())
+    setTextarea(container, '# Edited')
+
+    await act(async () => {
+      await ref.current!.openFile('other.txt')
+    })
+    await flush()
+
+    expect(props.writeFile).toHaveBeenCalledWith('readme.md', '# Edited')
+    expect(props.fetchPreview).toHaveBeenCalledWith('s1', 'other.txt')
+  })
+
+  test('switching files aborts when the dirty draft fails to save', async () => {
+    const props = makeProps({
+      fetchPreview: vi.fn().mockImplementation((_sid: string, path: string) =>
+        Promise.resolve(path === 'readme.md' ? cannedMdPreview : otherPreview),
+      ),
+    })
+    props.writeFile = vi.fn().mockRejectedValue(new Error('disk full'))
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    act(() => (container.querySelector('[data-fe-edit="edit"]') as HTMLElement).click())
+    setTextarea(container, '# Edited')
+
+    await act(async () => {
+      await ref.current!.openFile('other.txt')
+    })
+    await flush()
+
+    // 写回失败 → 中止切换：不拉取目标文件的 preview。
+    expect(props.fetchPreview).not.toHaveBeenCalledWith('s1', 'other.txt')
+    // 仍在编辑态，错误可见。
+    expect(container.querySelector('[data-fe-edit="textarea"]')).not.toBeNull()
+    expect(container.textContent).toContain('disk full')
+  })
 })

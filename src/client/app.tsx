@@ -68,16 +68,79 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     const [draft, setDraft] = useState('')
     const [saving, setSaving] = useState(false)
     const [saveError, setSaveError] = useState<string | null>(null)
+    const [dirty, setDirty] = useState(false)
 
     const previewPanelRef = useRef<FileExplorerPanelHandle>(null)
     const treeRef = useRef<FileTreeHandle>(null)
+    const selectedPathRef = useRef<string | null>(null)
 
     const openDrawer = useCallback(() => setDrawerOpen(true), [])
     const closeDrawer = useCallback(() => setDrawerOpen(false), [])
     const toggleDrawer = useCallback(() => setDrawerOpen((prev) => !prev), [])
 
+    const startEditing = useCallback(() => {
+      if (previewData?.kind !== 'text') return
+      setDraft(previewData.content)
+      setEditing(true)
+      setDirty(false)
+      setSaveError(null)
+    }, [previewData])
+
+    const cancelEditing = useCallback(() => {
+      setEditing(false)
+      setSaving(false)
+      setSaveError(null)
+      setDirty(false)
+    }, [])
+
+    const saveDraft = useCallback(async (): Promise<void> => {
+      if (writeFile === undefined || selectedPath === null) return
+      const targetPath = selectedPath
+      setSaving(true)
+      setSaveError(null)
+      try {
+        await writeFile(targetPath, draft)
+        if (selectedPathRef.current === targetPath) {
+          setPreviewData((prev) => (prev && prev.kind === 'text' ? { ...prev, content: draft } : prev))
+          setDirty(false)
+        }
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : String(error))
+        throw error
+      } finally {
+        setSaving(false)
+      }
+    }, [writeFile, selectedPath, draft])
+
+    const handleSave = useCallback(() => {
+      void saveDraft().catch(() => {})
+    }, [saveDraft])
+
+    const previewEditing = useCallback(async () => {
+      const targetPath = selectedPath
+      try {
+        await saveDraft()
+      } catch {
+        return
+      }
+      if (selectedPathRef.current === targetPath) setEditing(false)
+    }, [saveDraft, selectedPath])
+
     const openFileWithMode = useCallback(
-      (path: string, mode: PreviewMode) => {
+      async (path: string, mode: PreviewMode) => {
+        if (editing && dirty && writeFile !== undefined) {
+          try {
+            await saveDraft()
+          } catch {
+            return // 保存失败：停留在当前文件，不切换
+          }
+        }
+        setEditing(false)
+        setDirty(false)
+        setSaving(false)
+        setSaveError(null)
+        setDraft('')
+        selectedPathRef.current = path
         setSelectedPath(path)
         setViewMode(mode)
         if (sessionId === undefined) return
@@ -94,12 +157,12 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
             // Ignore preview fetch failures.
           })
       },
-      [sessionId, fetchPreview],
+      [sessionId, fetchPreview, editing, dirty, writeFile, saveDraft],
     )
 
-    const openFile = useCallback((path: string) => openFileWithMode(path, 'auto'), [openFileWithMode])
-    const openFileAsText = useCallback((path: string) => openFileWithMode(path, 'text'), [openFileWithMode])
-    const openFileAsBinary = useCallback((path: string) => openFileWithMode(path, 'binary'), [openFileWithMode])
+    const openFile = useCallback((path: string) => { void openFileWithMode(path, 'auto') }, [openFileWithMode])
+    const openFileAsText = useCallback((path: string) => { void openFileWithMode(path, 'text') }, [openFileWithMode])
+    const openFileAsBinary = useCallback((path: string) => { void openFileWithMode(path, 'binary') }, [openFileWithMode])
 
     const copyAbsolutePath = useCallback(
       async (path: string) => {
@@ -120,51 +183,6 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     const copyRelativePath = useCallback(async (path: string) => {
       await navigator.clipboard.writeText(path)
     }, [])
-
-    const startEditing = useCallback(() => {
-      if (previewData?.kind !== 'text') return
-      setDraft(previewData.content)
-      setEditing(true)
-    }, [previewData])
-
-    const cancelEditing = useCallback(() => {
-      setEditing(false)
-      setSaving(false)
-      setSaveError(null)
-    }, [])
-
-    const saveDraft = useCallback(async (): Promise<void> => {
-      if (writeFile === undefined || selectedPath === null) return
-      const targetName = previewData?.name ?? null
-      setSaving(true)
-      setSaveError(null)
-      try {
-        await writeFile(selectedPath, draft)
-        setPreviewData((prev) =>
-          prev && prev.kind === 'text' && prev.name === targetName
-            ? { ...prev, content: draft }
-            : prev,
-        )
-      } catch (error) {
-        setSaveError(error instanceof Error ? error.message : String(error))
-        throw error
-      } finally {
-        setSaving(false)
-      }
-    }, [writeFile, selectedPath, draft, previewData])
-
-    const handleSave = useCallback(() => {
-      void saveDraft().catch(() => {})
-    }, [saveDraft])
-
-    const previewEditing = useCallback(async () => {
-      try {
-        await saveDraft()
-      } catch {
-        return
-      }
-      setEditing(false)
-    }, [saveDraft])
 
     const helpers: FileActionHelpers = { openFile, openFileAsText, openFileAsBinary, copyAbsolutePath, copyRelativePath }
 
@@ -221,7 +239,10 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
               className="dsh-fe-md-editor"
               data-fe-edit="textarea"
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => {
+                setDraft(e.target.value)
+                setDirty(true)
+              }}
             />
           ) : (
             <MarkdownPreview preview={previewData} filePath={selectedPath ?? ''} activeView="preview" t={t} />

@@ -28,6 +28,8 @@ export interface FileExplorerPanelProps {
   /** Preview content rendered in the body. */
   children: ReactNode
   initialVisible?: boolean
+  /** Called synchronously just before the panel is closed via the close button. */
+  onClose?: () => void
 }
 
 interface Position {
@@ -153,7 +155,7 @@ function useDragHandle(
 // ---------------------------------------------------------------------------
 
 export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplorerPanelProps>(
-  function FileExplorerPanel({ title, t, children, initialVisible = false }, ref) {
+  function FileExplorerPanel({ title, t, children, onClose, initialVisible = false }, ref) {
     const [geometry, dispatch] = useReducer(geometryReducer, {
       visible: initialVisible,
       maximized: false,
@@ -256,7 +258,10 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
             <button
               className="dsh-fe-btn"
               data-fe-action="close"
-              onClick={() => dispatch({ type: 'CLOSE' })}
+              onClick={() => {
+                onClose?.()
+                dispatch({ type: 'CLOSE' })
+              }}
               title={t('close')}
             >
               <IconClose size={16} />

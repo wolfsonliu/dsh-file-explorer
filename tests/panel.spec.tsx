@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React from 'react'
@@ -148,6 +148,23 @@ describe('FileExplorerPanel', () => {
     // After close, the panel is removed from DOM
     const panelAfter = container.querySelector('[data-visible]')
     expect(panelAfter).toBeNull()
+  })
+
+  test('calls onClose before closing when the close button is clicked', () => {
+    const onClose = vi.fn()
+    const container = render(
+      <FileExplorerPanel initialVisible t={t} onClose={onClose}>
+        <span>Preview</span>
+      </FileExplorerPanel>,
+    )
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    const closeBtn = panel.querySelector('[data-fe-action="close"]') as HTMLElement
+    expect(closeBtn).not.toBeNull()
+
+    act(() => closeBtn.click())
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('[data-visible]')).toBeNull()
   })
 
   test('title bar has no minimize button and no data-minimized attribute', () => {

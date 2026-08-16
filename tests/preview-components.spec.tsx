@@ -68,12 +68,21 @@ describe('StatusPreview', () => {
   // rather than rendering a hardcoded Chinese string.
   const t: PreviewProps['t'] = (key) => `T:${key}`
 
-  test('shows binary message for {kind: "binary"}', () => {
-    const p = props({ kind: 'binary', name: 'data.bin', size: 1024 }, t)
+  test('renders hexdump for {kind: "binary"}', () => {
+    const p = props({ kind: 'binary', name: 'data.bin', size: 3, bytes: 'AAEC', truncated: false })
     const container = render(<BinaryPreview {...p} />)
-    expect(container.textContent).toContain('T:binary')
-    expect(container.textContent).toContain('data.bin')
-    expect(container.textContent).toContain('1.0 KB')
+    const code = container.querySelector('pre.dsh-fe-code code')
+    expect(code).toBeTruthy()
+    expect(code!.textContent).toContain('00000000  00 01 02')
+    expect(code!.textContent).toContain('|...|')
+    expect(container.textContent).toContain('3 B')
+  })
+
+  test('shows a truncation note when truncated', () => {
+    const t: PreviewProps['t'] = (key) => `T:${key}`
+    const p = props({ kind: 'binary', name: 'data.bin', size: 70000, bytes: 'AAEC', truncated: true }, t)
+    const container = render(<BinaryPreview {...p} />)
+    expect(container.textContent).toContain('T:hexTruncated')
   })
 
   test('shows too-large message for {kind: "too-large"}', () => {

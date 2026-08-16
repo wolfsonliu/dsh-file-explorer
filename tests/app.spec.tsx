@@ -325,7 +325,7 @@ describe('FileExplorerApp', () => {
     props.fetchPreview = vi.fn().mockImplementation((_sid: string, _path: string, mode?: string) =>
       Promise.resolve(
         mode === 'binary'
-          ? { kind: 'binary', name: 'notes.txt', size: 11 } as FilePreview
+          ? { kind: 'binary', name: 'notes.txt', size: 11, bytes: 'aGVsbG8gd29ybGQ=', truncated: false } as FilePreview
           : cannedPreview,
       ),
     )
@@ -353,8 +353,10 @@ describe('FileExplorerApp', () => {
     expect(props.fetchPreview).toHaveBeenCalledWith('s1', 'notes.txt', 'binary')
     const panel = container.querySelector('[data-visible]') as HTMLElement
     expect(panel).not.toBeNull()
-    // BinaryPreview renders StatusPreview → t('binary') == 'binary' with the identity translator.
-    expect(panel.textContent).toContain('binary')
+    // BinaryPreview renders a hexdump in a .dsh-fe-code <pre>; the ASCII gutter shows the text.
+    const pre = panel.querySelector('pre.dsh-fe-code')
+    expect(pre).not.toBeNull()
+    expect(pre!.textContent).toContain('hello world')
   })
 
   test('copy absolute path fetches resolve-path and writes the resolved path to clipboard', async () => {

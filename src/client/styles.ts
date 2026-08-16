@@ -242,4 +242,16 @@ export const PANEL_CSS = `
   border: 1px solid var(--fe-border, rgba(0,0,0,0.1));
   padding: 6px 10px;
 }
+.dsh-fe-hex { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.dsh-fe-hex-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--fe-border);
+  color: var(--dsw-alias-label-secondary, #999);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.dsh-fe-hex .dsh-fe-code { flex: 1; min-height: 0; }
 `

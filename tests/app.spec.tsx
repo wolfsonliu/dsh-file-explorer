@@ -619,4 +619,24 @@ describe('FileExplorerApp', () => {
     expect(container.querySelector('[data-fe-edit="textarea"]')).not.toBeNull()
     expect(container.textContent).toContain('disk full')
   })
+
+  test('closing the panel auto-saves a dirty markdown draft', async () => {
+    const props = makeProps({ fetchPreview: vi.fn().mockResolvedValue(cannedMdPreview) })
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('readme.md'))
+    await flush()
+
+    act(() => (container.querySelector('[data-fe-edit="edit"]') as HTMLElement).click())
+    setTextarea(container, '# Edited')
+
+    const closeBtn = container.querySelector('[data-fe-action="close"]') as HTMLElement
+    expect(closeBtn).not.toBeNull()
+    act(() => closeBtn.click())
+    await flush()
+
+    expect(props.writeFile).toHaveBeenCalledWith('readme.md', '# Edited')
+    expect(container.querySelector('[data-visible]')).toBeNull()
+  })
 })

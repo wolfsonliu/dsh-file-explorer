@@ -129,6 +129,12 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       if (selectedPathRef.current === targetPath) setEditing(false)
     }, [saveDraft, selectedPath])
 
+    const handlePanelClose = useCallback(() => {
+      if (editing && dirty && writeFile !== undefined) {
+        void saveDraft().catch(() => {})
+      }
+    }, [editing, dirty, writeFile, saveDraft])
+
     const openFileWithMode = useCallback(
       async (path: string, mode: PreviewMode) => {
         if (editing && dirty && writeFile !== undefined) {
@@ -287,7 +293,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
             t={t}
           />
         </FileExplorerDrawer>
-        <FileExplorerPanel ref={previewPanelRef} title={panelTitle} t={t}>
+        <FileExplorerPanel ref={previewPanelRef} title={panelTitle} onClose={handlePanelClose} t={t}>
           {previewChildren}
         </FileExplorerPanel>
       </>

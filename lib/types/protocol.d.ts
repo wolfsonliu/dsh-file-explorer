@@ -61,5 +61,8 @@ export interface Config {
     maxImageBytes?: number;
     /** Single binary-file hexdump read cap in bytes (default 64 KiB). */
     maxBinaryBytes?: number;
+    /** Per-read cap for raw file reads (default 100 MiB). Limits each
+     *  readRawFile call, not the total file size. */
+    maxRawBytes?: number;
 }
 export type PreviewMode = 'auto' | 'text' | 'binary';

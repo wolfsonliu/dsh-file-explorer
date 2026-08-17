@@ -13,7 +13,9 @@ export interface FileExplorerDrawerProps {
     children: ReactNode;
 }
 export declare function FileExplorerDrawer({ open, onClose, title, onRefresh, t, children, }: FileExplorerDrawerProps): React.JSX.Element | null;
-export declare function FloatingFileButton({ onClick, t }: {
+export declare function FloatingFileButton({ onClick, t, open, }: {
     onClick: () => void;
     t: Translate;
+    /** Whether the drawer is expanded; swaps the closed/open folder glyph. */
+    open: boolean;
 }): React.JSX.Element;

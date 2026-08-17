@@ -274,6 +274,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
   const maxText = capBytes(config.maxTextBytes, 2 * 1024 * 1024)
   const maxImage = capBytes(config.maxImageBytes, 10 * 1024 * 1024)
   const maxBinary = capBytes(config.maxBinaryBytes, 64 * 1024)
+  const maxRaw = capBytes(config.maxRawBytes, 100 * 1024 * 1024)
 
   ctx.effect(() => {
     const disposeRoute = ctx.webServer.register({
@@ -309,6 +310,52 @@ export function apply(ctx: HostContext, config: Config = {}): void {
           }
           if (action === PDF_ACTION) {
             return await servePdf(root, path, res)
+          }
+          if (action === 'raw') {
+            const rangeHeader = req.headers.range
+            let range: { offset: number; limit?: number } | undefined
+            if (rangeHeader) {
+              const m = rangeHeader.match(/^bytes=(\d+)-(\d*)$/)
+              if (m) {
+                const start = Number(m[1])
+                const end = m[2] ? Number(m[2]) : undefined
+                range = end !== undefined
+                  ? { offset: start, limit: end - start + 1 }
+                  : { offset: start }
+              }
+            }
+            try {
+              const { buffer, size } = await raw(root, path, maxRaw, range)
+              if (range) {
+                const end = range.offset + buffer.length - 1
+                res.writeHead(206, {
+                  'content-type': 'application/octet-stream',
+                  'content-length': String(buffer.length),
+                  'content-range': `bytes ${range.offset}-${end}/${size}`,
+                  'accept-ranges': 'bytes',
+                  'cache-control': 'no-store',
+                  'x-content-type-options': 'nosniff',
+                })
+              } else {
+                res.writeHead(200, {
+                  'content-type': 'application/octet-stream',
+                  'content-length': String(buffer.length),
+                  'accept-ranges': 'bytes',
+                  'cache-control': 'no-store',
+                  'x-content-type-options': 'nosniff',
+                })
+              }
+              res.end(buffer)
+              return
+            } catch (err) {
+              // Ignore: raw() throws 'invalid range' for out-of-bounds; return 416.
+              if (err instanceof Error && err.message === 'invalid range') {
+                res.writeHead(416, { 'content-range': `bytes */${(await stat(resolve(root, path))).size}` })
+                res.end()
+                return
+              }
+              throw err
+            }
           }
           if (action === 'write') {
             if (typeof body.content !== 'string') throw new Error('content is required')

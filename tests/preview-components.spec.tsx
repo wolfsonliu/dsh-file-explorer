@@ -294,4 +294,41 @@ describe('resolvePreviewFor', () => {
     const comp = resolvePreviewFor({ kind: 'binary', name: 'x.bin', size: 4 }, '')
     expect(comp).toBe(BinaryPreview)
   })
+
+  test('too-large kind with registered extension routes to that extension component', () => {
+    registerBuiltinPreviews()
+    // Register a custom preview for 'cif' (simulating molstar plugin)
+    const dispose = registerPreview('cif', TextPreview, 10)
+    const comp = resolvePreviewFor({ kind: 'too-large', name: 'big.cif', size: 10485760 }, 'cif')
+    expect(comp).toBe(TextPreview) // routes to registered component, not BinaryPreview
+    dispose()
+  })
+
+  test('binary kind with registered extension routes to that extension component', () => {
+    registerBuiltinPreviews()
+    const dispose = registerPreview('bcif', TextPreview, 10)
+    const comp = resolvePreviewFor({ kind: 'binary', name: 'data.bcif', size: 5000, bytes: 'AAAA', truncated: false }, 'bcif')
+    expect(comp).toBe(TextPreview) // routes to registered component, not BinaryPreview
+    dispose()
+  })
+
+  test('too-large kind with unregistered extension falls back to BinaryPreview', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreviewFor({ kind: 'too-large', name: 'big.dat', size: 10485760 }, 'dat')
+    expect(comp).toBe(BinaryPreview) // 'dat' is not registered → fallback
+  })
+
+  test('binary kind with unregistered extension falls back to BinaryPreview', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreviewFor({ kind: 'binary', name: 'data.bin', size: 5000, bytes: 'AAAA', truncated: false }, 'bin')
+    expect(comp).toBe(BinaryPreview) // 'bin' is not registered → fallback
+  })
+
+  test('empty kind still routes to BinaryPreview regardless of registration', () => {
+    registerBuiltinPreviews()
+    const dispose = registerPreview('cif', TextPreview, 10)
+    const comp = resolvePreviewFor({ kind: 'empty', name: 'empty.cif', size: 0 }, 'cif')
+    expect(comp).toBe(BinaryPreview) // empty always goes to BinaryPreview
+    dispose()
+  })
 })

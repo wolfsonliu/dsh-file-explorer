@@ -170,6 +170,33 @@ async function preview(
 }
 
 // ---------------------------------------------------------------------------
+// raw — read a file as raw bytes, with optional Range support.
+// ---------------------------------------------------------------------------
+async function raw(
+  root: string,
+  input: string,
+  maxRaw: number,
+  range?: { offset: number; limit?: number },
+): Promise<{ buffer: Buffer; size: number }> {
+  const target = await inside(root, input)
+  const info = await stat(target.absolute)
+  if (!info.isFile()) throw new Error('path is not a file')
+  const offset = range?.offset ?? 0
+  const limit = range?.limit !== undefined
+    ? Math.min(range.limit, maxRaw)
+    : Math.min(info.size - offset, maxRaw)
+  if (limit <= 0 || offset >= info.size) throw new Error('invalid range')
+  const handle = await open(target.absolute, 'r')
+  try {
+    const buffer = Buffer.alloc(limit)
+    const { bytesRead } = await handle.read(buffer, 0, limit, offset)
+    return { buffer: buffer.subarray(0, bytesRead), size: info.size }
+  } finally {
+    await handle.close()
+  }
+}
+
+// ---------------------------------------------------------------------------
 // write — write UTF-8 text to a workspace file, rejecting escapes.
 // ---------------------------------------------------------------------------
 async function write(root: string, input: string, content: string): Promise<string> {
@@ -298,4 +325,4 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 // ---------------------------------------------------------------------------
 // Exported for testing
 // ---------------------------------------------------------------------------
-export { capBytes, inside, list, preview, write }
+export { capBytes, inside, list, preview, raw, write }

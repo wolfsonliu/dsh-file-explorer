@@ -234,16 +234,24 @@ describe('FileExplorerDrawer', () => {
 // ---------------------------------------------------------------------------
 describe('FloatingFileButton', () => {
   test('renders a button with the localized label', () => {
-    const container = render(<FloatingFileButton onClick={() => {}} t={t} />)
+    const container = render(<FloatingFileButton open={false} onClick={() => {}} t={t} />)
     const button = container.querySelector('[data-fe-file-button]')
     expect(button).not.toBeNull()
     expect(button!.className).toContain('dsh-fe-file-button')
     expect(button!.textContent).toContain('file')
   })
 
+  test('shows a closed folder icon when collapsed and an open one when expanded', () => {
+    const collapsed = render(<FloatingFileButton open={false} onClick={() => {}} t={t} />)
+    expect(collapsed.querySelector('.dsh-fe-file-button-icon[data-fe-icon="closed"]')).not.toBeNull()
+
+    const expanded = render(<FloatingFileButton open onClick={() => {}} t={t} />)
+    expect(expanded.querySelector('.dsh-fe-file-button-icon[data-fe-icon="open"]')).not.toBeNull()
+  })
+
   test('clicking the button calls onClick', () => {
     const onClick = vi.fn()
-    const container = render(<FloatingFileButton onClick={onClick} t={t} />)
+    const container = render(<FloatingFileButton open={false} onClick={onClick} t={t} />)
     const button = container.querySelector('[data-fe-file-button]')
 
     act(() => {
@@ -254,7 +262,7 @@ describe('FloatingFileButton', () => {
   })
 
   test('hover-move without pointerdown does not move the button', () => {
-    const container = render(<FloatingFileButton onClick={() => {}} t={t} />)
+    const container = render(<FloatingFileButton open={false} onClick={() => {}} t={t} />)
     const button = container.querySelector('[data-fe-file-button]') as HTMLElement
     const initialTop = button.style.top
 
@@ -267,7 +275,7 @@ describe('FloatingFileButton', () => {
 
   test('dragging the button vertically moves it and suppresses click', () => {
     const onClick = vi.fn()
-    const container = render(<FloatingFileButton onClick={onClick} t={t} />)
+    const container = render(<FloatingFileButton open={false} onClick={onClick} t={t} />)
     const button = container.querySelector('[data-fe-file-button]') as HTMLElement
 
     act(() => {

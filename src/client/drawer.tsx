@@ -1,5 +1,5 @@
 import React, { useRef, useState, type ReactNode } from 'react'
-import { IconClose, IconFolderOpen, IconRefresh } from './icons.tsx'
+import { IconClose, IconFolderClose, IconFolderOpen, IconRefresh } from './icons.tsx'
 import type { Translate } from './locale.ts'
 
 function clamp(value: number, min: number, max: number): number {
@@ -142,7 +142,16 @@ export function FileExplorerDrawer({
 const BUTTON_TOP_KEY = 'dsh.file-explorer.button-top'
 const BUTTON_HEIGHT = 36
 
-export function FloatingFileButton({ onClick, t }: { onClick: () => void; t: Translate }) {
+export function FloatingFileButton({
+  onClick,
+  t,
+  open,
+}: {
+  onClick: () => void
+  t: Translate
+  /** Whether the drawer is expanded; swaps the closed/open folder glyph. */
+  open: boolean
+}) {
   const [top, setTop] = useState<number>(() => {
     try {
       const saved = Number.parseInt(localStorage.getItem(BUTTON_TOP_KEY) ?? '', 10)
@@ -208,7 +217,9 @@ export function FloatingFileButton({ onClick, t }: { onClick: () => void; t: Tra
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
     >
-      <IconFolderOpen size={18} />
+      <span className="dsh-fe-file-button-icon" data-fe-icon={open ? 'open' : 'closed'}>
+        {open ? <IconFolderOpen size={18} /> : <IconFolderClose size={18} />}
+      </span>
       <span className="dsh-fe-file-button-label">{t('file')}</span>
     </button>
   )

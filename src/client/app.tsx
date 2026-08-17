@@ -320,7 +320,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
 
     return (
       <>
-        <FloatingFileButton onClick={toggleDrawer} t={t} />
+        <FloatingFileButton onClick={toggleDrawer} t={t} open={drawerOpen} />
         <FileExplorerDrawer
           open={drawerOpen}
           onClose={closeDrawer}

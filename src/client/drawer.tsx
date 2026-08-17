@@ -1,5 +1,5 @@
 import React, { useRef, useState, type ReactNode } from 'react'
-import { IconClose, IconPanelLeft, IconRefresh } from './icons.tsx'
+import { IconClose, IconFolderOpen, IconRefresh } from './icons.tsx'
 import type { Translate } from './locale.ts'
 
 function clamp(value: number, min: number, max: number): number {
@@ -208,7 +208,7 @@ export function FloatingFileButton({ onClick, t }: { onClick: () => void; t: Tra
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
     >
-      <IconPanelLeft size={16} />
+      <IconFolderOpen size={18} />
       <span className="dsh-fe-file-button-label">{t('file')}</span>
     </button>
   )

@@ -467,6 +467,49 @@ describe('apply / route handler', () => {
     expect(body.ok).toBe(false)
   })
 
+  test('raw action returns octet-stream with full file content', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=raw&path=raw.bin`
+    const res = await fetch(url)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/octet-stream')
+    expect(res.headers.get('accept-ranges')).toBe('bytes')
+    const buf = Buffer.from(await res.arrayBuffer())
+    expect(buf.length).toBe(200)
+  })
+
+  test('raw action with Range header returns 206 partial content', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=raw&path=raw.bin`
+    const res = await fetch(url, { headers: { Range: 'bytes=0-49' } })
+    expect(res.status).toBe(206)
+    expect(res.headers.get('content-type')).toBe('application/octet-stream')
+    expect(res.headers.get('content-range')).toBe('bytes 0-49/200')
+    const buf = Buffer.from(await res.arrayBuffer())
+    expect(buf.length).toBe(50)
+  })
+
+  test('raw action with open-ended Range returns 206', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=raw&path=raw.bin`
+    const res = await fetch(url, { headers: { Range: 'bytes=100-' } })
+    expect(res.status).toBe(206)
+    expect(res.headers.get('content-range')).toBe('bytes 100-199/200')
+    const buf = Buffer.from(await res.arrayBuffer())
+    expect(buf.length).toBe(100)
+  })
+
+  test('raw action rejects a path escaping the workspace', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=raw&path=escape`
+    const res = await fetch(url)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.ok).toBe(false)
+  })
+
+  test('raw action returns 416 for out-of-bounds range', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=raw&path=raw.bin`
+    const res = await fetch(url, { headers: { Range: 'bytes=500-600' } })
+    expect(res.status).toBe(416)
+  })
+
   test('preview action falls back for an invalid maxBinaryBytes config', async () => {
     const server2 = createServer()
     apply(

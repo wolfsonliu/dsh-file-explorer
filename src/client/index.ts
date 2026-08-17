@@ -60,9 +60,30 @@ export function apply(ctx: ClientContext): void {
     if (!data.ok) throw new Error(data.error)
   }
 
+  // Read raw bytes from a workspace file, with optional byte range.
+  const readRawFile = async (path: string, offset?: number, limit?: number): Promise<ArrayBuffer> => {
+    const sessionId = ctx.sessions.list.getSnapshot().current
+    if (sessionId === undefined) throw new Error('no current session')
+    const headers: Record<string, string> = {}
+    if (offset !== undefined || limit !== undefined) {
+      const start = offset ?? 0
+      const end = limit !== undefined ? start + limit - 1 : ''
+      headers['Range'] = `bytes=${start}-${end}`
+    }
+    const res = await fetch(
+      `${FILE_EXPLORER_ROUTE}?action=raw&sessionId=${encodeURIComponent(sessionId)}&path=${encodeURIComponent(path)}`,
+      { headers },
+    )
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      throw new Error((data && (data as { error?: string }).error) || `raw fetch failed (${res.status})`)
+    }
+    return res.arrayBuffer()
+  }
+
   // Expose the registration services so external plugins can contribute
   // previewers, file-row actions, and file writes (override built-ins by priority).
-  ctx.reflect.provide('fileExplorer', { registerPreview, registerFileAction, writeFile })
+  ctx.reflect.provide('fileExplorer', { registerPreview, registerFileAction, writeFile, readRawFile })
 
   // Inject panel styles (an external plugin cannot import a CSS module).
   const styleEl = document.createElement('style')

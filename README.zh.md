@@ -102,12 +102,15 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequenc
 - **大文件**：文本/图片读取受 `maxTextBytes`/`maxImageBytes` 上限约束，二进制 hexdump 只读取前 `maxBinaryBytes` 字节；流式读取未实现。
 - **PDF 不支持分段请求**：`pdf` 动作整体流式返回，不支持 `Range`/`206`，超大 PDF 需完整下载后原生阅读器才能渲染；分段加载留待后续。
 
-## 开发预览插件
+## 开发扩展
 
-`dsh-file-explorer` 通过 cordis 服务 `fileExplorer` 暴露注册入口：`registerPreview`（新增预览器）、`registerFileAction`（新增文件行菜单项）与 `writeFile`（把 UTF-8 文本写回工作区文件）。领域专家可把扩展做成独立插件（命名 `@dsh-external/dsh-file-explorer-preview-<domain>`），无需改动核心。
+`dsh-file-explorer` 通过 cordis 服务 `fileExplorer` 暴露注册入口：`registerPreview`、`registerFileAction`、`writeFile` 和 `readRawFile`。领域专家可把扩展做成独立插件（命名 `@dsh-external/dsh-file-explorer-preview-<domain>`），无需改动核心。
+
+完整指南请参阅 **[开发 dsh-file-explorer 扩展](docs/developing-extensions.zh.md)**（[English](docs/developing-extensions.md)）——契约、路由、用 `readRawFile` 处理大文件/二进制、用 `writeFile` 编辑、打包、国际化，以及参考实现。
+
+快速骨架：
 
 ```typescript
-// preview 插件 client 入口
 import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'
 
 export const inject = ['fileExplorer']
@@ -118,19 +121,7 @@ export function apply(ctx: {
 }): void {
   ctx.effect(() => ctx.fileExplorer.registerPreview('cif', CifPreview, 10))
 }
-
-function CifPreview(props: PreviewProps) {
-  // props.preview.kind === 'text' 时，props.preview.content 是文件文本内容
-  return renderStructure(props.preview.content)
-}
 ```
-
-要点：
-
-- **服务名**：`fileExplorer`，`inject: ['fileExplorer']` 后通过 `ctx.fileExplorer.registerPreview(ext, component, priority?)` 注册。
-- **优先级**：数值越大越优先；内置预览为 `0`，外部用 `10` 即可覆盖。同优先级后注册者胜。
-- **契约类型**：`import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'` 获得类型提示。
-- **registerPreview 返回 disposer**：在 `ctx.effect` 的清理里调用以卸载/HMR 时移除注册。
 
 ## 扩展
 
@@ -142,7 +133,7 @@ function CifPreview(props: PreviewProps) {
 | `dsh-file-explorer-preview-molstar` | 基于 Mol* 的分子结构预览（`.cif` / `.pdb`） | [wolfsonliu/dsh-file-explorer-preview-molstar](https://github.com/wolfsonliu/dsh-file-explorer-preview-molstar) |
 | `dsh-file-explorer-preview-sequence` | 基于 SeqViz 的序列查看器预览（FASTA / GenBank / JBEI / SnapGene / SBOL） | [wolfsonliu/dsh-file-explorer-preview-sequence](https://github.com/wolfsonliu/dsh-file-explorer-preview-sequence) |
 
-欢迎增加更多扩展——参照 [开发预览插件](#开发预览插件) 自行开发即可。
+欢迎增加更多扩展——参照 [开发扩展](docs/developing-extensions.zh.md) 自行开发即可。
 
 ## 开发
 

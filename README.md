@@ -102,12 +102,15 @@ This plugin is a pure UI surface — it emits no session events and does not mod
 - **Large files**: text/image reads are bounded by `maxTextBytes`/`maxImageBytes`, and binary hexdumps read only the first `maxBinaryBytes`; streaming is not implemented.
 - **PDF range requests**: the `pdf` action streams the whole file without `Range`/`206` support, so very large PDFs download fully before the native viewer renders; byte-range seeking is deferred.
 
-## Developing preview plugins
+## Developing extensions
 
-`dsh-file-explorer` exposes registration entries via the cordis service `fileExplorer`: `registerPreview` (add a previewer), `registerFileAction` (add a file-row menu item), and `writeFile` (write UTF-8 text back to a workspace file). Domain experts can ship extensions as separate plugins (named `@dsh-external/dsh-file-explorer-preview-<domain>`) without touching the core.
+`dsh-file-explorer` exposes the `fileExplorer` cordis service: `registerPreview`, `registerFileAction`, `writeFile`, and `readRawFile`. Domain experts can ship extensions as separate plugins (named `@dsh-external/dsh-file-explorer-preview-<domain>`) without touching the core.
+
+See **[Developing a dsh-file-explorer extension](docs/developing-extensions.md)** ([中文](docs/developing-extensions.zh.md)) for the full guide — contracts, routing, handling large/binary files with `readRawFile`, editing with `writeFile`, bundling, i18n, and reference implementations.
+
+Quick skeleton:
 
 ```typescript
-// preview plugin client entry
 import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'
 
 export const inject = ['fileExplorer']
@@ -118,19 +121,7 @@ export function apply(ctx: {
 }): void {
   ctx.effect(() => ctx.fileExplorer.registerPreview('cif', CifPreview, 10))
 }
-
-function CifPreview(props: PreviewProps) {
-  // when props.preview.kind === 'text', props.preview.content is the file text
-  return renderStructure(props.preview.content)
-}
 ```
-
-Notes:
-
-- **Service name**: `fileExplorer`. Inject it with `inject: ['fileExplorer']`, then call `ctx.fileExplorer.registerPreview(ext, component, priority?)`.
-- **Priority**: higher wins; built-ins use `0`, use `10` to override. Later registration wins on ties.
-- **Contract types**: `import type { PreviewProps } from '@dsh-external/dsh-file-explorer/client'`.
-- **registerPreview returns a disposer**: call it in `ctx.effect` cleanup to unregister on unload/HMR.
 
 ## Extensions
 
@@ -142,7 +133,7 @@ Notes:
 | `dsh-file-explorer-preview-molstar` | Mol* molecular-structure preview (`.cif` / `.pdb`) | [wolfsonliu/dsh-file-explorer-preview-molstar](https://github.com/wolfsonliu/dsh-file-explorer-preview-molstar) |
 | `dsh-file-explorer-preview-sequence` | SeqViz sequence viewer preview (FASTA / GenBank / JBEI / SnapGene / SBOL) | [wolfsonliu/dsh-file-explorer-preview-sequence](https://github.com/wolfsonliu/dsh-file-explorer-preview-sequence) |
 
-More extensions are welcome — build your own by following [Developing preview plugins](#developing-preview-plugins).
+More extensions are welcome — build your own by following [Developing a dsh-file-explorer extension](docs/developing-extensions.md).
 
 ## Development
 

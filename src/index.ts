@@ -189,8 +189,13 @@ async function raw(
   const handle = await open(target.absolute, 'r')
   try {
     const buffer = Buffer.alloc(limit)
-    const { bytesRead } = await handle.read(buffer, 0, limit, offset)
-    return { buffer: buffer.subarray(0, bytesRead), size: info.size }
+    let pos = 0
+    while (pos < limit) {
+      const { bytesRead } = await handle.read(buffer, pos, limit - pos, offset + pos)
+      if (bytesRead === 0) break
+      pos += bytesRead
+    }
+    return { buffer: buffer.subarray(0, pos), size: info.size }
   } finally {
     await handle.close()
   }

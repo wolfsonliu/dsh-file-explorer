@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { mkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { inside, list, preview, write, apply, capBytes } from '../src/index.ts'
+import { inside, list, preview, write, raw, apply, capBytes } from '../src/index.ts'
 import type { Config } from '../src/protocol.ts'
 
 let root: string
@@ -34,6 +34,8 @@ beforeAll(async () => {
   await writeFile(join(root, 'binary.bin'), Buffer.from([0x00, 0x01, 0x02]))
   // big.txt: 100 bytes for testing too-large with a small cap
   await writeFile(join(root, 'big.txt'), Buffer.alloc(100, 'x'))
+  // raw.bin: 200 bytes for testing raw file reads
+  await writeFile(join(root, 'raw.bin'), Buffer.alloc(200, (i) => i % 256))
   // PDF fixtures for the pdf action (opened in a new browser tab).
   await writeFile(join(root, 'report.pdf'), Buffer.from('%PDF-1.4\n% test pdf\n'))
   await writeFile(join(root, 'report-upper.PDF'), Buffer.from('%PDF-1.4\n% upper\n'))
@@ -309,6 +311,64 @@ describe('write', () => {
 
   test('rejects path escaping the workspace', async () => {
     await expect(write(root, '../outside.txt', 'x')).rejects.toThrow('path is outside the configured workspace')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// raw
+// ---------------------------------------------------------------------------
+describe('raw', () => {
+  test('reads a full file into a buffer', async () => {
+    const result = await raw(root, 'raw.bin', 1024 * 1024)
+    expect(result.buffer).toBeInstanceOf(Buffer)
+    expect(result.buffer.length).toBe(200)
+    expect(result.size).toBe(200)
+  })
+
+  test('respects the maxRaw cap (truncates to maxRaw)', async () => {
+    const result = await raw(root, 'raw.bin', 50)
+    expect(result.buffer.length).toBe(50)
+    expect(result.size).toBe(200)
+  })
+
+  test('reads from an offset', async () => {
+    const result = await raw(root, 'raw.bin', 1024 * 1024, { offset: 100 })
+    expect(result.buffer.length).toBe(100) // 200 total - 100 offset
+    expect(result.size).toBe(200)
+  })
+
+  test('reads from offset with limit', async () => {
+    const result = await raw(root, 'raw.bin', 1024 * 1024, { offset: 10, limit: 30 })
+    expect(result.buffer.length).toBe(30)
+    expect(result.size).toBe(200)
+  })
+
+  test('limit is clamped to maxRaw', async () => {
+    const result = await raw(root, 'raw.bin', 20, { offset: 0, limit: 100 })
+    expect(result.buffer.length).toBe(20) // clamped to maxRaw=20
+    expect(result.size).toBe(200)
+  })
+
+  test('throws for invalid range (offset at file size)', async () => {
+    await expect(raw(root, 'raw.bin', 1024 * 1024, { offset: 200 }))
+      .rejects.toThrow('invalid range')
+  })
+
+  test('throws for invalid range (offset beyond file size)', async () => {
+    await expect(raw(root, 'raw.bin', 1024 * 1024, { offset: 300 }))
+      .rejects.toThrow('invalid range')
+  })
+
+  test('throws for non-existent path', async () => {
+    await expect(raw(root, 'nonexistent', 1024)).rejects.toThrow()
+  })
+
+  test('throws for a directory path', async () => {
+    await expect(raw(root, 'subdir', 1024)).rejects.toThrow('path is not a file')
+  })
+
+  test('throws for a path escaping the workspace', async () => {
+    await expect(raw(root, 'escape', 1024)).rejects.toThrow('path is outside the configured workspace')
   })
 })
 

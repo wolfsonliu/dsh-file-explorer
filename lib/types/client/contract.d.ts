@@ -32,4 +32,12 @@ export interface FileExplorerService {
      * @param content The full new file content.
      */
     writeFile(path: string, content: string): Promise<void>;
+    /**
+     * Read raw bytes from a workspace file, optionally with a byte range.
+     * @param path   Workspace-relative file path.
+     * @param offset Byte offset to start reading (default 0).
+     * @param limit  Max bytes to read (capped server-side by maxRawBytes).
+     * @returns      The raw bytes as an ArrayBuffer.
+     */
+    readRawFile(path: string, offset?: number, limit?: number): Promise<ArrayBuffer>;
 }

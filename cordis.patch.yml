@@ -5,3 +5,4 @@
         maxTextBytes: 2097152
         maxImageBytes: 10485760
         maxBinaryBytes: 65536
+        maxRawBytes: 104857600

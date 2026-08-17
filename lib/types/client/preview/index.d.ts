@@ -9,10 +9,11 @@ export { formatBytes, StatusPreview } from './status.tsx';
 /** Register all built-in preview components. */
 export declare function registerBuiltinPreviews(): void;
 /**
- * Resolve the preview component by the preview's kind, not the extension
- * alone: images use ImagePreview, non-text kinds (empty/binary/too-large) use
- * BinaryPreview, and text kinds use the extension-registered component — or
- * TextPreview when the extension is unregistered (e.g. an extension-less file
- * like LICENSE).
+ * Resolve the preview component by the preview's kind: images use
+ * ImagePreview, empty files always use BinaryPreview, and non-text kinds
+ * (binary/too-large) route to the extension-registered component — or fall
+ * back to BinaryPreview when the extension is unregistered. Text kinds use
+ * the extension-registered component, or TextPreview when the extension is
+ * unregistered (e.g. an extension-less file like LICENSE).
  */
 export declare function resolvePreviewFor(preview: FilePreview, ext: string): ComponentType<PreviewProps>;

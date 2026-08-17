@@ -12,7 +12,7 @@ A file explorer for DSH Web. A floating "Files" button opens a left drawer (work
 
 ## Features
 
-1. **Floating entry**: an always-visible "Files" handle at the screen edge; click to toggle the file drawer.
+1. **Floating entry**: a "Files" button pinned to the left edge of the page. It stays collapsed into a small, low-profile handle — intentionally unobtrusive and out of the way — so it does not distract from the main workspace. Hover or click to expand it and toggle the file drawer.
 2. **Left drawer**: a full-height fixed drawer with a title bar (refresh + close buttons) holding the workspace file tree.
 3. **File browsing**: a lazy-loading directory tree that follows the current session's workspace root and refreshes on session switch.
 4. **Floating preview**: clicking a file floats a draggable/resizable/minimizable/closable preview box on the right.
@@ -40,6 +40,21 @@ npm install
 npm run build
 dsh plugin --profile web add .
 dsh web
+```
+
+### Optional preview plugins
+
+Install additional previewers for richer file previews:
+
+```sh
+# CodeMirror 6 code preview with syntax highlighting and editing
+dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-code
+
+# Mol* molecular-structure preview (.cif / .pdb)
+dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-molstar
+
+# SeqViz sequence viewer (FASTA / GenBank / JBEI / SnapGene / SBOL)
+dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequence
 ```
 
 ## Configuration

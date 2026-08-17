@@ -12,7 +12,7 @@ DSH Web 的文件浏览器。页面边缘有一个浮动「文件」按钮，点
 
 ## 功能
 
-1. **浮动入口**：屏幕边缘始终可见的「文件」把手，点击开关文件浏览器抽屉。
+1. **浮动入口**：页面左侧边缘固定一个「文件」按钮。它默认收起为小巧低调的把手，刻意不引人注目、不干扰主工作区；悬停或点击时展开，即可开关文件浏览器抽屉。
 2. **左抽屉**：左侧全高抽屉（fixed），标题栏带刷新 + 关闭按钮，内含工作区文件树。
 3. **文件浏览**：懒加载目录树，跟随当前会话的工作区根目录，切换会话时自动刷新。
 4. **悬浮预览框**：点文件在右侧浮出可拖拽/缩放/最小化/关闭的预览框。
@@ -40,6 +40,21 @@ npm install
 npm run build
 dsh plugin --profile web add .
 dsh web
+```
+
+### 可选预览插件
+
+安装额外的预览器以获得更丰富的文件预览体验：
+
+```sh
+# 基于 CodeMirror 6 的代码预览，支持语法高亮与编辑
+dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-code
+
+# 基于 Mol* 的分子结构预览（.cif / .pdb）
+dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-molstar
+
+# 基于 SeqViz 的序列查看器（FASTA / GenBank / JBEI / SnapGene / SBOL）
+dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequence
 ```
 
 ## 配置

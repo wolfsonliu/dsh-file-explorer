@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import { TextPreview } from '../src/client/preview/text.tsx'
@@ -10,6 +10,7 @@ import { formatBytes } from '../src/client/preview/status.tsx'
 import {
   registerBuiltinPreviews,
   resolvePreviewFor,
+  makeTextPagedPreview,
 } from '../src/client/preview/index.ts'
 import { resolvePreview, registerPreview } from '../src/client/preview/registry.ts'
 import type { PreviewProps } from '../src/client/preview/registry.ts'
@@ -248,10 +249,11 @@ describe('registerBuiltinPreviews', () => {
     expect(comp).toBe(MarkdownPreview)
   })
 
-  test('resolvePreview("ts") returns text component', () => {
-    registerBuiltinPreviews()
+  test('resolvePreview("ts") returns the paged text component', () => {
+    const readRawFile = vi.fn()
+    registerBuiltinPreviews(readRawFile)
     const comp = resolvePreview('ts')
-    expect(comp).toBe(TextPreview)
+    expect(comp).toBe(makeTextPagedPreview(readRawFile))
   })
 
   test('resolvePreview("png") returns image component', () => {
@@ -329,6 +331,28 @@ describe('resolvePreviewFor', () => {
     const dispose = registerPreview('cif', TextPreview, 10)
     const comp = resolvePreviewFor({ kind: 'empty', name: 'empty.cif', size: 0 }, 'cif')
     expect(comp).toBe(BinaryPreview) // empty always goes to BinaryPreview
+    dispose()
+  })
+
+  test('text-large kind with unregistered extension uses the paged text component', () => {
+    registerBuiltinPreviews()
+    const readRaw = vi.fn()
+    const comp = resolvePreviewFor(
+      { kind: 'text-large', name: 'big.dat', extension: 'dat', size: 6000000 },
+      'dat',
+      readRaw,
+    )
+    expect(comp).toBe(makeTextPagedPreview(readRaw))
+  })
+
+  test('text-large kind with registered extension routes to that extension component', () => {
+    registerBuiltinPreviews()
+    const dispose = registerPreview('bcif2', TextPreview, 10)
+    const comp = resolvePreviewFor(
+      { kind: 'text-large', name: 'big.bcif2', extension: 'bcif2', size: 6000000 },
+      'bcif2',
+    )
+    expect(comp).toBe(TextPreview)
     dispose()
   })
 })

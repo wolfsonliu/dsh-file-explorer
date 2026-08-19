@@ -224,16 +224,51 @@ function parseRange(header: string | undefined): { start: number; end?: number }
 // servePdf — stream one inline-capable file (whitelisted MIME) to the response.
 // All validation runs before writeHead so a rejection can still send JSON.
 // ---------------------------------------------------------------------------
-async function servePdf(root: string, input: string, res: ServerResponse): Promise<void> {
+async function servePdf(
+  root: string,
+  input: string,
+  rangeHeader: string | undefined,
+  res: ServerResponse,
+): Promise<void> {
   const target = await inside(root, input)
   const info = await stat(target.absolute)
   if (!info.isFile()) throw new Error('path is not a file')
   const mime = INLINE_MIME[extname(target.path).toLowerCase()]
   if (mime === undefined) throw new Error('unsupported file type')
   const name = target.path.split('/').at(-1) ?? target.path
+  const range = parseRange(rangeHeader)
+
+  if (range !== undefined) {
+    if (range.start >= info.size) {
+      res.writeHead(416, { 'content-range': `bytes */${info.size}` })
+      res.end()
+      return
+    }
+    const end = range.end !== undefined ? Math.min(range.end, info.size - 1) : info.size - 1
+    if (end < range.start) {
+      res.writeHead(416, { 'content-range': `bytes */${info.size}` })
+      res.end()
+      return
+    }
+    res.writeHead(206, {
+      'content-type': mime,
+      'content-disposition': `inline; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+      'content-range': `bytes ${range.start}-${end}/${info.size}`,
+      'content-length': String(end - range.start + 1),
+      'accept-ranges': 'bytes',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+    })
+    const stream = createReadStream(target.absolute, { start: range.start, end })
+    stream.on('error', () => res.destroy())
+    stream.pipe(res)
+    return
+  }
+
   res.writeHead(200, {
     'content-type': mime,
     'content-disposition': `inline; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+    'accept-ranges': 'bytes',
     'cache-control': 'no-store',
     'x-content-type-options': 'nosniff',
   })
@@ -319,7 +354,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
             })
           }
           if (action === PDF_ACTION) {
-            return await servePdf(root, path, res)
+            return await servePdf(root, path, req.headers.range, res)
           }
           if (action === 'raw') {
             const parsed = parseRange(req.headers.range)

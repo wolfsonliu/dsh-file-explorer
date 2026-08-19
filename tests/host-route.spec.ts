@@ -467,6 +467,38 @@ describe('apply / route handler', () => {
     expect(body.ok).toBe(false)
   })
 
+  test('pdf action with Range header returns 206 partial content', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=pdf&path=report.pdf`
+    const res = await fetch(url, { headers: { Range: 'bytes=0-7' } })
+    expect(res.status).toBe(206)
+    expect(res.headers.get('content-range')).toBe('bytes 0-7/20')
+    expect(res.headers.get('accept-ranges')).toBe('bytes')
+    const body = Buffer.from(await res.arrayBuffer())
+    expect(body.toString('utf8')).toBe('%PDF-1.4')
+  })
+
+  test('pdf action with open-ended Range returns 206 to EOF', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=pdf&path=report.pdf`
+    const res = await fetch(url, { headers: { Range: 'bytes=9-' } })
+    expect(res.status).toBe(206)
+    expect(res.headers.get('content-range')).toBe('bytes 9-19/20')
+    const body = Buffer.from(await res.arrayBuffer())
+    expect(body.toString('utf8')).toBe('% test pdf\n')
+  })
+
+  test('pdf action returns 416 for out-of-bounds range', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=pdf&path=report.pdf`
+    const res = await fetch(url, { headers: { Range: 'bytes=500-600' } })
+    expect(res.status).toBe(416)
+  })
+
+  test('pdf action without Range returns 200 with accept-ranges', async () => {
+    const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=pdf&path=report.pdf`
+    const res = await fetch(url)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('accept-ranges')).toBe('bytes')
+  })
+
   test('raw action returns octet-stream with full file content', async () => {
     const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=raw&path=raw.bin`
     const res = await fetch(url)

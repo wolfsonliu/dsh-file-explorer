@@ -24,7 +24,9 @@ declare function inside(root: string, input?: string, opts?: {
     absolute: string;
     path: string;
 }>;
-declare function list(root: string, input: string): Promise<BrowserEntry[]>;
+/** Drop all cached directory listings (called after a write changes entry sizes). */
+declare function invalidateListCache(): void;
+declare function list(root: string, input: string, showHidden?: boolean): Promise<BrowserEntry[]>;
 declare function preview(root: string, input: string, maxText: number, maxImage: number, mode?: PreviewMode, maxBinary?: number): Promise<FilePreview>;
 declare function raw(root: string, input: string, maxRaw: number, range?: {
     offset: number;
@@ -36,4 +38,4 @@ declare function raw(root: string, input: string, maxRaw: number, range?: {
 declare function write(root: string, input: string, content: string): Promise<string>;
 declare function capBytes(value: number | undefined, fallback: number): number;
 export declare function apply(ctx: HostContext, config?: Config): void;
-export { capBytes, inside, list, preview, raw, write };
+export { capBytes, inside, invalidateListCache, list, preview, raw, write };

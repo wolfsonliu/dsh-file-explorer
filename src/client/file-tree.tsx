@@ -1,4 +1,4 @@
-import React, {
+import {
   forwardRef,
   useCallback,
   useEffect,
@@ -8,6 +8,7 @@ import React, {
 } from 'react'
 import type { BrowserEntry } from '../protocol.ts'
 import type { Translate } from './locale.ts'
+import { VirtualList } from './virtual-list.tsx'
 import { FileContextMenu } from './context-menu.tsx'
 import { fileActionsFor, type FileActionHelpers } from './file-action.ts'
 import { IconChevronRight, IconEllipsis, IconFile, IconFolderClose, IconFolderOpen } from './icons.tsx'
@@ -140,19 +141,25 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
       }))
     : []
 
+  const flat = flattenVisible(entries, expanded, children)
+
   return (
     <div className="dsh-fe-tree">
-      <div className="dsh-fe-tree-body">
-        <EntryList
-          entries={entries}
-          depth={0}
-          expanded={expanded}
-          childrenMap={children}
-          onDisclosureClick={handleDisclosureClick}
-          helpers={helpers}
-          onOpenMenu={openMenu}
-        />
-      </div>
+      <VirtualList
+        rowCount={flat.length}
+        rowHeight={TREE_ROW_HEIGHT}
+        rowKey={(i) => flat[i].path}
+        renderRow={(i) => (
+          <TreeRow
+            entry={flat[i].entry}
+            depth={flat[i].depth}
+            expanded={expanded}
+            onDisclosureClick={handleDisclosureClick}
+            helpers={helpers}
+            onOpenMenu={openMenu}
+          />
+        )}
+      />
       <FileContextMenu
         open={menu.open}
         anchor={menu.anchor}
@@ -163,104 +170,90 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
   )
 })
 
-interface EntryListProps {
-  entries: BrowserEntry[]
+const TREE_ROW_HEIGHT = 28
+
+interface FlatRow {
+  path: string
+  depth: number
+  entry: BrowserEntry
+}
+
+/** DFS pre-order of every visible row, derived from the expanded set. */
+function flattenVisible(
+  entries: BrowserEntry[],
+  expanded: Record<string, boolean>,
+  childrenMap: Record<string, BrowserEntry[]>,
+  depth = 0,
+): FlatRow[] {
+  const out: FlatRow[] = []
+  for (const entry of entries) {
+    out.push({ path: entry.path, depth, entry })
+    if (entry.kind === 'directory' && expanded[entry.path] && childrenMap[entry.path]) {
+      out.push(...flattenVisible(childrenMap[entry.path], expanded, childrenMap, depth + 1))
+    }
+  }
+  return out
+}
+
+interface TreeRowProps {
+  entry: BrowserEntry
   depth: number
   expanded: Record<string, boolean>
-  childrenMap: Record<string, BrowserEntry[]>
   onDisclosureClick: (entry: BrowserEntry) => void
   helpers: FileActionHelpers
   onOpenMenu: (entry: BrowserEntry, anchor: { x: number; y: number }) => void
 }
 
-function EntryList({
-  entries,
-  depth,
-  expanded,
-  childrenMap,
-  onDisclosureClick,
-  helpers,
-  onOpenMenu,
-}: EntryListProps) {
+function TreeRow({ entry, depth, expanded, onDisclosureClick, helpers, onOpenMenu }: TreeRowProps) {
+  const isDir = entry.kind === 'directory'
   return (
-    <>
-      {entries.map((entry) => (
-        <React.Fragment key={entry.path}>
-          <div
-            className={
-              'dsh-fe-tree-row' +
-              (entry.kind === 'directory' ? ' dsh-fe-tree-row--dir' : ' dsh-fe-tree-row--file')
-            }
-            data-fe-path={entry.path}
-            data-fe-kind={entry.kind}
-            style={{ paddingLeft: `${depth * 16 + 4}px` }}
-            onClick={() => {
-              if (entry.kind === 'file') {
-                helpers.openFile(entry.path)
-              }
-            }}
-          >
-            {entry.kind === 'directory' ? (
-              <span
-                className="dsh-fe-disclosure"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDisclosureClick(entry)
-                }}
-              >
-                <IconChevronRight
-                  size={14}
-                  style={{
-                    transform: expanded[entry.path] ? 'rotate(90deg)' : undefined,
-                    transition: 'transform 0.1s',
-                  }}
-                />
-              </span>
-            ) : (
-              <span className="dsh-fe-spacer" />
-            )}
-            <span className="dsh-fe-icon">
-              {entry.kind === 'directory' ? (
-                expanded[entry.path] ? (
-                  <IconFolderOpen size={16} />
-                ) : (
-                  <IconFolderClose size={16} />
-                )
-              ) : (
-                <IconFile size={16} />
-              )}
-            </span>
-            <span className="dsh-fe-name">{entry.name}</span>
-            <span className="dsh-fe-row-actions">
-              <button
-                type="button"
-                className="dsh-fe-btn dsh-fe-row-action-btn"
-                data-fe-action-button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  onOpenMenu(entry, { x: rect.left, y: rect.bottom })
-                }}
-              >
-                <IconEllipsis size={16} />
-              </button>
-            </span>
-          </div>
-          {entry.kind === 'directory' &&
-            expanded[entry.path] &&
-            childrenMap[entry.path] && (
-              <EntryList
-                entries={childrenMap[entry.path]}
-                depth={depth + 1}
-                expanded={expanded}
-                childrenMap={childrenMap}
-                onDisclosureClick={onDisclosureClick}
-                helpers={helpers}
-                onOpenMenu={onOpenMenu}
-              />
-            )}
-        </React.Fragment>
-      ))}
-    </>
+    <div
+      className={'dsh-fe-tree-row' + (isDir ? ' dsh-fe-tree-row--dir' : ' dsh-fe-tree-row--file')}
+      data-fe-path={entry.path}
+      data-fe-kind={entry.kind}
+      style={{ paddingLeft: `${depth * 16 + 4}px` }}
+      onClick={() => {
+        if (!isDir) helpers.openFile(entry.path)
+      }}
+    >
+      {isDir ? (
+        <span
+          className="dsh-fe-disclosure"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDisclosureClick(entry)
+          }}
+        >
+          <IconChevronRight
+            size={14}
+            style={{ transform: expanded[entry.path] ? 'rotate(90deg)' : undefined, transition: 'transform 0.1s' }}
+          />
+        </span>
+      ) : (
+        <span className="dsh-fe-spacer" />
+      )}
+      <span className="dsh-fe-icon">
+        {isDir ? (
+          expanded[entry.path] ? <IconFolderOpen size={16} /> : <IconFolderClose size={16} />
+        ) : (
+          <IconFile size={16} />
+        )}
+      </span>
+      <span className="dsh-fe-name">{entry.name}</span>
+      <span className="dsh-fe-row-actions">
+        <button
+          type="button"
+          className="dsh-fe-btn dsh-fe-row-action-btn"
+          data-fe-action-button
+          onClick={(e) => {
+            e.stopPropagation()
+            const rect = e.currentTarget.getBoundingClientRect()
+            onOpenMenu(entry, { x: rect.left, y: rect.bottom })
+          }}
+        >
+          <IconEllipsis size={16} />
+        </button>
+      </span>
+    </div>
   )
 }

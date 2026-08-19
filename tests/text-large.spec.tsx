@@ -27,6 +27,7 @@ const props = (overrides: Record<string, unknown> = {}) => ({
   preview: { kind: 'text-large', name: 'big.txt', extension: '.txt', size: 6000000 },
   filePath: '/ws/big.txt',
   t: (key: string) => key,
+  activeView: 'preview',
   ...overrides,
 })
 
@@ -69,5 +70,20 @@ describe('makeTextPagedPreview', () => {
     const Comp = makeTextPagedPreview(undefined)
     const container = render(<Comp {...props()} />)
     expect(container.textContent).toContain('tooLarge')
+  })
+
+  test('renders kind "text" as a plain pre/code', () => {
+    const Comp = makeTextPagedPreview(undefined)
+    const container = render(
+      <Comp
+        preview={{ kind: 'text', name: 'a.txt', extension: '.txt', content: 'hello', size: 5 }}
+        filePath="/ws/a.txt"
+        t={(key: string) => key}
+        activeView="preview"
+      />,
+    )
+    const code = container.querySelector('pre.dsh-fe-code code')
+    expect(code).toBeTruthy()
+    expect(code!.textContent).toBe('hello')
   })
 })

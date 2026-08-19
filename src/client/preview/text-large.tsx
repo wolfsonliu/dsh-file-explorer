@@ -50,6 +50,7 @@ function PagedContent({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const mountedRef = useRef(true)
+  const loadTokenRef = useRef(0)
   const decoderRef = useRef(new TextDecoder('utf-8', { fatal: false }))
   const bodyRef = useRef<HTMLDivElement>(null)
 
@@ -63,13 +64,15 @@ function PagedContent({
   // Load the first chunk when this file is shown (also resets on file change).
   useEffect(() => {
     let cancelled = false
+    loadTokenRef.current += 1
+    const token = loadTokenRef.current
     setError(null)
     setChunks([])
     setLoaded(0)
     decoderRef.current = new TextDecoder('utf-8', { fatal: false })
     void readRawFile(filePath, 0, CHUNK_SIZE)
       .then((bytes) => {
-        if (cancelled || !mountedRef.current) return
+        if (cancelled || !mountedRef.current || loadTokenRef.current !== token) return
         let text = decoderRef.current.decode(new Uint8Array(bytes), { stream: true })
         if (bytes.byteLength >= total) text += decoderRef.current.decode()
         setChunks([text])
@@ -89,9 +92,10 @@ function PagedContent({
     if (loading || loaded >= total) return
     setLoading(true)
     const offset = loaded
+    const token = loadTokenRef.current
     void readRawFile(filePath, offset, CHUNK_SIZE)
       .then((bytes) => {
-        if (!mountedRef.current) return
+        if (!mountedRef.current || loadTokenRef.current !== token) return
         let text = decoderRef.current.decode(new Uint8Array(bytes), { stream: true })
         if (offset + bytes.byteLength >= total) text += decoderRef.current.decode()
         setChunks((prev) => [...prev, text])

@@ -36,6 +36,8 @@ export interface Config {
   /** Per-read cap for raw file reads (default 100 MiB). Limits each
    *  readRawFile call, not the total file size. */
   maxRawBytes?: number
+  /** When true, dot-prefixed files/directories are listed (default false = hide). */
+  showHidden?: boolean
 }
 
 export type PreviewMode = 'auto' | 'text' | 'binary'

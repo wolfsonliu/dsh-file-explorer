@@ -145,14 +145,16 @@ describe('list', () => {
     expect(aFile?.size).toBe(5) // 'hello' = 5 bytes
   })
 
-  test('includes hidden entries like .git and node_modules', async () => {
-    await mkdir(join(root, 'node_modules'))
-    await writeFile(join(root, 'node_modules', 'pkg.json'), '{}')
-    await mkdir(join(root, '.git'))
+  test('hides dotfile entries by default', async () => {
     const entries = await list(root, '')
     const names = entries.map(e => e.name)
-    expect(names).toContain('node_modules')
-    expect(names).toContain('.git')
+    expect(names).toContain('a.txt')
+    expect(names).not.toContain('.hidden')
+  })
+
+  test('includes dotfile entries when showHidden is true', async () => {
+    const entries = await list(root, '', true)
+    const names = entries.map(e => e.name)
     expect(names).toContain('.hidden')
   })
 

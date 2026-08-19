@@ -74,14 +74,14 @@ async function inside(root: string, input = '', opts?: { allowMissing?: boolean 
 
 // ---------------------------------------------------------------------------
 // list — list one directory level; directories before files, each
-// alphabetically by name; skip symlinks and hidden entries.
+// alphabetically by name; skip symlinks and (unless showHidden) dotfiles.
 // ---------------------------------------------------------------------------
-async function list(root: string, input: string): Promise<BrowserEntry[]> {
+async function list(root: string, input: string, showHidden = false): Promise<BrowserEntry[]> {
   const target = await inside(root, input)
   const children = await readdir(target.absolute, { withFileTypes: true })
   const entries = await Promise.all(
     children
-      .filter(child => !child.isSymbolicLink())
+      .filter(child => !child.isSymbolicLink() && (showHidden || !child.name.startsWith('.')))
       .map(async child => {
         const childPath = target.path === '' ? child.name : `${target.path}/${child.name}`
         if (child.isDirectory()) {
@@ -320,6 +320,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
   const maxImage = capBytes(config.maxImageBytes, 10 * 1024 * 1024)
   const maxBinary = capBytes(config.maxBinaryBytes, 64 * 1024)
   const maxRaw = capBytes(config.maxRawBytes, 100 * 1024 * 1024)
+  const showHidden = config.showHidden === true
 
   ctx.effect(() => {
     const disposeRoute = ctx.webServer.register({
@@ -337,7 +338,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
           const root = resolve(cwd)
           const path = typeof body.path === 'string' ? body.path : url.searchParams.get('path') ?? ''
           const action = typeof body.action === 'string' ? body.action : url.searchParams.get('action') ?? 'list'
-          if (action === 'list') return json(res, 200, { ok: true, root, entries: await list(root, path) })
+          if (action === 'list') return json(res, 200, { ok: true, root, entries: await list(root, path, showHidden) })
           if (action === 'preview') {
             const mode = typeof body.mode === 'string' ? body.mode : url.searchParams.get('mode') ?? 'auto'
             if (mode !== 'auto' && mode !== 'text' && mode !== 'binary') {

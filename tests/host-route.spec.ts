@@ -263,10 +263,11 @@ describe('preview', () => {
     expect(result.truncated).toBe(false)
   })
 
-  test('returns too-large for a file over the text cap', async () => {
+  test('returns text-large for a file over the text cap', async () => {
     const result = await preview(root, 'big.txt', 50, 1024)
-    expect(result.kind).toBe('too-large')
+    expect(result.kind).toBe('text-large')
     expect(result.name).toBe('big.txt')
+    expect(result.extension).toBe('.txt')
     expect(result.size).toBe(100)
   })
 
@@ -315,7 +316,9 @@ describe('preview', () => {
 
   test('mode text respects the maxText cap', async () => {
     const result = await preview(root, 'big.txt', 50, 1024, 'text')
-    expect(result.kind).toBe('too-large')
+    expect(result.kind).toBe('text-large')
+    expect(result.extension).toBe('.txt')
+    expect(result.size).toBe(100)
   })
 
   test('rejects when path is a directory', async () => {

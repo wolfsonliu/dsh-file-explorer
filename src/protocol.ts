@@ -17,6 +17,7 @@ export type FilePreview =
   | { kind: 'image'; name: string; mime: string; dataUrl: string; size: number }
   | { kind: 'empty'; name: string; size: 0 }
   | { kind: 'binary'; name: string; size: number; bytes: string /* base64 */; truncated: boolean }
+  | { kind: 'text-large'; name: string; extension: string; size: number }
   | { kind: 'too-large'; name: string; size: number }
 
 export type ApiResponse =

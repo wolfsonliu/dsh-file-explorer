@@ -176,7 +176,7 @@ async function preview(
     return binaryFrom(name, info.size, head, maxBinary)
   }
   if (mode === 'text') {
-    if (info.size > maxText) return { kind: 'too-large', name, size: info.size }
+    if (info.size > maxText) return { kind: 'text-large', name, extension, size: info.size }
     const body = await readFile(target.absolute)
     return { kind: 'text', name, extension, content: body.toString('utf8'), size: info.size }
   }
@@ -189,7 +189,7 @@ async function preview(
   if (info.size > maxText) {
     const head = await readHead(target.absolute, maxBinary)
     if (head.includes(0)) return binaryFrom(name, info.size, head, maxBinary)
-    return { kind: 'too-large', name, size: info.size }
+    return { kind: 'text-large', name, extension, size: info.size }
   }
   const body = await readFile(target.absolute)
   if (body.includes(0)) return binaryFrom(name, info.size, body, maxBinary)

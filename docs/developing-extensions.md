@@ -82,6 +82,7 @@ type FilePreview =
   | { kind: 'image'; name: string; mime: string; dataUrl: string; size: number }
   | { kind: 'empty'; name: string; size: 0 }
   | { kind: 'binary'; name: string; size: number; bytes: string; truncated: boolean }
+  | { kind: 'text-large'; name: string; extension: string; size: number }
   | { kind: 'too-large'; name: string; size: number }
 ```
 
@@ -95,6 +96,7 @@ preview.kind === 'empty'   → BinaryPreview (status page)
 preview.kind === 'text'    → your registered component, or TextPreview (fallback)
 preview.kind === 'binary'  → your registered component, or BinaryPreview (fallback)
 preview.kind === 'too-large' → your registered component, or BinaryPreview (fallback)
+preview.kind === 'text-large' → your registered component, or the built-in paged text preview
 ```
 
 The key change (dsh-file-explorer v0.1.0+): `too-large` and `binary` previews are now

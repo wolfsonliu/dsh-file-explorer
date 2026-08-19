@@ -79,6 +79,7 @@ type FilePreview =
   | { kind: 'image'; name: string; mime: string; dataUrl: string; size: number }
   | { kind: 'empty'; name: string; size: 0 }
   | { kind: 'binary'; name: string; size: number; bytes: string; truncated: boolean }
+  | { kind: 'text-large'; name: string; extension: string; size: number }
   | { kind: 'too-large'; name: string; size: number }
 ```
 
@@ -92,6 +93,7 @@ preview.kind === 'empty'      → BinaryPreview（状态页）
 preview.kind === 'text'       → 你注册的组件，或 TextPreview（回退）
 preview.kind === 'binary'     → 你注册的组件，或 BinaryPreview（回退）
 preview.kind === 'too-large'  → 你注册的组件，或 BinaryPreview（回退）
+preview.kind === 'text-large' → 你注册的组件，或内置的分页文本预览
 ```
 
 关键变化（dsh-file-explorer v0.1.0+）：`too-large` 和 `binary` 类型的预览现在会

@@ -255,4 +255,9 @@ export const PANEL_CSS = `
   flex-shrink: 0;
 }
 .dsh-fe-hex .dsh-fe-code { flex: 1; min-height: 0; }
+.dsh-fe-text-large { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.dsh-fe-text-large-meta { display: flex; align-items: center; gap: 8px; padding: 4px 8px 8px; flex-shrink: 0; color: var(--dsw-alias-label-secondary, #999); font-size: 12px; }
+.dsh-fe-text-large-body { flex: 1; min-height: 0; overflow: auto; }
+.dsh-fe-text-large-body .dsh-fe-code { margin: 0; }
+.dsh-fe-preview-error { padding: 0 8px 8px; color: var(--dsw-alias-state-danger, #c0392b); font-size: 13px; }
 `

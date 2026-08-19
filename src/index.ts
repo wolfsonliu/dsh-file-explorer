@@ -73,11 +73,36 @@ async function inside(root: string, input = '', opts?: { allowMissing?: boolean 
 }
 
 // ---------------------------------------------------------------------------
+// list cache — an in-memory cache of directory listings keyed by
+// `root + '\0' + path`, invalidated by directory mtime and a short TTL.
+// ---------------------------------------------------------------------------
+interface ListCacheEntry {
+  mtimeMs: number
+  expiresAt: number
+  entries: BrowserEntry[]
+}
+
+const listCache = new Map<string, ListCacheEntry>()
+const LIST_CACHE_TTL_MS = 2000
+
+/** Drop all cached directory listings (called after a write changes entry sizes). */
+function invalidateListCache(): void {
+  listCache.clear()
+}
+
+// ---------------------------------------------------------------------------
 // list — list one directory level; directories before files, each
 // alphabetically by name; skip symlinks and (unless showHidden) dotfiles.
 // ---------------------------------------------------------------------------
 async function list(root: string, input: string, showHidden = false): Promise<BrowserEntry[]> {
   const target = await inside(root, input)
+  const dirInfo = await stat(target.absolute)
+  const cacheKey = `${root}\0${target.path}\0${showHidden}`
+  const cached = listCache.get(cacheKey)
+  const now = Date.now()
+  if (cached !== undefined && cached.mtimeMs === dirInfo.mtimeMs && now < cached.expiresAt) {
+    return cached.entries
+  }
   const children = await readdir(target.absolute, { withFileTypes: true })
   const entries = await Promise.all(
     children
@@ -91,9 +116,11 @@ async function list(root: string, input: string, showHidden = false): Promise<Br
         return { name: child.name, path: childPath, kind: 'file' as const, size: info.size }
       }),
   )
-  return entries.sort((a, b) =>
+  const sorted = entries.sort((a, b) =>
     a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'directory' ? -1 : 1,
   )
+  listCache.set(cacheKey, { mtimeMs: dirInfo.mtimeMs, expiresAt: now + LIST_CACHE_TTL_MS, entries: sorted })
+  return sorted
 }
 
 /** Read the first `maxBytes` bytes of a file (bounded; never reads more). */
@@ -401,6 +428,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
           if (action === 'write') {
             if (typeof body.content !== 'string') throw new Error('content is required')
             const saved = await write(root, path, body.content)
+            invalidateListCache()
             return json(res, 200, { ok: true, saved })
           }
           return json(res, 400, { ok: false, error: 'unknown action' })
@@ -418,4 +446,4 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 // ---------------------------------------------------------------------------
 // Exported for testing
 // ---------------------------------------------------------------------------
-export { capBytes, inside, list, preview, raw, write }
+export { capBytes, inside, invalidateListCache, list, preview, raw, write }

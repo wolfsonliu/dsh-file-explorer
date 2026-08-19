@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { mkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { inside, list, preview, write, raw, apply, capBytes } from '../src/index.ts'
+import { inside, list, preview, write, raw, apply, capBytes, invalidateListCache } from '../src/index.ts'
 import type { Config } from '../src/protocol.ts'
 
 let root: string
@@ -192,6 +192,37 @@ describe('list', () => {
 
   test('rejects symlink pointing outside workspace', async () => {
     await expect(list(root, 'escape')).rejects.toThrow('path is outside the configured workspace')
+  })
+
+  test('caches directory listings within the TTL (same array reference)', async () => {
+    const a = await list(root, '')
+    const b = await list(root, '')
+    expect(a).toBe(b)
+  })
+
+  test('recomputes when the directory mtime changes', async () => {
+    const a = await list(root, '')
+    await write(root, 'mtime-probe.txt', 'x')
+    const b = await list(root, '')
+    expect(b).not.toBe(a)
+    expect(b.find(e => e.name === 'mtime-probe.txt')).toBeDefined()
+  })
+
+  test('invalidateListCache forces a recompute', async () => {
+    const a = await list(root, '')
+    invalidateListCache()
+    const b = await list(root, '')
+    expect(b).not.toBe(a)
+  })
+
+  test('recomputes size after invalidateListCache following an overwrite', async () => {
+    await write(root, 'overwrite.txt', 'hello') // 5 bytes
+    const a = await list(root, '')
+    expect(a.find(e => e.name === 'overwrite.txt')?.size).toBe(5)
+    await write(root, 'overwrite.txt', 'hello world') // 11 bytes; directory mtime unchanged
+    invalidateListCache()
+    const b = await list(root, '')
+    expect(b.find(e => e.name === 'overwrite.txt')?.size).toBe(11)
   })
 })
 

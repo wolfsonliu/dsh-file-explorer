@@ -76,6 +76,8 @@ The bundle enables the following defaults:
 | `maxTextBytes`   |   2 MiB | Max size of a single text file to preview          |
 | `maxImageBytes`  |  10 MiB | Max size of a single image file to preview         |
 | `maxBinaryBytes` |  64 KiB | Max bytes of a binary file to read for its hexdump |
+| `maxRawBytes`    | 100 MiB | Per-read cap for raw reads / readRawFile           |
+| `showHidden`     |   false | Whether to list dot-prefixed (hidden) files        |
 
 ## Data layer
 
@@ -100,7 +102,7 @@ This plugin is a pure UI surface — it emits no session events and does not mod
 - **No polling refresh**: the tree only refreshes manually (↻) or on session switch.
 - **File-link interception is best-effort**: it relies on DSH's CSS class names (`_fileLink`, `data-produced-files-row`); update the selectors if the upstream UI changes.
 - **Large files**: text/image reads are bounded by `maxTextBytes`/`maxImageBytes`, and binary hexdumps read only the first `maxBinaryBytes`; streaming is not implemented.
-- **PDF range requests**: the `pdf` action streams the whole file without `Range`/`206` support, so very large PDFs download fully before the native viewer renders; byte-range seeking is deferred.
+- **Hidden files are hidden by default**: dot-prefixed files/directories are no longer listed; set `showHidden: true` in the bundle config to show them.
 
 ## Developing extensions
 

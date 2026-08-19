@@ -100,6 +100,7 @@ npm run build     # tsc + tsdown → host ESM lib/index.js + client CJS bundle l
 | `maxImageBytes` |    10 MiB | Max bytes of a single image file to preview                       |
 | `maxBinaryBytes`|   64 KiB  | Max bytes of a binary file to hexdump                             |
 | `maxRawBytes`   |  100 MiB  | Per-read cap for the `raw` action / `readRawFile` (not total size)|
+| `showHidden`    |     false | Whether dot-prefixed (hidden) files are listed                    |
 
 When adding or changing a cap, update `Config`, `cordis.patch.yml`, this table, and the README together.
 

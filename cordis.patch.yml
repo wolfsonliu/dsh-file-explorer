@@ -6,4 +6,4 @@
         maxImageBytes: 10485760
         maxBinaryBytes: 65536
         maxRawBytes: 104857600
-        showHidden: false
+        showHidden: true

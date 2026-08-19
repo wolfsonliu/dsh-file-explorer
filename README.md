@@ -99,7 +99,7 @@ This plugin is a pure UI surface — it emits no session events and does not mod
 
 - **Markdown-only editing**: built-in Markdown previews support inline edit/save (with autosave on file switch and panel close); full CodeMirror text editing across all files is a later phase.
 - **Single-file preview**: no multi-tab or inline diff.
-- **No polling refresh**: the tree only refreshes manually (↻) or on session switch.
+- **Automatic refresh is a debounced poll**: while the drawer is open and the tab is visible, the tree re-fetches its loaded directories every ~3s and on focus; there is no server-push (fs.watch) transport.
 - **File-link interception is best-effort**: it relies on DSH's CSS class names (`_fileLink`, `data-produced-files-row`); update the selectors if the upstream UI changes.
 - **Large files**: text/image reads are bounded by `maxTextBytes`/`maxImageBytes`, and binary hexdumps read only the first `maxBinaryBytes`; streaming is not implemented.
 - **Hidden files are hidden by default**: dot-prefixed files/directories are no longer listed; set `showHidden: true` in the bundle config to show them.

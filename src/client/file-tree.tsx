@@ -22,6 +22,8 @@ export interface FileTreeProps {
   fetchList: (sessionId: string, path: string) => Promise<BrowserEntry[]>
   /** Translator for localized UI copy. */
   t: Translate
+  /** When true, periodically refresh loaded directories (while visible). */
+  autoRefresh?: boolean
 }
 
 /** Imperative handle exposed by FileTree. */
@@ -46,7 +48,7 @@ interface MenuState {
 }
 
 export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
-  { sessionId, helpers, fetchList, t },
+  { sessionId, helpers, fetchList, t, autoRefresh },
   ref,
 ) {
   const [entries, setEntries] = useState<BrowserEntry[]>([])
@@ -54,6 +56,34 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [refreshKey, setRefreshKey] = useState(0)
   const [menu, setMenu] = useState<MenuState>({ open: false, anchor: { x: 0, y: 0 }, entry: null })
+
+  const childrenRef = useRef(children)
+  childrenRef.current = children
+  const refreshingRef = useRef(false)
+
+  const refreshLoadedDirectories = useCallback(() => {
+    if (!sessionId || refreshingRef.current) return
+    refreshingRef.current = true
+    const reload = (path: string, isRoot: boolean) => {
+      fetchList(sessionId, path)
+        .then((list) => {
+          if (!mountedRef.current) return
+          const sorted = sortEntries(list)
+          if (isRoot) setEntries(sorted)
+          else setChildren((prev) => ({ ...prev, [path]: sorted }))
+        })
+        .catch(() => {
+          // Ignore polling fetch failures.
+        })
+    }
+    const targets: Array<[string, boolean]> = [
+      ['', true],
+      ...Object.keys(childrenRef.current).map((p) => [p, false] as [string, boolean]),
+    ]
+    void Promise.all(targets.map(([path, isRoot]) => reload(path, isRoot))).finally(() => {
+      refreshingRef.current = false
+    })
+  }, [sessionId, fetchList])
 
   // Track mounted state to avoid setState after unmount
   const mountedRef = useRef(true)
@@ -84,6 +114,28 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     setChildren({})
     setExpanded({})
   }, [sessionId, refreshKey])
+
+  useEffect(() => {
+    if (!autoRefresh || !sessionId) return
+    const poll = setInterval(() => {
+      if (document.visibilityState !== 'visible') return
+      refreshLoadedDirectories()
+    }, 3000)
+    const onFocus = () => {
+      if (document.visibilityState !== 'visible') return
+      refreshLoadedDirectories()
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refreshLoadedDirectories()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      clearInterval(poll)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [autoRefresh, sessionId, refreshLoadedDirectories])
 
   const handleDisclosureClick = useCallback(
     (entry: BrowserEntry) => {

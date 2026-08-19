@@ -587,4 +587,72 @@ describe('FileTree', () => {
       expect(row.textContent).not.toContain('📄')
     }
   })
+
+  test('polls loaded directories while autoRefresh is true', async () => {
+    vi.useFakeTimers()
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    render(<FileTree sessionId="s1" autoRefresh fetchList={fetchList} helpers={helpers} t={t} />)
+    await act(async () => {})
+    expect(fetchList).toHaveBeenCalledTimes(1)
+
+    act(() => { vi.advanceTimersByTime(3000) })
+    await act(async () => {})
+    expect(fetchList).toHaveBeenCalledTimes(2)
+    expect(fetchList).toHaveBeenLastCalledWith('s1', '')
+
+    vi.useRealTimers()
+  })
+
+  test('does not poll when autoRefresh is false', async () => {
+    vi.useFakeTimers()
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    render(<FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />)
+    await act(async () => {})
+    expect(fetchList).toHaveBeenCalledTimes(1)
+
+    act(() => { vi.advanceTimersByTime(10000) })
+    await act(async () => {})
+    expect(fetchList).toHaveBeenCalledTimes(1)
+
+    vi.useRealTimers()
+  })
+
+  test('refreshes loaded directories on window focus', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    render(<FileTree sessionId="s1" autoRefresh fetchList={fetchList} helpers={helpers} t={t} />)
+    await flush()
+    expect(fetchList).toHaveBeenCalledTimes(1)
+
+    act(() => { window.dispatchEvent(new Event('focus')) })
+    await flush()
+    expect(fetchList).toHaveBeenCalledTimes(2)
+  })
+
+  test('auto-refresh preserves expanded directories', async () => {
+    const fetchList = vi.fn()
+      .mockResolvedValueOnce(rootEntries)   // initial root
+      .mockResolvedValueOnce(srcChildren)   // expand src
+      .mockResolvedValueOnce(rootEntries)   // focus: root
+      .mockResolvedValueOnce(srcChildren)   // focus: src
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" autoRefresh fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    const srcRow = rowNamed(container, 'src')
+    const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
+    act(() => { disclosure.click() })
+    await flush()
+    expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(5)
+
+    act(() => { window.dispatchEvent(new Event('focus')) })
+    await flush()
+
+    expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(5)
+    expect(fetchList).toHaveBeenCalledTimes(4)
+  })
 })

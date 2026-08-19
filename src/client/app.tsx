@@ -335,6 +335,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
             fetchList={fetchList}
             helpers={helpers}
             t={t}
+            autoRefresh={drawerOpen}
           />
         </FileExplorerDrawer>
         <FileExplorerPanel ref={previewPanelRef} title={panelTitle} onClose={handlePanelClose} t={t}>

@@ -11,7 +11,7 @@ import { FileExplorerDrawer, FloatingFileButton } from './drawer.tsx'
 import { FileTree, type FileTreeHandle } from './file-tree.tsx'
 import type { FileActionHelpers } from './file-action.ts'
 import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
-import { BinaryPreview, MarkdownPreview, resolvePreviewFor, TextPreview } from './preview/index.ts'
+import { BinaryPreview, MarkdownPreview, makeTextPagedPreview, resolvePreviewFor } from './preview/index.ts'
 import type { PreviewProps } from './preview/registry.ts'
 import type { Translate } from './locale.ts'
 
@@ -28,6 +28,8 @@ export interface FileExplorerAppProps {
   t: Translate
   /** Write a file back (injectable for tests); enables built-in markdown editing. */
   writeFile?: (path: string, content: string) => Promise<void>
+  /** Read raw bytes (range-capable); enables built-in paged text preview. */
+  readRawFile?: (path: string, offset?: number, limit?: number) => Promise<ArrayBuffer>
 }
 
 export interface FileExplorerAppHandle {
@@ -79,7 +81,7 @@ function openPdfInNewTab(sessionId: string | undefined, path: string): boolean {
 
 /** Composes the floating button, left drawer, and floating preview box. */
 export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerAppProps>(
-  function FileExplorerApp({ sessionId, fetchList, fetchPreview, t, writeFile }, ref) {
+  function FileExplorerApp({ sessionId, fetchList, fetchPreview, t, writeFile, readRawFile }, ref) {
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [selectedPath, setSelectedPath] = useState<string | null>(null)
     const [previewData, setPreviewData] = useState<FilePreview | null>(null)
@@ -303,10 +305,10 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     } else {
       const PreviewComponent =
         viewMode === 'text'
-          ? TextPreview
+          ? makeTextPagedPreview(readRawFile)
           : viewMode === 'binary'
             ? BinaryPreview
-            : resolvePreviewFor(previewData, extensionOf(selectedPath ?? ''))
+            : resolvePreviewFor(previewData, extensionOf(selectedPath ?? ''), readRawFile)
       const previewProps: PreviewProps = {
         preview: previewData,
         filePath: selectedPath ?? '',

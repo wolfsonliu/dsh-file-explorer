@@ -41,7 +41,6 @@ export const inject = ['sessions', 'workspaces', 'locale']
 // ---------------------------------------------------------------------------
 
 export function apply(ctx: ClientContext): void {
-  registerBuiltinPreviews()
   registerBuiltinFileActions()
 
   // Write UTF-8 text to a workspace file (for preview plugins that edit).
@@ -81,6 +80,8 @@ export function apply(ctx: ClientContext): void {
     return res.arrayBuffer()
   }
 
+  registerBuiltinPreviews(readRawFile)
+
   // Expose the registration services so external plugins can contribute
   // previewers, file-row actions, and file writes (override built-ins by priority).
   ctx.reflect.provide('fileExplorer', { registerPreview, registerFileAction, writeFile, readRawFile })
@@ -110,6 +111,7 @@ export function apply(ctx: ClientContext): void {
         sessionId,
         t,
         writeFile,
+        readRawFile,
         fetchList: async (sid, path) => {
           try {
             const res = await fetch(

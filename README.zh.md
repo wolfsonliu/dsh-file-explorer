@@ -76,6 +76,8 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequenc
 | `maxTextBytes`   |  2 MiB | 可预览的单个文本文件大小上限           |
 | `maxImageBytes`  | 10 MiB | 可预览的单个图片大小上限               |
 | `maxBinaryBytes` | 64 KiB | 二进制文件 hexdump 读取的字节数上限    |
+| `maxRawBytes`    | 100 MiB | `raw` 动作 / `readRawFile` 单次读取上限（非总大小） |
+| `showHidden`     |   false | 是否列出以点开头（隐藏）的文件        |
 
 ## 数据层
 
@@ -97,10 +99,10 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequenc
 
 - **仅 Markdown 支持编辑**：内置 Markdown 预览支持行内编辑/保存（切换文件或关闭面板时自动保存）；全文件类型的 CodeMirror 文本编辑属于后续阶段。
 - **单文件预览**：无多标签页、无行内 diff。
-- **不轮询刷新**：目录树仅手动刷新（↻），切换会话时自动刷新。
+- **自动刷新采用防抖轮询**：抽屉打开且标签页可见时，目录树每约 3 秒及窗口获得焦点时重新拉取其已加载目录；没有服务器推送（`fs.watch`）通道。
 - **文件链接拦截为 best-effort**：依赖 DSH 会话区的 CSS 类名（`_fileLink`、`data-produced-files-row`），上游 UI 结构调整时需同步选择器。
-- **大文件**：文本/图片读取受 `maxTextBytes`/`maxImageBytes` 上限约束，二进制 hexdump 只读取前 `maxBinaryBytes` 字节；流式读取未实现。
-- **PDF 不支持分段请求**：`pdf` 动作整体流式返回，不支持 `Range`/`206`，超大 PDF 需完整下载后原生阅读器才能渲染；分段加载留待后续。
+- **大文件**：超大文本文件分页流式加载（超过 `maxTextBytes` 后经 `readRawFile` 分页预览）；图片读取受 `maxImageBytes` 上限约束，二进制 hexdump 只读取前 `maxBinaryBytes` 字节。
+- **隐藏文件默认隐藏**：以点开头的文件/目录不再列出；如需显示，请在组合包配置中设置 `showHidden: true`。
 
 ## 开发扩展
 

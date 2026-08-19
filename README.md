@@ -101,7 +101,7 @@ This plugin is a pure UI surface — it emits no session events and does not mod
 - **Single-file preview**: no multi-tab or inline diff.
 - **Automatic refresh is a debounced poll**: while the drawer is open and the tab is visible, the tree re-fetches its loaded directories every ~3s and on focus; there is no server-push (fs.watch) transport.
 - **File-link interception is best-effort**: it relies on DSH's CSS class names (`_fileLink`, `data-produced-files-row`); update the selectors if the upstream UI changes.
-- **Large files**: text/image reads are bounded by `maxTextBytes`/`maxImageBytes`, and binary hexdumps read only the first `maxBinaryBytes`; streaming is not implemented.
+- **Large files**: large text files stream in pages (past `maxTextBytes` the preview pages via `readRawFile`); image reads are bounded by `maxImageBytes`, and binary hexdumps read only the first `maxBinaryBytes`.
 - **Hidden files are hidden by default**: dot-prefixed files/directories are no longer listed; set `showHidden: true` in the bundle config to show them.
 
 ## Developing extensions

@@ -18,6 +18,8 @@ export declare const ZH: {
     readonly emptyFile: "空文件";
     readonly tooLarge: "文件过大，无法预览";
     readonly hexTruncated: "文件较大，仅显示前 {shown} / {total}";
+    readonly loadMore: "加载更多";
+    readonly textLoaded: "已加载 {loaded} / {total}";
     readonly edit: "编辑";
     readonly save: "保存";
     readonly cancel: "取消";
@@ -43,6 +45,8 @@ export declare const EN: {
     readonly emptyFile: "Empty file";
     readonly tooLarge: "File too large to preview";
     readonly hexTruncated: "Showing first {shown} of {total}";
+    readonly loadMore: "Load more";
+    readonly textLoaded: "Loaded {loaded} / {total}";
     readonly edit: "Edit";
     readonly save: "Save";
     readonly cancel: "Cancel";

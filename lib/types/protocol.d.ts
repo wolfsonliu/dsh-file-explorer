@@ -32,6 +32,11 @@ export type FilePreview = {
     bytes: string;
     truncated: boolean;
 } | {
+    kind: 'text-large';
+    name: string;
+    extension: string;
+    size: number;
+} | {
     kind: 'too-large';
     name: string;
     size: number;

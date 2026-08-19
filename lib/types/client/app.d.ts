@@ -10,6 +10,8 @@ export interface FileExplorerAppProps {
     t: Translate;
     /** Write a file back (injectable for tests); enables built-in markdown editing. */
     writeFile?: (path: string, content: string) => Promise<void>;
+    /** Read raw bytes (range-capable); enables built-in paged text preview. */
+    readRawFile?: (path: string, offset?: number, limit?: number) => Promise<ArrayBuffer>;
 }
 export interface FileExplorerAppHandle {
     openDrawer(): void;

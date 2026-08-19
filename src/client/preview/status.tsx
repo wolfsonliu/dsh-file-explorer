@@ -25,7 +25,7 @@ export const StatusPreview: ComponentType<PreviewProps> = ({ preview, t }) => {
     )
   }
 
-  if (preview.kind === 'too-large') {
+  if (preview.kind === 'too-large' || preview.kind === 'text-large') {
     return (
       <div>
         <p>

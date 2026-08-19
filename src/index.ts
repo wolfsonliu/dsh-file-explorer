@@ -210,6 +210,16 @@ async function write(root: string, input: string, content: string): Promise<stri
   return target.path
 }
 
+/** Parse an HTTP Range header ("bytes=start-end" or "bytes=start-") into inclusive byte offsets. */
+function parseRange(header: string | undefined): { start: number; end?: number } | undefined {
+  if (header === undefined) return undefined
+  const match = /^bytes=(\d+)-(\d*)$/.exec(header)
+  if (match === null) return undefined
+  const start = Number(match[1])
+  const endPart = match[2]
+  return endPart === '' ? { start } : { start, end: Number(endPart) }
+}
+
 // ---------------------------------------------------------------------------
 // servePdf — stream one inline-capable file (whitelisted MIME) to the response.
 // All validation runs before writeHead so a rejection can still send JSON.
@@ -312,17 +322,12 @@ export function apply(ctx: HostContext, config: Config = {}): void {
             return await servePdf(root, path, res)
           }
           if (action === 'raw') {
-            const rangeHeader = req.headers.range
+            const parsed = parseRange(req.headers.range)
             let range: { offset: number; limit?: number } | undefined
-            if (rangeHeader) {
-              const m = rangeHeader.match(/^bytes=(\d+)-(\d*)$/)
-              if (m) {
-                const start = Number(m[1])
-                const end = m[2] ? Number(m[2]) : undefined
-                range = end !== undefined
-                  ? { offset: start, limit: end - start + 1 }
-                  : { offset: start }
-              }
+            if (parsed) {
+              range = parsed.end !== undefined
+                ? { offset: parsed.start, limit: parsed.end - parsed.start + 1 }
+                : { offset: parsed.start }
             }
             try {
               const { buffer, size } = await raw(root, path, maxRaw, range)

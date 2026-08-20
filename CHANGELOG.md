@@ -4,6 +4,14 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-08-20
+
+### Fixed
+
+- The floating file button no longer shifts its icon on hover: the expanded
+  state now keeps the collapsed `padding`, so the icon stays pinned and only the
+  label fades in beside it.
+
 ## [0.3.0] - 2026-08-19
 
 ### Upgrading from 0.2.x (extension authors)

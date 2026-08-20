@@ -177,7 +177,7 @@ export const PANEL_CSS = `
 .dsh-fe-drawer-resize:hover, .dsh-fe-drawer-resize:active { background: var(--dsw-alias-state-business-primary, #4a90d9); }
 .dsh-fe-file-button { position: fixed; left: 0; z-index: 1000; display: inline-flex; align-items: center; gap: 4px; height: 36px; width: 36px; padding: 0 8px; box-sizing: border-box; border: 1px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.1)); border-left: none; border-radius: 0 18px 18px 0; background: var(--dsw-alias-button-elevated-fill, var(--dsw-alias-bg-base, #fff)); box-shadow: 2px 0 8px rgba(0,0,0,0.12); cursor: grab; font-size: 14px; line-height: 22px; color: var(--dsw-alias-label-primary, #333); overflow: hidden; white-space: nowrap; transition: width 0.15s ease, background 0.15s ease; touch-action: none; }
 .dsh-fe-file-button:active { cursor: grabbing; }
-.dsh-fe-file-button:hover { width: 80px; padding: 0 14px; background: var(--dsw-alias-button-floating-hover, var(--dsw-alias-interactive-bg-hover, #0000000d)); }
+.dsh-fe-file-button:hover { width: 80px; background: var(--dsw-alias-button-floating-hover, var(--dsw-alias-interactive-bg-hover, #0000000d)); }
 .dsh-fe-file-button-icon { display: inline-flex; flex-shrink: 0; }
 .dsh-fe-file-button-label { opacity: 0; transition: opacity 0.15s ease; }
 .dsh-fe-file-button:hover .dsh-fe-file-button-label { opacity: 1; }

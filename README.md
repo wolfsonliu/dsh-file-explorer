@@ -69,6 +69,8 @@ The bundle enables the following defaults:
         maxTextBytes: 2097152
         maxImageBytes: 10485760
         maxBinaryBytes: 65536
+        maxRawBytes: 104857600
+        showHidden: true
 ```
 
 | Config           | Default | Description                                        |
@@ -77,7 +79,7 @@ The bundle enables the following defaults:
 | `maxImageBytes`  |  10 MiB | Max size of a single image file to preview         |
 | `maxBinaryBytes` |  64 KiB | Max bytes of a binary file to read for its hexdump |
 | `maxRawBytes`    | 100 MiB | Per-read cap for raw reads / readRawFile           |
-| `showHidden`     |   false | Whether to list dot-prefixed (hidden) files        |
+| `showHidden`     |    true | Whether to list dot-prefixed (hidden) files        |
 
 ## Data layer
 
@@ -102,7 +104,7 @@ This plugin is a pure UI surface — it emits no session events and does not mod
 - **Automatic refresh is a debounced poll**: while the drawer is open and the tab is visible, the tree re-fetches its loaded directories every ~3s and on focus; there is no server-push (fs.watch) transport.
 - **File-link interception is best-effort**: it relies on DSH's CSS class names (`_fileLink`, `data-produced-files-row`); update the selectors if the upstream UI changes.
 - **Large files**: large text files stream in pages (past `maxTextBytes` the preview pages via `readRawFile`); image reads are bounded by `maxImageBytes`, and binary hexdumps read only the first `maxBinaryBytes`.
-- **Hidden files are hidden by default**: dot-prefixed files/directories are no longer listed; set `showHidden: true` in the bundle config to show them.
+- **Hidden files are shown by default**: dot-prefixed files/directories are listed (the bundle sets `showHidden: true`); set `showHidden: false` in the bundle config to hide them.
 
 ## Developing extensions
 

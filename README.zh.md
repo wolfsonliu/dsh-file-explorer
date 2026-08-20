@@ -69,6 +69,8 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequenc
         maxTextBytes: 2097152
         maxImageBytes: 10485760
         maxBinaryBytes: 65536
+        maxRawBytes: 104857600
+        showHidden: true
 ```
 
 | 配置项           | 默认值 | 说明                                   |
@@ -77,7 +79,7 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequenc
 | `maxImageBytes`  | 10 MiB | 可预览的单个图片大小上限               |
 | `maxBinaryBytes` | 64 KiB | 二进制文件 hexdump 读取的字节数上限    |
 | `maxRawBytes`    | 100 MiB | `raw` 动作 / `readRawFile` 单次读取上限（非总大小） |
-| `showHidden`     |   false | 是否列出以点开头（隐藏）的文件        |
+| `showHidden`     |    true | 是否列出以点开头（隐藏）的文件        |
 
 ## 数据层
 
@@ -102,7 +104,7 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequenc
 - **自动刷新采用防抖轮询**：抽屉打开且标签页可见时，目录树每约 3 秒及窗口获得焦点时重新拉取其已加载目录；没有服务器推送（`fs.watch`）通道。
 - **文件链接拦截为 best-effort**：依赖 DSH 会话区的 CSS 类名（`_fileLink`、`data-produced-files-row`），上游 UI 结构调整时需同步选择器。
 - **大文件**：超大文本文件分页流式加载（超过 `maxTextBytes` 后经 `readRawFile` 分页预览）；图片读取受 `maxImageBytes` 上限约束，二进制 hexdump 只读取前 `maxBinaryBytes` 字节。
-- **隐藏文件默认隐藏**：以点开头的文件/目录不再列出；如需显示，请在组合包配置中设置 `showHidden: true`。
+- **隐藏文件默认显示**：以点开头的文件/目录默认会列出（组合包设置 `showHidden: true`）；如需隐藏，请在组合包配置中设置 `showHidden: false`。
 
 ## 开发扩展
 

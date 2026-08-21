@@ -37,8 +37,8 @@ export type FilePreview =
 export type ApiResponse =
   | { ok: true; root: string; entries: BrowserEntry[] }
   | { ok: true; preview: FilePreview }
-  | { ok: true; path: string; parentPath: string }
-  | { ok: true; path: string }
+  | { ok: true; path: string; parentPath: string } // resolve-path
+  | { ok: true; path: string } // file-op mutation result (distinguish from resolve-path by the absence of `parentPath`)
   | { ok: true; saved: string }
   | { ok: false; error: string }
 

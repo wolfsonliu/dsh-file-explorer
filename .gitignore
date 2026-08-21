@@ -2,6 +2,11 @@ node_modules/
 *.tsbuildinfo
 .npm-cache/
 
+# Local git worktrees (isolated feature workspaces).
+.worktrees/
+
+tmp/*
+
 # Agent workflow skills (harness tooling, not project code; live in ~/.dsh/skills).
 .dsh/
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { BrowserEntry } from '../protocol.ts'
 import type { Translate } from './locale.ts'
 import { basenameOfRel, joinRel, type FileOp, type FileOps } from './file-ops.ts'
@@ -45,6 +45,9 @@ export function FileOpsModal({ op, fileOps, fetchList, sessionId, t, onDone, onC
   const [dirMap, setDirMap] = useState<Record<string, BrowserEntry[]>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
+  const mountedRef = useRef(true)
+  useEffect(() => () => { mountedRef.current = false }, [])
+
   // move/copy: enumerate root directories; default the destination to root.
   useEffect(() => {
     if (op.kind !== 'move' && op.kind !== 'copy') return
@@ -77,6 +80,7 @@ export function FileOpsModal({ op, fileOps, fetchList, sessionId, t, onDone, onC
       }
       onDone(resultPath)
     } catch (err) {
+      if (!mountedRef.current) return
       setError(err instanceof Error ? err.message : String(err))
       setSaving(false)
     }
@@ -90,6 +94,7 @@ export function FileOpsModal({ op, fileOps, fetchList, sessionId, t, onDone, onC
       await fileOps.remove(op.entry.path)
       onDone(op.entry.path)
     } catch (err) {
+      if (!mountedRef.current) return
       setError(err instanceof Error ? err.message : String(err))
       setSaving(false)
     }
@@ -104,6 +109,7 @@ export function FileOpsModal({ op, fileOps, fetchList, sessionId, t, onDone, onC
       else await fileOps.copy(op.entry.path, destDir)
       onDone(joinRel(destDir, basenameOfRel(op.entry.path)))
     } catch (err) {
+      if (!mountedRef.current) return
       setError(err instanceof Error ? err.message : String(err))
       setSaving(false)
     }
@@ -114,7 +120,7 @@ export function FileOpsModal({ op, fileOps, fetchList, sessionId, t, onDone, onC
     if (next && !dirMap[path]) {
       if (sessionId !== undefined) {
         void fetchList(sessionId, path)
-          .then(list => setDirMap(m => ({ ...m, [path]: list.filter(e => e.kind === 'directory') })))
+          .then(list => { if (mountedRef.current) setDirMap(m => ({ ...m, [path]: list.filter(e => e.kind === 'directory') })) })
           .catch(() => { /* Ignore destination-dir fetch failures. */ })
       }
     }

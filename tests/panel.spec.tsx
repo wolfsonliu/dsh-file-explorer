@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React from 'react'
-import { FileExplorerPanel } from '../src/client/panel.tsx'
+import {
+  clampToViewport,
+  FileExplorerPanel,
+  TITLE_BAR_HEIGHT,
+} from '../src/client/panel.tsx'
 
 /** Identity translator: renders the localization key as-is. */
 const t = (key: string) => key
@@ -54,6 +58,95 @@ function render(element: React.ReactElement): HTMLElement {
   })
   return container
 }
+
+// ---------------------------------------------------------------------------
+// Viewport clamp helpers
+// ---------------------------------------------------------------------------
+
+const DEFAULT_INNER_WIDTH = window.innerWidth
+const DEFAULT_INNER_HEIGHT = window.innerHeight
+
+/** Fix the jsdom viewport so pointer/resize clamping is deterministic. */
+function setViewport(width: number, height: number): void {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: height })
+}
+
+/** Perform a pointerdown → pointermove → pointerup title drag. */
+function dragTitle(
+  titleText: HTMLElement,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): void {
+  act(() => {
+    titleText.dispatchEvent(
+      new PointerEvent('pointerdown', { clientX: from.x, clientY: from.y, bubbles: true }),
+    )
+  })
+  act(() => {
+    document.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: to.x, clientY: to.y, bubbles: true }),
+    )
+  })
+  act(() => {
+    document.dispatchEvent(
+      new PointerEvent('pointerup', { clientX: to.x, clientY: to.y, bubbles: true }),
+    )
+  })
+}
+
+afterEach(() => {
+  setViewport(DEFAULT_INNER_WIDTH, DEFAULT_INNER_HEIGHT)
+})
+
+// ---------------------------------------------------------------------------
+// clampToViewport (pure function)
+// ---------------------------------------------------------------------------
+describe('clampToViewport', () => {
+  const size = { width: 640, height: 480 }
+
+  test('returns a legal position unchanged', () => {
+    const viewport = { width: 1000, height: 700 }
+    expect(clampToViewport({ x: 80, y: 80 }, size, viewport)).toEqual({ x: 80, y: 80 })
+  })
+
+  test('clamps a negative top to 0', () => {
+    const viewport = { width: 1000, height: 700 }
+    expect(clampToViewport({ x: 80, y: -100 }, size, viewport)).toEqual({ x: 80, y: 0 })
+  })
+
+  test('clamps top past the lower bound to viewport height minus title bar height', () => {
+    const viewport = { width: 1000, height: 700 }
+    expect(clampToViewport({ x: 80, y: 900 }, size, viewport)).toEqual({
+      x: 80,
+      y: viewport.height - TITLE_BAR_HEIGHT,
+    })
+  })
+
+  test('clamps a negative left to 0', () => {
+    const viewport = { width: 1000, height: 700 }
+    expect(clampToViewport({ x: -100, y: 80 }, size, viewport)).toEqual({ x: 0, y: 80 })
+  })
+
+  test('clamps left past the right bound to viewport width minus size width', () => {
+    const viewport = { width: 1000, height: 700 }
+    expect(clampToViewport({ x: 900, y: 80 }, size, viewport)).toEqual({
+      x: viewport.width - size.width,
+      y: 80,
+    })
+  })
+
+  test('clamps left to 0 when size width >= viewport width', () => {
+    const viewport = { width: 1000, height: 700 }
+    const oversized = { width: 1200, height: 480 }
+    expect(clampToViewport({ x: 50, y: 80 }, oversized, viewport)).toEqual({ x: 0, y: 80 })
+  })
+
+  test('clamps top to 0 when viewport height < title bar height', () => {
+    const viewport = { width: 1000, height: 10 }
+    expect(clampToViewport({ x: 80, y: 80 }, size, viewport)).toEqual({ x: 80, y: 0 })
+  })
+})
 
 // ---------------------------------------------------------------------------
 // FileExplorerPanel
@@ -262,6 +355,67 @@ describe('FileExplorerPanel', () => {
 
     expect(panel.style.left).not.toBe(initialLeft)
     expect(panel.style.top).not.toBe(initialTop)
+  })
+
+  test('drag above viewport clamps top to 0', () => {
+    setViewport(1000, 700)
+    const container = render(
+      <FileExplorerPanel initialVisible t={t}>
+        <span>Preview</span>
+      </FileExplorerPanel>,
+    )
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    const titleText = panel.querySelector('.dsh-fe-title-text') as HTMLElement
+    expect(titleText).not.toBeNull()
+
+    dragTitle(titleText, { x: 100, y: 100 }, { x: 100, y: -500 })
+
+    expect(panel.style.top).toBe('0px')
+  })
+
+  test('drag beyond bottom-right clamps to viewport bounds', () => {
+    setViewport(1000, 700)
+    const container = render(
+      <FileExplorerPanel initialVisible t={t}>
+        <span>Preview</span>
+      </FileExplorerPanel>,
+    )
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    const titleText = panel.querySelector('.dsh-fe-title-text') as HTMLElement
+    expect(titleText).not.toBeNull()
+
+    dragTitle(titleText, { x: 100, y: 100 }, { x: 2000, y: 2000 })
+
+    expect(panel.style.left).toBe('360px')
+    expect(panel.style.top).toBe('668px')
+  })
+
+  test('window resize re-clamps an out-of-bounds panel', () => {
+    setViewport(1000, 700)
+    const container = render(
+      <FileExplorerPanel initialVisible t={t}>
+        <span>Preview</span>
+      </FileExplorerPanel>,
+    )
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    const titleText = panel.querySelector('.dsh-fe-title-text') as HTMLElement
+    expect(titleText).not.toBeNull()
+
+    dragTitle(titleText, { x: 100, y: 100 }, { x: 2000, y: 2000 })
+    expect(panel.style.left).toBe('360px')
+    expect(panel.style.top).toBe('668px')
+
+    setViewport(1000, 400)
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(panel.style.top).toBe('368px')
+
+    setViewport(500, 400)
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(panel.style.left).toBe('0px')
   })
 
   test('resize handle drag updates panel size', () => {

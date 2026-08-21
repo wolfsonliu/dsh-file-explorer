@@ -32,12 +32,12 @@ export interface FileExplorerPanelProps {
   onClose?: () => void
 }
 
-interface Position {
+export interface Position {
   x: number
   y: number
 }
 
-interface Size {
+export interface Size {
   width: number
   height: number
 }
@@ -55,6 +55,32 @@ type Action =
   | { type: 'MAXIMIZE' }
   | { type: 'MOVE'; payload: Position }
   | { type: 'RESIZE'; payload: Size }
+
+// ---------------------------------------------------------------------------
+// Viewport clamping
+// ---------------------------------------------------------------------------
+
+/** 标题栏高度；必须与 styles.ts 的 `.dsh-fe-title-bar { height: 32px }` 保持一致。 */
+export const TITLE_BAR_HEIGHT = 32
+
+export interface Viewport {
+  width: number
+  height: number
+}
+
+/** 把面板位置钳制到视口内，保证 32px 标题栏始终完整可见。 */
+export function clampToViewport(
+  position: Position,
+  size: Size,
+  viewport: Viewport,
+): Position {
+  const maxTop = Math.max(0, viewport.height - TITLE_BAR_HEIGHT)
+  const maxLeft = Math.max(0, viewport.width - size.width)
+  return {
+    x: Math.max(0, Math.min(maxLeft, position.x)),
+    y: Math.max(0, Math.min(maxTop, position.y)),
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Reducer
@@ -184,15 +210,17 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
     const handleTitleDrag = useCallback(
       (dx: number, dy: number) => {
         if (geometry.maximized) return
+        const viewport = { width: window.innerWidth, height: window.innerHeight }
         dispatch({
           type: 'MOVE',
-          payload: {
-            x: geometry.position.x + dx,
-            y: geometry.position.y + dy,
-          },
+          payload: clampToViewport(
+            { x: geometry.position.x + dx, y: geometry.position.y + dy },
+            geometry.size,
+            viewport,
+          ),
         })
       },
-      [geometry.position, geometry.maximized],
+      [geometry.position, geometry.maximized, geometry.size],
     )
     const titleDrag = useDragHandle(handleTitleDrag)
 
@@ -210,6 +238,33 @@ export const FileExplorerPanel = forwardRef<FileExplorerPanelHandle, FileExplore
       [geometry.size],
     )
     const resizeDrag = useDragHandle(handleResizeDrag)
+
+    // Re-clamp whenever the viewport shrinks or maximized is restored, so the
+    // 32px title bar always stays reachable. A ref holds the latest geometry
+    // (same pattern as useDragHandle's onDeltaRef); the effect only re-runs on
+    // maximized changes, avoiding listener churn on every drag.
+    const geometryRef = useRef(geometry)
+    geometryRef.current = geometry
+
+    useEffect(() => {
+      if (geometry.maximized) return
+
+      const reClamp = () => {
+        const viewport = { width: window.innerWidth, height: window.innerHeight }
+        const { position, size } = geometryRef.current
+        const clamped = clampToViewport(position, size, viewport)
+        if (clamped.x !== position.x || clamped.y !== position.y) {
+          dispatch({ type: 'MOVE', payload: clamped })
+        }
+      }
+
+      reClamp()
+      window.addEventListener('resize', reClamp)
+
+      return () => {
+        window.removeEventListener('resize', reClamp)
+      }
+    }, [geometry.maximized])
 
     if (!geometry.visible) {
       return null

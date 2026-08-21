@@ -177,7 +177,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
 
     const openFileWithMode = useCallback(
       async (path: string, mode: PreviewMode) => {
-        // PDF default-open goes straight to a new browser tab (before any
+        // Browser-renderable files default-open in a new tab (before any
         // `await`, so the call stays inside the click gesture). When the tab
         // is blocked, fall through to the normal panel preview.
         if (mode === 'auto' && isBrowserOpenable(path) && openInBrowserTab(sessionId, path)) return

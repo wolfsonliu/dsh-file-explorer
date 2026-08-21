@@ -29,6 +29,21 @@ export declare const ZH: {
     readonly searchPlaceholder: "搜索文件…";
     readonly noSearchResults: "没有匹配的文件";
     readonly clearSearch: "清除搜索";
+    readonly new: "新建";
+    readonly newFile: "新建文件";
+    readonly newFolder: "新建文件夹";
+    readonly rename: "重命名";
+    readonly moveTo: "移动";
+    readonly copyTo: "复制";
+    readonly delete: "删除";
+    readonly confirmDelete: "确认删除 {name}？此操作不可恢复";
+    readonly create: "创建";
+    readonly moveHere: "移动到这里";
+    readonly copyHere: "复制到这里";
+    readonly selectDestination: "选择目标目录";
+    readonly workspaceRoot: "工作区根目录";
+    readonly confirm: "确定";
+    readonly opFailed: "操作失败";
 };
 export declare const EN: {
     readonly title: "File Explorer";
@@ -59,6 +74,21 @@ export declare const EN: {
     readonly searchPlaceholder: "Search files…";
     readonly noSearchResults: "No matching files";
     readonly clearSearch: "Clear search";
+    readonly new: "New";
+    readonly newFile: "New file";
+    readonly newFolder: "New folder";
+    readonly rename: "Rename";
+    readonly moveTo: "Move";
+    readonly copyTo: "Copy";
+    readonly delete: "Delete";
+    readonly confirmDelete: "Delete {name}? This cannot be undone";
+    readonly create: "Create";
+    readonly moveHere: "Move here";
+    readonly copyHere: "Copy here";
+    readonly selectDestination: "Select destination";
+    readonly workspaceRoot: "Workspace root";
+    readonly confirm: "OK";
+    readonly opFailed: "Operation failed";
 };
 /** Register the plugin's dictionaries; returns a disposer for both locales. */
 export declare function registerFileExplorerLocale(ctx: {

@@ -36,6 +36,12 @@ declare function raw(root: string, input: string, maxRaw: number, range?: {
     size: number;
 }>;
 declare function write(root: string, input: string, content: string): Promise<string>;
+declare function createFile(root: string, input: string): Promise<string>;
+declare function mkdir(root: string, input: string): Promise<string>;
+declare function rename(root: string, input: string, name: string): Promise<string>;
+declare function move(root: string, input: string, toDir: string): Promise<string>;
+declare function copy(root: string, input: string, toDir: string): Promise<string>;
+declare function remove(root: string, input: string): Promise<string>;
 /**
  * Serve one workspace file under the static prefix route. Directories fall
  * back to their `index.html`. Throws the `inside` containment error for
@@ -44,4 +50,4 @@ declare function write(root: string, input: string, content: string): Promise<st
 declare function serveStatic(root: string, input: string, rangeHeader: string | undefined, csp: string | undefined, res: ServerResponse): Promise<void>;
 declare function capBytes(value: number | undefined, fallback: number): number;
 export declare function apply(ctx: HostContext, config?: Config): void;
-export { capBytes, inside, invalidateListCache, list, preview, raw, serveStatic, write };
+export { capBytes, copy, createFile, inside, invalidateListCache, list, mkdir, move, preview, raw, remove, rename, serveStatic, write };

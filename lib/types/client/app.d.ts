@@ -1,6 +1,7 @@
 import React from 'react';
 import { type BrowserEntry, type FilePreview, type PreviewMode } from '../protocol.ts';
 import type { Translate } from './locale.ts';
+import { type FileOps } from './file-ops.ts';
 export interface FileExplorerAppProps {
     sessionId: string | undefined;
     fetchList: (sessionId: string, path: string) => Promise<BrowserEntry[]>;
@@ -12,6 +13,8 @@ export interface FileExplorerAppProps {
     writeFile?: (path: string, content: string) => Promise<void>;
     /** Read raw bytes (range-capable); enables built-in paged text preview. */
     readRawFile?: (path: string, offset?: number, limit?: number) => Promise<ArrayBuffer>;
+    /** File-operation backend (injectable for tests). */
+    fileOps?: FileOps;
 }
 export interface FileExplorerAppHandle {
     openDrawer(): void;

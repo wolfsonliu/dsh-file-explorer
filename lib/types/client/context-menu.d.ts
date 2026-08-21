@@ -6,6 +6,8 @@ export interface FileContextMenuItem {
     label: string;
     /** Optional leading icon. */
     icon?: ReactNode;
+    /** Render this item with the danger color. */
+    danger?: boolean;
     /** Called when the item is selected (before the menu closes). */
     onSelect: () => void;
 }

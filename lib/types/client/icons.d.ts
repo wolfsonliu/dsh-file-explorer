@@ -33,3 +33,5 @@ export declare function IconFile(props: FeIconProps): import("react").JSX.Elemen
 export declare function IconEllipsis(props: FeIconProps): import("react").JSX.Element;
 /** ic_ds_search_outline_16 — magnifier ring + handle (inlined, fill-based). */
 export declare function IconSearch(props: FeIconProps): import("react").JSX.Element;
+/** ic_ds_plus_outline_16 — a simple plus glyph. */
+export declare function IconPlus(props: FeIconProps): import("react").JSX.Element;

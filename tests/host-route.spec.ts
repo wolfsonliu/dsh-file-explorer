@@ -952,6 +952,105 @@ describe('apply / route handler', () => {
     await new Promise<void>((resolve) => server2.close(() => resolve()))
   })
 
+  // --- file-op mutation actions ---
+
+  test('create-file route creates a file and returns its path', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'create-file', path: 'route-created.txt' }),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json() as any
+    expect(body.ok).toBe(true)
+    expect(body.path).toBe('route-created.txt')
+
+    const listRes = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session&action=list&path=`)
+    const listBody = await listRes.json() as any
+    expect(listBody.entries.map((e: any) => e.name)).toContain('route-created.txt')
+  })
+
+  test('mkdir route creates a directory', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'mkdir', path: 'route-dir' }),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json() as any
+    expect(body.ok).toBe(true)
+    expect(body.path).toBe('route-dir')
+  })
+
+  test('rename route returns the new path and updates the listing', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'rename', path: 'a.txt', name: 'a-renamed.txt' }),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json() as any
+    expect(body.path).toBe('a-renamed.txt')
+  })
+
+  test('rename route rejects an invalid name with 400', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'rename', path: 'b.txt', name: 'bad/name' }),
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.ok).toBe(false)
+    expect(body.error).toBe('invalid name')
+  })
+
+  test('create-file route rejects an existing target with 400', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'create-file', path: 'b.txt' }),
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.error).toBe('path already exists')
+  })
+
+  test('delete route removes a file', async () => {
+    await write(root, 'route-delete.txt', 'x')
+    const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', path: 'route-delete.txt' }),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json() as any
+    expect(body.path).toBe('route-delete.txt')
+  })
+
+  test('move route moves a file and returns its new path', async () => {
+    await write(root, 'route-move.txt', 'x')
+    const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'move', path: 'route-move.txt', toDir: 'subdir' }),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json() as any
+    expect(body.path).toBe('subdir/route-move.txt')
+  })
+
+  test('copy route copies a file and returns its new path', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'copy', path: 'b.txt', toDir: 'subdir' }),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json() as any
+    expect(body.path).toBe('subdir/b.txt')
+  })
+
   test('unknown action returns 400', async () => {
     const url = `${baseUrl}/file-explorer/api?sessionId=test-session&action=bogus`
     const res = await fetch(url)

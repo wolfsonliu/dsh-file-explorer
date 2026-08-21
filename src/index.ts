@@ -14,8 +14,14 @@ import {
 } from 'node:fs/promises'
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import {
+  COPY_ACTION,
+  CREATE_FILE_ACTION,
+  DELETE_ACTION,
   FILE_EXPLORER_ROUTE,
+  MKDIR_ACTION,
+  MOVE_ACTION,
   PDF_ACTION,
+  RENAME_ACTION,
   STATIC_FILES_ROUTE,
   type ApiResponse,
   type BrowserEntry,
@@ -713,6 +719,37 @@ export function apply(ctx: HostContext, config: Config = {}): void {
             const saved = await write(root, path, body.content)
             invalidateListCache()
             return json(res, 200, { ok: true, saved })
+          }
+          if (action === CREATE_FILE_ACTION) {
+            const created = await createFile(root, path)
+            invalidateListCache()
+            return json(res, 200, { ok: true, path: created })
+          }
+          if (action === MKDIR_ACTION) {
+            const created = await mkdir(root, path)
+            invalidateListCache()
+            return json(res, 200, { ok: true, path: created })
+          }
+          if (action === RENAME_ACTION) {
+            if (typeof body.name !== 'string') throw new Error('name is required')
+            const renamed = await rename(root, path, body.name)
+            invalidateListCache()
+            return json(res, 200, { ok: true, path: renamed })
+          }
+          if (action === MOVE_ACTION) {
+            const moved = await move(root, path, typeof body.toDir === 'string' ? body.toDir : '')
+            invalidateListCache()
+            return json(res, 200, { ok: true, path: moved })
+          }
+          if (action === COPY_ACTION) {
+            const copied = await copy(root, path, typeof body.toDir === 'string' ? body.toDir : '')
+            invalidateListCache()
+            return json(res, 200, { ok: true, path: copied })
+          }
+          if (action === DELETE_ACTION) {
+            const removed = await remove(root, path)
+            invalidateListCache()
+            return json(res, 200, { ok: true, path: removed })
           }
           return json(res, 400, { ok: false, error: 'unknown action' })
         } catch (error) {

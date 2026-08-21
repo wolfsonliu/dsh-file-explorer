@@ -4,6 +4,12 @@ export const FILE_EXPLORER_ROUTE = '/file-explorer/api'
 /** The `action` value that streams a PDF inline for the browser's native viewer. */
 export const PDF_ACTION = 'pdf'
 
+/** Prefix route that serves workspace files for browser-native rendering. */
+export const STATIC_FILES_ROUTE = '/file-explorer/files'
+
+/** Extensions the client opens in a new browser tab on default open. */
+export const BROWSER_OPEN_EXTS = ['pdf', 'html', 'htm', 'xhtml'] as const
+
 export interface BrowserEntry {
   name: string
   /** Workspace-relative path ('' = root). */
@@ -39,6 +45,10 @@ export interface Config {
   maxRawBytes?: number
   /** When true, dot-prefixed files/directories are listed (default false = hide). */
   showHidden?: boolean
+  /** Optional Content-Security-Policy value for inline `text/html`,
+   *  `application/xhtml+xml`, and `image/svg+xml` responses from the
+   *  `/file-explorer/files` route. Empty/undefined = no header (default). */
+  inlineCsp?: string
 }
 
 export type PreviewMode = 'auto' | 'text' | 'binary'

@@ -4,6 +4,31 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-08-21
+
+### Added
+
+- Static file route `/file-explorer/files/<sessionId>/<path…>` that streams
+  workspace files with browser-native MIME types, honors `Range`
+  (200/206/416), serves a directory's `index.html`, and always sets
+  `x-content-type-options: nosniff` + `cache-control: no-store`.
+- `Config.inlineCsp` (optional) — a `Content-Security-Policy` applied to
+  inline `html`/`xhtml`/`svg` responses from the static route.
+- Default open now routes `.html`, `.htm`, and `.xhtml` (alongside `.pdf`)
+  through the browser's native renderer in a new tab.
+
+### Changed
+
+- Hidden files are now shown by default (`showHidden: true` in the bundle
+  config; set `showHidden: false` to restore the previous behavior).
+
+### Fixed
+
+- Dragging the preview box could push its title bar past the viewport edge,
+  leaving it un-closeable, un-maximizable, and un-draggable. The position is
+  now clamped so the title bar always stays in view, and re-clamped on window
+  resize and when restoring from maximize.
+
 ## [0.3.1] - 2026-08-20
 
 ### Fixed

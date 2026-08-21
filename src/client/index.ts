@@ -1,10 +1,19 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import { FILE_EXPLORER_ROUTE } from '../protocol.ts'
+import {
+  COPY_ACTION,
+  CREATE_FILE_ACTION,
+  DELETE_ACTION,
+  FILE_EXPLORER_ROUTE,
+  MKDIR_ACTION,
+  MOVE_ACTION,
+  RENAME_ACTION,
+} from '../protocol.ts'
 import { registerBuiltinPreviews } from './preview/index.ts'
 import { registerPreview } from './preview/registry.ts'
 import { registerBuiltinFileActions, registerFileAction } from './file-action.ts'
 import { FileExplorerApp, type FileExplorerAppHandle } from './app.tsx'
+import type { FileOps } from './file-ops.ts'
 import { interceptFileLinks } from './intercept.ts'
 import { PANEL_CSS } from './styles.ts'
 import {
@@ -43,20 +52,35 @@ export const inject = ['sessions', 'workspaces', 'locale']
 export function apply(ctx: ClientContext): void {
   registerBuiltinFileActions()
 
-  // Write UTF-8 text to a workspace file (for preview plugins that edit).
-  const writeFile = async (path: string, content: string): Promise<void> => {
+  // Shared POST helper for mutating actions; reads the current sessionId.
+  const mutate = async (action: string, body: Record<string, unknown>): Promise<void> => {
     const sessionId = ctx.sessions.list.getSnapshot().current
     if (sessionId === undefined) throw new Error('no current session')
     const res = await fetch(
-      `${FILE_EXPLORER_ROUTE}?action=write&sessionId=${encodeURIComponent(sessionId)}`,
+      `${FILE_EXPLORER_ROUTE}?action=${encodeURIComponent(action)}&sessionId=${encodeURIComponent(sessionId)}`,
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ path, content }),
+        body: JSON.stringify(body),
       },
     )
     const data = await res.json()
     if (!data.ok) throw new Error(data.error)
+  }
+
+  // Write UTF-8 text to a workspace file (for preview plugins that edit).
+  const writeFile = async (path: string, content: string): Promise<void> => {
+    await mutate('write', { path, content })
+  }
+
+  // Workspace mutation API used by FileOpsModal (not exposed on the service).
+  const fileOps: FileOps = {
+    createFile: (path) => mutate(CREATE_FILE_ACTION, { path }),
+    createDir: (path) => mutate(MKDIR_ACTION, { path }),
+    rename: (path, name) => mutate(RENAME_ACTION, { path, name }),
+    remove: (path) => mutate(DELETE_ACTION, { path }),
+    move: (path, toDir) => mutate(MOVE_ACTION, { path, toDir }),
+    copy: (path, toDir) => mutate(COPY_ACTION, { path, toDir }),
   }
 
   // Read raw bytes from a workspace file, with optional byte range.
@@ -112,6 +136,7 @@ export function apply(ctx: ClientContext): void {
         t,
         writeFile,
         readRawFile,
+        fileOps,
         fetchList: async (sid, path) => {
           try {
             const res = await fetch(

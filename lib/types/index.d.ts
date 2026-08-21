@@ -10,7 +10,7 @@ interface HostContext {
     };
     webServer: {
         register(route: {
-            kind: 'exact';
+            kind: 'exact' | 'prefix';
             path: string;
             handler(req: IncomingMessage, res: ServerResponse): Promise<void>;
         }): () => void;
@@ -36,6 +36,12 @@ declare function raw(root: string, input: string, maxRaw: number, range?: {
     size: number;
 }>;
 declare function write(root: string, input: string, content: string): Promise<string>;
+/**
+ * Serve one workspace file under the static prefix route. Directories fall
+ * back to their `index.html`. Throws the `inside` containment error for
+ * escapes, ENOENT for missing files — the route handler maps those to 400/404.
+ */
+declare function serveStatic(root: string, input: string, rangeHeader: string | undefined, csp: string | undefined, res: ServerResponse): Promise<void>;
 declare function capBytes(value: number | undefined, fallback: number): number;
 export declare function apply(ctx: HostContext, config?: Config): void;
-export { capBytes, inside, invalidateListCache, list, preview, raw, write };
+export { capBytes, inside, invalidateListCache, list, preview, raw, serveStatic, write };

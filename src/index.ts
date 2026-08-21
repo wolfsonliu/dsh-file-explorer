@@ -395,6 +395,13 @@ async function copy(root: string, input: string, toDir: string): Promise<string>
   return joinRel(destDir.path, name)
 }
 
+async function remove(root: string, input: string): Promise<string> {
+  assertNotRoot(input)
+  const target = await inside(root, input)
+  await fsRm(target.absolute, { recursive: true })
+  return target.path
+}
+
 /** Parse an HTTP Range header ("bytes=start-end" or "bytes=start-") into inclusive byte offsets. */
 function parseRange(header: string | undefined): { start: number; end?: number } | undefined {
   if (header === undefined) return undefined
@@ -741,4 +748,4 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 // ---------------------------------------------------------------------------
 // Exported for testing
 // ---------------------------------------------------------------------------
-export { capBytes, copy, createFile, inside, invalidateListCache, list, mkdir, move, preview, raw, rename, serveStatic, write }
+export { capBytes, copy, createFile, inside, invalidateListCache, list, mkdir, move, preview, raw, remove, rename, serveStatic, write }

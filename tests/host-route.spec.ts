@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { mkdir as fsMkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { inside, list, preview, write, raw, apply, capBytes, invalidateListCache, copy, createFile, mkdir, move, rename } from '../src/index.ts'
+import { inside, list, preview, write, raw, apply, capBytes, invalidateListCache, copy, createFile, mkdir, move, rename, remove } from '../src/index.ts'
 import type { Config } from '../src/protocol.ts'
 
 let root: string
@@ -562,6 +562,29 @@ describe('copy', () => {
     await mkdir(root, 'self-copy')
     await mkdir(root, 'self-copy/sub')
     await expect(copy(root, 'self-copy', 'self-copy/sub')).rejects.toThrow('cannot copy a directory into itself')
+  })
+})
+
+describe('remove', () => {
+  test('removes a file and returns its relative path', async () => {
+    await write(root, 'remove-me.txt', 'x')
+    expect(await remove(root, 'remove-me.txt')).toBe('remove-me.txt')
+    await expect(import('node:fs/promises').then(fs => fs.stat(join(root, 'remove-me.txt')))).rejects.toThrow()
+  })
+
+  test('recursively removes a directory', async () => {
+    await mkdir(root, 'remove-dir')
+    await write(root, 'remove-dir/inner.txt', 'x')
+    expect(await remove(root, 'remove-dir')).toBe('remove-dir')
+    await expect(import('node:fs/promises').then(fs => fs.stat(join(root, 'remove-dir')))).rejects.toThrow()
+  })
+
+  test('rejects the workspace root', async () => {
+    await expect(remove(root, '')).rejects.toThrow('cannot operate on the workspace root')
+  })
+
+  test('rejects a path escaping the workspace', async () => {
+    await expect(remove(root, 'escape')).rejects.toThrow('path is outside the configured workspace')
   })
 })
 

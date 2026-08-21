@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { describe, expect, test, vi } from 'vitest'
+import { beforeAll, describe, expect, test, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React from 'react'
 import { FileOpsModal } from '../src/client/file-ops-modal.tsx'
 import { basenameOfRel, joinRel, type FileOp, type FileOps } from '../src/client/file-ops.ts'
-import type { BrowserEntry } from '../src/protocol.ts'
+import { FileExplorerApp } from '../src/client/app.tsx'
+import { registerBuiltinFileActions } from '../src/client/file-action.ts'
+import type { BrowserEntry, FilePreview } from '../src/protocol.ts'
 
 const t = (key: string) => key
 
@@ -49,6 +51,41 @@ const dirEntries: BrowserEntry[] = [
 ]
 
 const fileEntry: BrowserEntry = { name: 'notes.txt', path: 'notes.txt', kind: 'file' }
+
+beforeAll(() => { registerBuiltinFileActions() })
+
+const rootEntries: BrowserEntry[] = [ { name: 'notes.txt', path: 'notes.txt', kind: 'file', size: 11 } ]
+const cannedPreview: FilePreview = { kind: 'text', name: 'notes.txt', extension: 'txt', content: 'hello world', size: 11 }
+const renamedPreview: FilePreview = { kind: 'text', name: 'renamed.txt', extension: 'txt', content: 'hello world', size: 11 }
+
+function makeAppProps(overrides: Record<string, unknown> = {}) {
+  return {
+    sessionId: 's1' as string | undefined,
+    fetchList: vi.fn().mockResolvedValue(rootEntries),
+    fetchPreview: vi.fn().mockImplementation((_sid: string, path: string) =>
+      Promise.resolve(path === 'renamed.txt' ? renamedPreview : cannedPreview)),
+    t: (key: string) => key,
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    fileOps: makeFileOps(),
+    ...overrides,
+  }
+}
+
+function rowNamed(container: HTMLElement, name: string): HTMLElement {
+  const row = Array.from(container.querySelectorAll('.dsh-fe-tree-row')).find((r) =>
+    r.textContent!.includes(name),
+  ) as HTMLElement
+  expect(row).toBeTruthy()
+  return row
+}
+
+function menuItemByText(container: HTMLElement, text: string): HTMLElement {
+  const item = Array.from(container.querySelectorAll('[role="menuitem"]')).find((el) =>
+    el.textContent!.includes(text),
+  ) as HTMLElement
+  expect(item).toBeTruthy()
+  return item
+}
 
 describe('file-ops helpers', () => {
   test('joinRel joins under a parent or returns the bare name at root', () => {
@@ -147,5 +184,71 @@ describe('FileOpsModal', () => {
     await flush()
     expect(onDone).not.toHaveBeenCalled()
     expect(container.textContent).toContain('boom')
+  })
+})
+
+describe('FileExplorerApp file operations', () => {
+  test('rename from the row menu renames, refreshes the tree, and updates the open file', async () => {
+    const props = makeAppProps()
+    const container = render(<FileExplorerApp {...props} />)
+    const appRef = container.querySelector('[data-fe-file-button]') as HTMLElement
+    act(() => { appRef.click() })
+    await flush()
+
+    act(() => { rowNamed(container, 'notes.txt').click() })
+    await flush()
+    expect(props.fetchPreview).toHaveBeenCalledWith('s1', 'notes.txt')
+
+    act(() => { (rowNamed(container, 'notes.txt').querySelector('[data-fe-action-button]') as HTMLElement).click() })
+    act(() => { menuItemByText(container, 'rename').click() })
+    expect(container.querySelector('[data-fe-op="rename"]')).not.toBeNull()
+
+    setInput(container, 'renamed.txt')
+    const fetchCountBefore = props.fetchList.mock.calls.length
+    act(() => { (container.querySelector('[data-fe-op-submit]') as HTMLElement).click() })
+    await flush()
+
+    expect(props.fileOps.rename).toHaveBeenCalledWith('notes.txt', 'renamed.txt')
+    expect(props.fetchList.mock.calls.length).toBeGreaterThan(fetchCountBefore)
+    expect(props.fetchPreview).toHaveBeenCalledWith('s1', 'renamed.txt')
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    expect(panel.querySelector('.dsh-fe-title-text')!.textContent).toBe('renamed.txt')
+  })
+
+  test('delete from the row menu clears the current preview', async () => {
+    const props = makeAppProps()
+    const container = render(<FileExplorerApp {...props} />)
+    act(() => { (container.querySelector('[data-fe-file-button]') as HTMLElement).click() })
+    await flush()
+
+    act(() => { rowNamed(container, 'notes.txt').click() })
+    await flush()
+    expect(container.querySelector('[data-visible]')).not.toBeNull()
+
+    act(() => { (rowNamed(container, 'notes.txt').querySelector('[data-fe-action-button]') as HTMLElement).click() })
+    act(() => { menuItemByText(container, 'delete').click() })
+    expect(container.querySelector('[data-fe-op="delete"]')).not.toBeNull()
+
+    act(() => { (container.querySelector('[data-fe-op-submit]') as HTMLElement).click() })
+    await flush()
+
+    expect(props.fileOps.remove).toHaveBeenCalledWith('notes.txt')
+    expect(container.querySelector('[data-visible]')).toBeNull()
+  })
+
+  test('the drawer "＋ 新建" button opens a two-item menu', async () => {
+    const props = makeAppProps()
+    const container = render(<FileExplorerApp {...props} />)
+    act(() => { (container.querySelector('[data-fe-file-button]') as HTMLElement).click() })
+    await flush()
+
+    const newBtn = container.querySelector('[data-fe-new-button]') as HTMLElement
+    expect(newBtn).not.toBeNull()
+    act(() => { newBtn.click() })
+
+    const items = container.querySelectorAll('[role="menuitem"]')
+    expect(items.length).toBe(2)
+    expect(items[0].textContent).toContain('newFile')
+    expect(items[1].textContent).toContain('newFolder')
   })
 })

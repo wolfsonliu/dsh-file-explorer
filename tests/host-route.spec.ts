@@ -429,6 +429,10 @@ describe('createFile', () => {
     await expect(createFile(root, 'subdir/..')).rejects.toThrow('invalid name')
     await expect(createFile(root, 'subdir/bad\\name')).rejects.toThrow('invalid name')
   })
+
+  test('rejects a path escaping the workspace', async () => {
+    await expect(createFile(root, '../outside.txt')).rejects.toThrow('path is outside the configured workspace')
+  })
 })
 
 describe('mkdir', () => {
@@ -450,6 +454,10 @@ describe('mkdir', () => {
   test('rejects the workspace root and invalid names', async () => {
     await expect(mkdir(root, '.')).rejects.toThrow('cannot operate on the workspace root')
     await expect(mkdir(root, 'subdir/..')).rejects.toThrow('invalid name')
+  })
+
+  test('rejects a path escaping the workspace', async () => {
+    await expect(mkdir(root, '../outside-dir')).rejects.toThrow('path is outside the configured workspace')
   })
 })
 

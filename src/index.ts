@@ -336,7 +336,7 @@ async function createFile(root: string, input: string): Promise<string> {
   assertValidName(input.split('/').at(-1) ?? '')
   const target = await inside(root, input, { allowMissing: true })
   if (await exists(target.absolute)) throw new Error('path already exists')
-  await writeFile(target.absolute, '', 'utf8')
+  await writeFile(target.absolute, '', { encoding: 'utf8', flag: 'wx' })
   return target.path
 }
 

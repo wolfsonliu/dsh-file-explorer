@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeAll, afterAll } from 'vitest'
-import { createServer } from 'node:http'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { mkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -43,11 +43,57 @@ beforeAll(async () => {
   await symlink(join(root, 'a.txt'), join(root, 'symlink'))
   // escape symlink pointing outside the workspace
   await symlink(tmpdir(), join(root, 'escape'))
+  // Static-route fixtures.
+  await writeFile(join(root, 'page.html'), '<h1>page</h1>')
+  await mkdir(join(root, 'site'))
+  await writeFile(join(root, 'site', 'index.html'), '<html><body>Hi</body></html>')
+  await writeFile(join(root, 'site', 'style.css'), 'body { color: red; }')
+  await writeFile(join(root, 'site', 'unknown.xyz'), 'not-a-known-type')
 })
 
 afterAll(async () => {
   await rm(root, { recursive: true, force: true })
 })
+
+// ---------------------------------------------------------------------------
+// apply / route handler fixtures
+// ---------------------------------------------------------------------------
+interface TestRoute {
+  kind: 'exact' | 'prefix'
+  path: string
+  handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>
+}
+
+/** A webServer stub dispatching requests by pathname like the real server. */
+function makeWebServer(server: ReturnType<typeof createServer>, onDispose?: () => void) {
+  const routes: TestRoute[] = []
+  server.on('request', (req, res) => {
+    const pathname = new URL(req.url ?? '/', 'http://localhost').pathname
+    const exact = routes.find((r) => r.kind === 'exact' && r.path === pathname)
+    const prefix = routes
+      .filter((r) => r.kind === 'prefix' && (pathname === r.path || pathname.startsWith(`${r.path}/`)))
+      .sort((a, b) => b.path.length - a.path.length)[0]
+    const target = exact ?? prefix
+    if (target === undefined) {
+      res.writeHead(404)
+      res.end()
+      return
+    }
+    void Promise.resolve(target.handler(req, res)).catch(() => {
+      // Handlers own their error handling; never let an unhandled rejection crash the server.
+    })
+  })
+  return {
+    register(route: TestRoute) {
+      routes.push(route)
+      return () => {
+        onDispose?.()
+        const i = routes.indexOf(route)
+        if (i >= 0) routes.splice(i, 1)
+      }
+    },
+  }
+}
 
 // ---------------------------------------------------------------------------
 // inside
@@ -428,14 +474,7 @@ describe('apply / route handler', () => {
           return undefined
         },
       },
-      webServer: {
-        register(route: { handler: (req: any, res: any) => Promise<void> }) {
-          server.on('request', route.handler)
-          return () => {
-            routeDisposed = true
-          }
-        },
-      },
+      webServer: makeWebServer(server, () => { routeDisposed = true }),
       effect(cb: () => () => void) {
         appDisposer = cb()
       },
@@ -578,6 +617,67 @@ describe('apply / route handler', () => {
     expect(res.status).toBe(416)
   })
 
+  // --- /file-explorer/files static prefix route ---
+
+  test('static route serves html with text/html and nosniff', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/page.html`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('text/html')
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(await res.text()).toBe('<h1>page</h1>')
+  })
+
+  test('static route serves a directory as its index.html', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/site`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('text/html')
+    expect(await res.text()).toBe('<html><body>Hi</body></html>')
+  })
+
+  test('static route returns 404 for a directory without index.html', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/subdir`)
+    expect(res.status).toBe(404)
+  })
+
+  test('static route serves an unknown extension as octet-stream', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/site/unknown.xyz`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/octet-stream')
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff')
+  })
+
+  test('static route rejects a path escaping the workspace', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/..`)
+    expect(res.status).toBe(400)
+  })
+
+  test('static route rejects a symlink pointing outside the workspace', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/escape`)
+    expect(res.status).toBe(400)
+  })
+
+  test('static route with Range header returns 206 partial content', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/report.pdf`, { headers: { Range: 'bytes=0-7' } })
+    expect(res.status).toBe(206)
+    expect(res.headers.get('content-range')).toBe('bytes 0-7/20')
+    expect(res.headers.get('accept-ranges')).toBe('bytes')
+  })
+
+  test('static route returns 404 for a missing file', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/nope.html`)
+    expect(res.status).toBe(404)
+  })
+
+  test('static route returns 400 for an unknown session', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/bogus-session/page.html`)
+    expect(res.status).toBe(400)
+  })
+
+  test('static route returns 400 when the sessionId segment is missing', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files`)
+    expect(res.status).toBe(400)
+  })
+
   test('preview action falls back for an invalid maxBinaryBytes config', async () => {
     const server2 = createServer()
     apply(
@@ -588,12 +688,7 @@ describe('apply / route handler', () => {
             return undefined
           },
         },
-        webServer: {
-          register(route: { handler: (req: any, res: any) => Promise<void> }) {
-            server2.on('request', route.handler)
-            return () => {}
-          },
-        },
+        webServer: makeWebServer(server2),
         effect(cb: () => () => void) {
           cb()
         },

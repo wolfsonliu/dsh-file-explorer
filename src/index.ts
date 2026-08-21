@@ -1,10 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { createReadStream } from 'node:fs'
+import { createReadStream, type Stats } from 'node:fs'
 import { open, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import {
   FILE_EXPLORER_ROUTE,
   PDF_ACTION,
+  STATIC_FILES_ROUTE,
   type ApiResponse,
   type BrowserEntry,
   type Config,
@@ -21,7 +22,7 @@ interface HostContext {
   }
   webServer: {
     register(route: {
-      kind: 'exact'
+      kind: 'exact' | 'prefix'
       path: string
       handler(req: IncomingMessage, res: ServerResponse): Promise<void>
     }): () => void
@@ -52,6 +53,48 @@ const IMAGE_MIME: Record<string, string> = {
 const INLINE_MIME: Record<string, string> = {
   '.pdf': 'application/pdf',
 }
+
+/** Content types for the `/file-explorer/files` static prefix route. */
+const STATIC_MIME: Record<string, string> = {
+  '.html': 'text/html',
+  '.htm': 'text/html',
+  '.xhtml': 'application/xhtml+xml',
+  '.svg': 'image/svg+xml',
+  '.pdf': 'application/pdf',
+  '.css': 'text/css',
+  '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
+  '.json': 'application/json',
+  '.xml': 'application/xml',
+  '.txt': 'text/plain',
+  '.md': 'text/plain',
+  '.csv': 'text/csv',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.bmp': 'image/bmp',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
+  '.wasm': 'application/wasm',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+}
+
+/** Document types served with an `inline` Content-Disposition. */
+const STATIC_INLINE_EXTS = new Set(['.html', '.htm', '.xhtml', '.svg', '.pdf'])
+
+/** Types eligible for the optional `inlineCsp` Content-Security-Policy header. */
+const STATIC_CSP_EXTS = new Set(['.html', '.htm', '.xhtml', '.svg'])
 
 // ---------------------------------------------------------------------------
 // inside — resolve a workspace-relative input to an absolute path, rejecting
@@ -305,6 +348,126 @@ async function servePdf(
 }
 
 // ---------------------------------------------------------------------------
+// static route — serve workspace files for browser-native rendering.
+// ---------------------------------------------------------------------------
+
+/** Build the common response headers for the static route. */
+function staticHeaders(
+  mime: string,
+  ext: string,
+  name: string,
+  csp: string | undefined,
+  extra: Record<string, string>,
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    'content-type': mime,
+    'accept-ranges': 'bytes',
+    'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
+    ...extra,
+  }
+  if (STATIC_INLINE_EXTS.has(ext)) {
+    headers['content-disposition'] = `inline; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`
+  }
+  if (csp !== undefined && csp !== '' && STATIC_CSP_EXTS.has(ext)) {
+    headers['content-security-policy'] = csp
+  }
+  return headers
+}
+
+/** Stream one file (with Range support) using static-route headers. */
+async function streamStatic(
+  absolute: string,
+  filePath: string,
+  info: Stats,
+  rangeHeader: string | undefined,
+  csp: string | undefined,
+  res: ServerResponse,
+): Promise<void> {
+  const ext = extname(filePath).toLowerCase()
+  const mime = STATIC_MIME[ext] ?? 'application/octet-stream'
+  const name = filePath.split('/').at(-1) ?? filePath
+  const range = parseRange(rangeHeader)
+
+  if (range !== undefined) {
+    if (range.start >= info.size) {
+      res.writeHead(416, { 'content-range': `bytes */${info.size}` })
+      res.end()
+      return
+    }
+    const end = range.end !== undefined ? Math.min(range.end, info.size - 1) : info.size - 1
+    if (end < range.start) {
+      res.writeHead(416, { 'content-range': `bytes */${info.size}` })
+      res.end()
+      return
+    }
+    res.writeHead(206, staticHeaders(mime, ext, name, csp, {
+      'content-range': `bytes ${range.start}-${end}/${info.size}`,
+      'content-length': String(end - range.start + 1),
+    }))
+    const stream = createReadStream(absolute, { start: range.start, end })
+    stream.on('error', () => res.destroy())
+    stream.pipe(res)
+    return
+  }
+
+  res.writeHead(200, staticHeaders(mime, ext, name, csp, {}))
+  const stream = createReadStream(absolute)
+  stream.on('error', () => res.destroy())
+  stream.pipe(res)
+}
+
+/**
+ * Serve one workspace file under the static prefix route. Directories fall
+ * back to their `index.html`. Throws the `inside` containment error for
+ * escapes, ENOENT for missing files — the route handler maps those to 400/404.
+ */
+async function serveStatic(
+  root: string,
+  input: string,
+  rangeHeader: string | undefined,
+  csp: string | undefined,
+  res: ServerResponse,
+): Promise<void> {
+  const resolved = await inside(root, input)
+  let info = await stat(resolved.absolute)
+  if (info.isDirectory()) {
+    const indexInput = resolved.path === '' ? 'index.html' : `${resolved.path}/index.html`
+    const indexResolved = await inside(root, indexInput)
+    info = await stat(indexResolved.absolute)
+    await streamStatic(indexResolved.absolute, indexResolved.path, info, rangeHeader, csp, res)
+    return
+  }
+  if (!info.isFile()) throw new Error('path is not a file')
+  await streamStatic(resolved.absolute, resolved.path, info, rangeHeader, csp, res)
+}
+
+type ParsedStaticPath = { sessionId: string; relPath: string } | { error: string }
+
+/** Parse `/file-explorer/files/<sessionId>/<relative/path…>` from a pathname. */
+function parseStaticPath(pathname: string): ParsedStaticPath {
+  if (pathname === STATIC_FILES_ROUTE || pathname === `${STATIC_FILES_ROUTE}/`) {
+    return { error: 'sessionId is required' }
+  }
+  const segments = pathname.slice(STATIC_FILES_ROUTE.length).split('/').filter((segment) => segment !== '')
+  if (segments.length === 0) return { error: 'sessionId is required' }
+  let sessionId: string
+  let decoded: string[]
+  try {
+    sessionId = decodeURIComponent(segments[0])
+    decoded = segments.slice(1).map((segment) => decodeURIComponent(segment))
+  } catch {
+    return { error: 'invalid path encoding' }
+  }
+  for (const segment of decoded) {
+    if (segment === '..' || segment === '' || segment.includes('/') || segment.includes('\\')) {
+      return { error: 'invalid path' }
+    }
+  }
+  return { sessionId, relPath: decoded.join('/') }
+}
+
+// ---------------------------------------------------------------------------
 // json — send a JSON response.
 // ---------------------------------------------------------------------------
 function json(res: ServerResponse, status: number, body: ApiResponse): void {
@@ -348,9 +511,10 @@ export function apply(ctx: HostContext, config: Config = {}): void {
   const maxBinary = capBytes(config.maxBinaryBytes, 64 * 1024)
   const maxRaw = capBytes(config.maxRawBytes, 100 * 1024 * 1024)
   const showHidden = config.showHidden === true
+  const inlineCsp = typeof config.inlineCsp === 'string' && config.inlineCsp.trim() !== '' ? config.inlineCsp : undefined
 
   ctx.effect(() => {
-    const disposeRoute = ctx.webServer.register({
+    const disposeApiRoute = ctx.webServer.register({
       kind: 'exact',
       path: FILE_EXPLORER_ROUTE,
       handler: async (req: IncomingMessage, res: ServerResponse) => {
@@ -437,8 +601,28 @@ export function apply(ctx: HostContext, config: Config = {}): void {
         }
       },
     })
+    const disposeStaticRoute = ctx.webServer.register({
+      kind: 'prefix',
+      path: STATIC_FILES_ROUTE,
+      handler: async (req: IncomingMessage, res: ServerResponse) => {
+        try {
+          const url = new URL(req.url ?? STATIC_FILES_ROUTE, 'http://localhost')
+          const parsed = parseStaticPath(url.pathname)
+          if ('error' in parsed) return json(res, 400, { ok: false, error: parsed.error })
+          const session = ctx.sessions.get(parsed.sessionId)
+          const cwd = session?.header.cwd
+          if (cwd === undefined) throw new Error('current session has no workspace')
+          return await serveStatic(resolve(cwd), parsed.relPath, req.headers.range, inlineCsp, res)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          const status = message === 'path is outside the configured workspace' || message === 'current session has no workspace' ? 400 : 404
+          json(res, status, { ok: false, error: message })
+        }
+      },
+    })
     return () => {
-      disposeRoute()
+      disposeApiRoute()
+      disposeStaticRoute()
     }
   }, 'file-explorer: workspace file API')
 }
@@ -446,4 +630,4 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 // ---------------------------------------------------------------------------
 // Exported for testing
 // ---------------------------------------------------------------------------
-export { capBytes, inside, invalidateListCache, list, preview, raw, write }
+export { capBytes, inside, invalidateListCache, list, preview, raw, serveStatic, write }

@@ -363,6 +363,39 @@ async function rename(root: string, input: string, name: string): Promise<string
   return joinRel(parent, name)
 }
 
+async function move(root: string, input: string, toDir: string): Promise<string> {
+  assertNotRoot(input)
+  const source = await inside(root, input)
+  const destDir = await inside(root, toDir || '.')
+  const destInfo = await stat(destDir.absolute)
+  if (!destInfo.isDirectory()) throw new Error('destination is not a directory')
+  assertNotDescendant('move', destDir.path, source.path)
+  const name = source.path.split('/').at(-1) ?? ''
+  const nextAbs = join(destDir.absolute, name)
+  // Best-effort guard for a clean message: fsRename has no portable
+  // "no-overwrite" flag, so a concurrent same-name mutation could still be
+  // overwritten on POSIX. Moving into the source's current parent targets the
+  // source itself, which fsRename treats as an idempotent no-op — not a clash.
+  if (nextAbs !== source.absolute && await exists(nextAbs)) throw new Error('target already exists')
+  await fsRename(source.absolute, nextAbs)
+  return joinRel(destDir.path, name)
+}
+
+async function copy(root: string, input: string, toDir: string): Promise<string> {
+  assertNotRoot(input)
+  const source = await inside(root, input)
+  const destDir = await inside(root, toDir || '.')
+  const destInfo = await stat(destDir.absolute)
+  if (!destInfo.isDirectory()) throw new Error('destination is not a directory')
+  assertNotDescendant('copy', destDir.path, source.path)
+  const name = source.path.split('/').at(-1) ?? ''
+  const nextAbs = join(destDir.absolute, name)
+  // Best-effort guard for a clean message: fsCp overwrites by default.
+  if (await exists(nextAbs)) throw new Error('target already exists')
+  await fsCp(source.absolute, nextAbs, { recursive: true })
+  return joinRel(destDir.path, name)
+}
+
 /** Parse an HTTP Range header ("bytes=start-end" or "bytes=start-") into inclusive byte offsets. */
 function parseRange(header: string | undefined): { start: number; end?: number } | undefined {
   if (header === undefined) return undefined
@@ -709,4 +742,4 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 // ---------------------------------------------------------------------------
 // Exported for testing
 // ---------------------------------------------------------------------------
-export { capBytes, createFile, inside, invalidateListCache, list, mkdir, preview, raw, rename, serveStatic, write }
+export { capBytes, copy, createFile, inside, invalidateListCache, list, mkdir, move, preview, raw, rename, serveStatic, write }

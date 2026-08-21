@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { mkdir as fsMkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { inside, list, preview, write, raw, apply, capBytes, invalidateListCache, createFile, mkdir, rename } from '../src/index.ts'
+import { inside, list, preview, write, raw, apply, capBytes, invalidateListCache, copy, createFile, mkdir, move, rename } from '../src/index.ts'
 import type { Config } from '../src/protocol.ts'
 
 let root: string
@@ -500,6 +500,67 @@ describe('rename', () => {
 
   test('rejects the workspace root source', async () => {
     await expect(rename(root, '', 'x')).rejects.toThrow('cannot operate on the workspace root')
+  })
+})
+
+describe('move', () => {
+  test('moves a file into another directory and returns its new path', async () => {
+    await write(root, 'move-src.txt', 'x')
+    await mkdir(root, 'move-dest')
+    const moved = await move(root, 'move-src.txt', 'move-dest')
+    expect(moved).toBe('move-dest/move-src.txt')
+  })
+
+  test('moves a directory into its parent', async () => {
+    await mkdir(root, 'move-parent')
+    await mkdir(root, 'move-parent/move-inner')
+    await move(root, 'move-parent/move-inner', 'move-parent')
+  })
+
+  test('rejects when the destination already has the same name', async () => {
+    await write(root, 'move-clash-src.txt', 'x')
+    await mkdir(root, 'move-clash')
+    await write(root, 'move-clash/move-clash-src.txt', 'y')
+    await expect(move(root, 'move-clash-src.txt', 'move-clash')).rejects.toThrow('target already exists')
+  })
+
+  test('rejects moving a directory into itself or a descendant', async () => {
+    await mkdir(root, 'self-move')
+    await mkdir(root, 'self-move/sub')
+    await expect(move(root, 'self-move', 'self-move/sub')).rejects.toThrow('cannot move a directory into itself')
+    await expect(move(root, 'self-move', 'self-move')).rejects.toThrow('cannot move a directory into itself')
+  })
+
+  test('rejects a non-directory destination', async () => {
+    await write(root, 'move-file-src.txt', 'x')
+    await write(root, 'not-a-dir.txt', 'y')
+    await expect(move(root, 'move-file-src.txt', 'not-a-dir.txt')).rejects.toThrow('destination is not a directory')
+  })
+})
+
+describe('copy', () => {
+  test('copies a file into another directory and returns its new path', async () => {
+    await write(root, 'copy-src.txt', 'hello')
+    await mkdir(root, 'copy-dest')
+    const copied = await copy(root, 'copy-src.txt', 'copy-dest')
+    expect(copied).toBe('copy-dest/copy-src.txt')
+    const body = await import('node:fs/promises').then(fs => fs.readFile(join(root, 'copy-dest/copy-src.txt'), 'utf8'))
+    expect(body).toBe('hello')
+  })
+
+  test('recursively copies a directory', async () => {
+    await mkdir(root, 'copy-src-dir')
+    await write(root, 'copy-src-dir/inner.txt', 'inner')
+    await mkdir(root, 'copy-dest-dir')
+    await copy(root, 'copy-src-dir', 'copy-dest-dir')
+    const body = await import('node:fs/promises').then(fs => fs.readFile(join(root, 'copy-dest-dir/copy-src-dir/inner.txt'), 'utf8'))
+    expect(body).toBe('inner')
+  })
+
+  test('rejects copying a directory into itself or a descendant', async () => {
+    await mkdir(root, 'self-copy')
+    await mkdir(root, 'self-copy/sub')
+    await expect(copy(root, 'self-copy', 'self-copy/sub')).rejects.toThrow('cannot copy a directory into itself')
   })
 })
 

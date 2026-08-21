@@ -162,6 +162,34 @@ describe('FileExplorerDrawer', () => {
     expect(container.querySelector('[data-fe-action="refresh"]')).toBeNull()
   })
 
+  test('renders a new button to the left of refresh when onNew is provided', () => {
+    const onNew = vi.fn()
+    const container = render(
+      <FileExplorerDrawer open onClose={() => {}} onRefresh={() => {}} onNew={onNew} t={t}>
+        <span>Tree</span>
+      </FileExplorerDrawer>,
+    )
+    const newBtn = container.querySelector('[data-fe-new-button]')
+    expect(newBtn).not.toBeNull()
+    expect(newBtn!.textContent).toContain('new')
+
+    act(() => {
+      ;(newBtn as HTMLElement).dispatchEvent(
+        new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 20 }),
+      )
+    })
+    expect(onNew).toHaveBeenCalledTimes(1)
+  })
+
+  test('omits the new button when onNew is omitted', () => {
+    const container = render(
+      <FileExplorerDrawer open onClose={() => {}} t={t}>
+        <span>Tree</span>
+      </FileExplorerDrawer>,
+    )
+    expect(container.querySelector('[data-fe-new-button]')).toBeNull()
+  })
+
   test('renders a resize handle when open', () => {
     const container = render(
       <FileExplorerDrawer open onClose={() => {}} t={t}>

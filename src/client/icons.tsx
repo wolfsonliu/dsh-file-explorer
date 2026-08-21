@@ -171,3 +171,13 @@ export function IconSearch(props: FeIconProps) {
     </svg>
   )
 }
+
+/** ic_ds_plus_outline_16 — a simple plus glyph. */
+export function IconPlus(props: FeIconProps) {
+  const { size = 16, className, style } = props
+  return (
+    <svg width={size} height={size} className={className} style={style} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M7.5 2.5h1v5h5v1h-5v5h-1v-5h-5v-1h5v-5Z" fill="currentColor" />
+    </svg>
+  )
+}

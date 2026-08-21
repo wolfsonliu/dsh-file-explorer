@@ -14,6 +14,7 @@ import {
   IconFile,
   IconEllipsis,
   IconSearch,
+  IconPlus,
 } from '../src/client/icons.tsx'
 
 /** Render a React element into a jsdom container and return the container. */
@@ -39,6 +40,7 @@ const ICONS: ReadonlyArray<readonly [string, (props: { size?: number; className?
   ['IconFile', IconFile],
   ['IconEllipsis', IconEllipsis],
   ['IconSearch', IconSearch],
+  ['IconPlus', IconPlus],
 ]
 
 describe('icons', () => {

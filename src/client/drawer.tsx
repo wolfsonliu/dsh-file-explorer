@@ -1,5 +1,5 @@
 import React, { useRef, useState, type ReactNode } from 'react'
-import { IconClose, IconFolderClose, IconFolderOpen, IconRefresh } from './icons.tsx'
+import { IconClose, IconFolderClose, IconFolderOpen, IconPlus, IconRefresh } from './icons.tsx'
 import type { Translate } from './locale.ts'
 
 function clamp(value: number, min: number, max: number): number {
@@ -24,6 +24,8 @@ export interface FileExplorerDrawerProps {
   title?: string
   /** Called when the refresh button is clicked; button hidden when omitted. */
   onRefresh?: () => void
+  /** Called with the button's bottom-left anchor when "＋ 新建" is clicked. */
+  onNew?: (anchor: { x: number; y: number }) => void
   /** Translator for localized UI copy. */
   t: Translate
   /** The file tree. */
@@ -39,6 +41,7 @@ export function FileExplorerDrawer({
   onClose,
   title,
   onRefresh,
+  onNew,
   t,
   children,
 }: FileExplorerDrawerProps) {
@@ -103,6 +106,20 @@ export function FileExplorerDrawer({
     <div className="dsh-fe-drawer" data-fe-drawer style={{ width }}>
       <div className="dsh-fe-drawer-title">
         <span className="dsh-fe-drawer-title-text">{title ?? t('title')}</span>
+        {onNew && (
+          <button
+            className="dsh-fe-new-button"
+            data-fe-new-button
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              onNew({ x: rect.left, y: rect.bottom })
+            }}
+            title={t('new')}
+          >
+            <IconPlus size={14} />
+            <span>{t('new')}</span>
+          </button>
+        )}
         {onRefresh && (
           <button
             className="dsh-fe-btn"

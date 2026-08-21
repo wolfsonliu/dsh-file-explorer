@@ -429,14 +429,11 @@ async function serveStatic(
   csp: string | undefined,
   res: ServerResponse,
 ): Promise<void> {
-  const resolved = await inside(root, input)
+  let resolved = await inside(root, input)
   let info = await stat(resolved.absolute)
   if (info.isDirectory()) {
-    const indexInput = resolved.path === '' ? 'index.html' : `${resolved.path}/index.html`
-    const indexResolved = await inside(root, indexInput)
-    info = await stat(indexResolved.absolute)
-    await streamStatic(indexResolved.absolute, indexResolved.path, info, rangeHeader, csp, res)
-    return
+    resolved = await inside(root, resolved.path === '' ? 'index.html' : `${resolved.path}/index.html`)
+    info = await stat(resolved.absolute)
   }
   if (!info.isFile()) throw new Error('path is not a file')
   await streamStatic(resolved.absolute, resolved.path, info, rangeHeader, csp, res)
@@ -460,7 +457,7 @@ function parseStaticPath(pathname: string): ParsedStaticPath {
     return { error: 'invalid path encoding' }
   }
   for (const segment of decoded) {
-    if (segment === '..' || segment === '' || segment.includes('/') || segment.includes('\\')) {
+    if (segment === '..' || segment.includes('/') || segment.includes('\\')) {
       return { error: 'invalid path' }
     }
   }
@@ -614,9 +611,8 @@ export function apply(ctx: HostContext, config: Config = {}): void {
           if (cwd === undefined) throw new Error('current session has no workspace')
           return await serveStatic(resolve(cwd), parsed.relPath, req.headers.range, inlineCsp, res)
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          const status = message === 'path is outside the configured workspace' || message === 'current session has no workspace' ? 400 : 404
-          json(res, status, { ok: false, error: message })
+          const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined
+          json(res, code === 'ENOENT' ? 404 : 400, { ok: false, error: error instanceof Error ? error.message : String(error) })
         }
       },
     })

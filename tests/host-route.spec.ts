@@ -511,10 +511,11 @@ describe('move', () => {
     expect(moved).toBe('move-dest/move-src.txt')
   })
 
-  test('moves a directory into its parent', async () => {
-    await mkdir(root, 'move-parent')
-    await mkdir(root, 'move-parent/move-inner')
-    await move(root, 'move-parent/move-inner', 'move-parent')
+  test('moves a directory into the workspace root', async () => {
+    await mkdir(root, 'move-nested')
+    await mkdir(root, 'move-nested/move-child')
+    const moved = await move(root, 'move-nested/move-child', '')
+    expect(moved).toBe('move-child')
   })
 
   test('rejects when the destination already has the same name', async () => {

@@ -374,9 +374,8 @@ async function move(root: string, input: string, toDir: string): Promise<string>
   const nextAbs = join(destDir.absolute, name)
   // Best-effort guard for a clean message: fsRename has no portable
   // "no-overwrite" flag, so a concurrent same-name mutation could still be
-  // overwritten on POSIX. Moving into the source's current parent targets the
-  // source itself, which fsRename treats as an idempotent no-op — not a clash.
-  if (nextAbs !== source.absolute && await exists(nextAbs)) throw new Error('target already exists')
+  // overwritten on POSIX.
+  if (await exists(nextAbs)) throw new Error('target already exists')
   await fsRename(source.absolute, nextAbs)
   return joinRel(destDir.path, name)
 }

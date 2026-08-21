@@ -294,10 +294,15 @@ import type { FileAction } from '@dsh-external/dsh-file-explorer/client'
 
 ctx.fileExplorer.registerFileAction({
   id: 'my-action',
-  label: '我的操作',
-  run: ({ filePath, openFile }) => {
-    // filePath：工作区相对路径
-    // openFile(path)：在预览框中打开另一个文件
+  label: (t) => t('myAction'),
+  appliesTo: 'both',
+  onSelect: (entry, helpers) => {
+    // entry: { name, path, kind }
+    // helpers.openFile(path)：在预览框中打开文件
+    // helpers.promptRename(entry) / promptDelete(entry) / promptMove(entry) /
+    //   promptCopy(entry)：打开内置的重命名/删除/移动/复制对话框
+    // helpers.promptNewFile(parentDir) / promptNewFolder(parentDir)：打开内置的
+    //   新建文件/新建文件夹对话框
   },
 })
 ```

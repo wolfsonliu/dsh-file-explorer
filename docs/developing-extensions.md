@@ -302,10 +302,15 @@ import type { FileAction } from '@dsh-external/dsh-file-explorer/client'
 
 ctx.fileExplorer.registerFileAction({
   id: 'my-action',
-  label: 'My action',
-  run: ({ filePath, openFile }) => {
-    // filePath: workspace-relative
-    // openFile(path): opens another file in the preview box
+  label: (t) => t('myAction'),
+  appliesTo: 'both',
+  onSelect: (entry, helpers) => {
+    // entry: { name, path, kind }
+    // helpers.openFile(path): opens a file in the preview box
+    // helpers.promptRename(entry) / promptDelete(entry) / promptMove(entry) /
+    //   promptCopy(entry): open the built-in rename/delete/move/copy dialogs
+    // helpers.promptNewFile(parentDir) / promptNewFolder(parentDir): open the
+    //   built-in new-file/new-folder dialogs for a directory
   },
 })
 ```

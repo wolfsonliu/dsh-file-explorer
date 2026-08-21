@@ -794,4 +794,42 @@ describe('FileTree', () => {
     // Search cleared: tree restored.
     expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(3)
   })
+
+  test('whitespace-only query does not enter search mode', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    setSearch(container, '   ')
+    await flush()
+
+    expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(3)
+    expect(container.querySelector('[data-fe-search-empty]')).toBeNull()
+  })
+
+  test('clicking a directory search result restores the tree without opening a file', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    // 'sr' matches only the 'src' directory at the root.
+    setSearch(container, 'sr')
+    await flush()
+
+    const result = container.querySelector('.dsh-fe-search-result--dir') as HTMLElement
+    expect(result).toBeTruthy()
+
+    act(() => { result.click() })
+
+    expect(helpers.openFile).not.toHaveBeenCalled()
+    // Query cleared → full tree restored, 'src' directory still present.
+    expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(3)
+    expect(container.textContent).toContain('src')
+  })
 })

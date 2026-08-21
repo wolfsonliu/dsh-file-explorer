@@ -201,7 +201,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     : []
 
   const flat = flattenVisible(entries, expanded, children)
-  const searching = query !== ''
+  const searching = query.trim() !== ''
   const results = searching ? flat.filter((row) => matchesSearch(row.entry, query)) : []
 
   return (

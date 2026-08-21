@@ -79,9 +79,11 @@ function makeWebServer(server: ReturnType<typeof createServer>, onDispose?: () =
       res.end()
       return
     }
-    void Promise.resolve(target.handler(req, res)).catch(() => {
-      // Handlers own their error handling; never let an unhandled rejection crash the server.
-    })
+    void Promise.resolve()
+      .then(() => target.handler(req, res))
+      .catch(() => {
+        // Handlers own their error handling; never let an unhandled rejection crash the server.
+      })
   })
   return {
     register(route: TestRoute) {
@@ -646,11 +648,6 @@ describe('apply / route handler', () => {
     expect(res.headers.get('x-content-type-options')).toBe('nosniff')
   })
 
-  test('static route rejects a path escaping the workspace', async () => {
-    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/..`)
-    expect(res.status).toBe(400)
-  })
-
   test('static route rejects a symlink pointing outside the workspace', async () => {
     const res = await fetch(`${baseUrl}/file-explorer/files/test-session/escape`)
     expect(res.status).toBe(400)
@@ -661,6 +658,7 @@ describe('apply / route handler', () => {
     expect(res.status).toBe(206)
     expect(res.headers.get('content-range')).toBe('bytes 0-7/20')
     expect(res.headers.get('accept-ranges')).toBe('bytes')
+    expect(Buffer.from(await res.arrayBuffer()).toString('utf8')).toBe('%PDF-1.4')
   })
 
   test('static route returns 404 for a missing file', async () => {

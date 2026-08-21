@@ -10,6 +10,7 @@ export const ZH = {
   hexTruncated: '文件较大，仅显示前 {shown} / {total}',
   loadMore: '加载更多', textLoaded: '已加载 {loaded} / {total}',
   edit: '编辑', save: '保存', cancel: '取消', mdPreview: '预览', saving: '保存中…', saveFailed: '保存失败',
+  searchPlaceholder: '搜索文件…', noSearchResults: '没有匹配的文件', clearSearch: '清除搜索',
 } as const
 export const EN = {
   title: 'File Explorer', file: 'Files', refresh: 'Refresh', close: 'Close',
@@ -20,6 +21,7 @@ export const EN = {
   hexTruncated: 'Showing first {shown} of {total}',
   loadMore: 'Load more', textLoaded: 'Loaded {loaded} / {total}',
   edit: 'Edit', save: 'Save', cancel: 'Cancel', mdPreview: 'Preview', saving: 'Saving…', saveFailed: 'Save failed',
+  searchPlaceholder: 'Search files…', noSearchResults: 'No matching files', clearSearch: 'Clear search',
 } as const
 
 /** Register the plugin's dictionaries; returns a disposer for both locales. */

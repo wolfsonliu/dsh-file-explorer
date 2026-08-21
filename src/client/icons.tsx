@@ -156,3 +156,18 @@ export function IconEllipsis(props: FeIconProps) {
     </svg>
   )
 }
+
+/** ic_ds_search_outline_16 — magnifier ring + handle (inlined, fill-based). */
+export function IconSearch(props: FeIconProps) {
+  const { size = 16, className, style } = props
+  return (
+    <svg width={size} height={size} className={className} style={style} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M6.5 2a4.5 4.5 0 1 0 0 9a4.5 4.5 0 0 0 0 -9ZM3.75 6.5a2.75 2.75 0 1 1 5.5 0a2.75 2.75 0 0 1 -5.5 0ZM9.43 10.57L12.93 14.07L14.07 12.93L10.57 9.43Z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}

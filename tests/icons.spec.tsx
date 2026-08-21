@@ -13,6 +13,7 @@ import {
   IconFullscreen,
   IconFile,
   IconEllipsis,
+  IconSearch,
 } from '../src/client/icons.tsx'
 
 /** Render a React element into a jsdom container and return the container. */
@@ -37,6 +38,7 @@ const ICONS: ReadonlyArray<readonly [string, (props: { size?: number; className?
   ['IconFullscreen', IconFullscreen],
   ['IconFile', IconFile],
   ['IconEllipsis', IconEllipsis],
+  ['IconSearch', IconSearch],
 ]
 
 describe('icons', () => {

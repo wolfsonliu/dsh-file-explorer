@@ -349,6 +349,17 @@ async function mkdir(root: string, input: string): Promise<string> {
   return target.path
 }
 
+async function rename(root: string, input: string, name: string): Promise<string> {
+  assertNotRoot(input)
+  assertValidName(name)
+  const target = await inside(root, input)
+  const parent = target.path.includes('/') ? target.path.slice(0, target.path.lastIndexOf('/')) : ''
+  const nextAbs = join(dirname(target.absolute), name)
+  if (await exists(nextAbs)) throw new Error('target already exists')
+  await fsRename(target.absolute, nextAbs)
+  return joinRel(parent, name)
+}
+
 /** Parse an HTTP Range header ("bytes=start-end" or "bytes=start-") into inclusive byte offsets. */
 function parseRange(header: string | undefined): { start: number; end?: number } | undefined {
   if (header === undefined) return undefined
@@ -695,4 +706,4 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 // ---------------------------------------------------------------------------
 // Exported for testing
 // ---------------------------------------------------------------------------
-export { capBytes, createFile, inside, invalidateListCache, list, mkdir, preview, raw, serveStatic, write }
+export { capBytes, createFile, inside, invalidateListCache, list, mkdir, preview, raw, rename, serveStatic, write }

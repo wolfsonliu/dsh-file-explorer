@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { mkdir as fsMkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { inside, list, preview, write, raw, apply, capBytes, invalidateListCache, createFile, mkdir } from '../src/index.ts'
+import { inside, list, preview, write, raw, apply, capBytes, invalidateListCache, createFile, mkdir, rename } from '../src/index.ts'
 import type { Config } from '../src/protocol.ts'
 
 let root: string
@@ -458,6 +458,38 @@ describe('mkdir', () => {
 
   test('rejects a path escaping the workspace', async () => {
     await expect(mkdir(root, '../outside-dir')).rejects.toThrow('path is outside the configured workspace')
+  })
+})
+
+describe('rename', () => {
+  test('renames a file in place and returns the new relative path', async () => {
+    await write(root, 'rename-src.txt', 'x')
+    const renamed = await rename(root, 'rename-src.txt', 'rename-dst.txt')
+    expect(renamed).toBe('rename-dst.txt')
+    const names = (await list(root, '')).map(e => e.name)
+    expect(names).toContain('rename-dst.txt')
+    expect(names).not.toContain('rename-src.txt')
+  })
+
+  test('renames a directory in place', async () => {
+    await mkdir(root, 'rename-dir-src')
+    const renamed = await rename(root, 'rename-dir-src', 'rename-dir-dst')
+    expect(renamed).toBe('rename-dir-dst')
+  })
+
+  test('rejects when the new name already exists', async () => {
+    await write(root, 'rename-clash-a.txt', 'a')
+    await write(root, 'rename-clash-b.txt', 'b')
+    await expect(rename(root, 'rename-clash-a.txt', 'rename-clash-b.txt')).rejects.toThrow('target already exists')
+  })
+
+  test('rejects an invalid name', async () => {
+    await expect(rename(root, 'a.txt', 'bad/name')).rejects.toThrow('invalid name')
+    await expect(rename(root, 'a.txt', '..')).rejects.toThrow('invalid name')
+  })
+
+  test('rejects the workspace root source', async () => {
+    await expect(rename(root, '', 'x')).rejects.toThrow('cannot operate on the workspace root')
   })
 })
 

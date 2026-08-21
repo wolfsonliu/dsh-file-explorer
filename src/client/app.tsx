@@ -6,7 +6,7 @@ import React, {
   useState,
   type ReactNode,
 } from 'react'
-import { FILE_EXPLORER_ROUTE, PDF_ACTION, type BrowserEntry, type FilePreview, type PreviewMode } from '../protocol.ts'
+import { FILE_EXPLORER_ROUTE, STATIC_FILES_ROUTE, BROWSER_OPEN_EXTS, type BrowserEntry, type FilePreview, type PreviewMode } from '../protocol.ts'
 import { FileExplorerDrawer, FloatingFileButton } from './drawer.tsx'
 import { FileTree, type FileTreeHandle } from './file-tree.tsx'
 import type { FileActionHelpers } from './file-action.ts'
@@ -55,20 +55,21 @@ function basenameOf(filePath: string): string {
   return filePath.split('/').at(-1) ?? filePath
 }
 
-/** Whether a path is a PDF (case-insensitive extension). */
-function isPdfPath(filePath: string): boolean {
-  return extensionOf(filePath).toLowerCase() === 'pdf'
+/** Whether a path should be opened in a new browser tab (case-insensitive extension). */
+function isBrowserOpenable(filePath: string): boolean {
+  return (BROWSER_OPEN_EXTS as readonly string[]).includes(extensionOf(filePath).toLowerCase())
 }
 
 /**
- * Open a PDF in a new browser tab via the inline `pdf` action. Returns false
- * when the tab was blocked (so the caller can fall back to the preview panel).
+ * Open a browser-renderable file in a new tab via the static files route.
+ * Returns false when the tab was blocked (so the caller falls back to the
+ * preview panel).
  */
-function openPdfInNewTab(sessionId: string | undefined, path: string): boolean {
+function openInBrowserTab(sessionId: string | undefined, path: string): boolean {
   if (sessionId === undefined) return false
   const url =
-    `${FILE_EXPLORER_ROUTE}?action=${PDF_ACTION}` +
-    `&sessionId=${encodeURIComponent(sessionId)}&path=${encodeURIComponent(path)}`
+    `${STATIC_FILES_ROUTE}/${encodeURIComponent(sessionId)}/` +
+    path.split('/').map(encodeURIComponent).join('/')
   const win = window.open(url, '_blank')
   if (win === null) return false
   win.opener = null
@@ -179,7 +180,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
         // PDF default-open goes straight to a new browser tab (before any
         // `await`, so the call stays inside the click gesture). When the tab
         // is blocked, fall through to the normal panel preview.
-        if (mode === 'auto' && isPdfPath(path) && openPdfInNewTab(sessionId, path)) return
+        if (mode === 'auto' && isBrowserOpenable(path) && openInBrowserTab(sessionId, path)) return
         if (editing && dirty && writeFile !== undefined) {
           try {
             await saveDraft()

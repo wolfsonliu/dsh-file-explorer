@@ -10,6 +10,14 @@ export const STATIC_FILES_ROUTE = '/file-explorer/files'
 /** Extensions the client opens in a new browser tab on default open. */
 export const BROWSER_OPEN_EXTS = ['pdf', 'html', 'htm', 'xhtml'] as const
 
+/** Mutation actions for the file-ops feature (all POST, workspace-contained). */
+export const CREATE_FILE_ACTION = 'create-file'
+export const MKDIR_ACTION = 'mkdir'
+export const RENAME_ACTION = 'rename'
+export const MOVE_ACTION = 'move'
+export const COPY_ACTION = 'copy'
+export const DELETE_ACTION = 'delete'
+
 export interface BrowserEntry {
   name: string
   /** Workspace-relative path ('' = root). */
@@ -30,6 +38,7 @@ export type ApiResponse =
   | { ok: true; root: string; entries: BrowserEntry[] }
   | { ok: true; preview: FilePreview }
   | { ok: true; path: string; parentPath: string }
+  | { ok: true; path: string }
   | { ok: true; saved: string }
   | { ok: false; error: string }
 

@@ -418,6 +418,45 @@ describe('FileExplorerPanel', () => {
     expect(panel.style.left).toBe('0px')
   })
 
+  test('restoring from maximize re-clamps an out-of-bounds panel', () => {
+    setViewport(1000, 700)
+    const container = render(
+      <FileExplorerPanel initialVisible t={t}>
+        <span>Preview</span>
+      </FileExplorerPanel>,
+    )
+    const panel = container.querySelector('[data-visible]') as HTMLElement
+    const titleText = panel.querySelector('.dsh-fe-title-text') as HTMLElement
+    const maximizeBtn = panel.querySelector('[data-fe-action="maximize"]') as HTMLElement
+    expect(titleText).not.toBeNull()
+    expect(maximizeBtn).not.toBeNull()
+
+    // Drag out of bounds, then maximize.
+    dragTitle(titleText, { x: 100, y: 100 }, { x: 2000, y: 2000 })
+    expect(panel.style.left).toBe('360px')
+    expect(panel.style.top).toBe('668px')
+
+    act(() => {
+      maximizeBtn.click()
+    })
+    expect(panel.getAttribute('data-maximized')).toBe('true')
+
+    // Shrink the viewport while maximized; the resize listener is detached in
+    // the maximized state, so no re-clamp happens here.
+    setViewport(1000, 400)
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+
+    // Restore: the effect re-runs and re-clamps into the new viewport.
+    act(() => {
+      maximizeBtn.click()
+    })
+    expect(panel.getAttribute('data-maximized')).toBe('false')
+    expect(panel.style.left).toBe('360px')
+    expect(panel.style.top).toBe('368px')
+  })
+
   test('resize handle drag updates panel size', () => {
     const container = render(
       <FileExplorerPanel initialVisible t={t}>

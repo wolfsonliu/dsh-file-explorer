@@ -91,6 +91,23 @@ describe('FileContextMenu', () => {
     expect(menu.style.top).toBe('200px')
   })
 
+  test('renders a danger class on items flagged danger', () => {
+    const container = render(
+      <FileContextMenu
+        open={true}
+        anchor={{ x: 0, y: 0 }}
+        items={[
+          { id: 'delete', label: 'Delete', danger: true, onSelect: vi.fn() },
+          { id: 'rename', label: 'Rename', onSelect: vi.fn() },
+        ]}
+        onClose={vi.fn()}
+      />,
+    )
+    const items = container.querySelectorAll('[role="menuitem"]')
+    expect(items[0].className).toContain('dsh-fe-menu-item--danger')
+    expect(items[1].className).not.toContain('dsh-fe-menu-item--danger')
+  })
+
   test('clicking an item calls onSelect and then onClose', () => {
     const onSelect = vi.fn()
     const onClose = vi.fn()

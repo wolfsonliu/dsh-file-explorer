@@ -11,6 +11,12 @@ function makeHelpers(): FileActionHelpers {
     openFileAsBinary: vi.fn(),
     copyAbsolutePath: vi.fn(),
     copyRelativePath: vi.fn(),
+    promptRename: vi.fn(),
+    promptDelete: vi.fn(),
+    promptMove: vi.fn(),
+    promptCopy: vi.fn(),
+    promptNewFile: vi.fn(),
+    promptNewFolder: vi.fn(),
   }
 }
 
@@ -47,13 +53,19 @@ describe('file-action registry', () => {
     d3()
   })
 
-  test('registerBuiltinFileActions registers open, open-as-text, open-as-binary, copy-absolute, copy-relative in order', async () => {
+  test('registerBuiltinFileActions registers the file/dir actions in menu order', async () => {
     vi.resetModules()
     const mod = await import('../src/client/file-action.ts')
     mod.registerBuiltinFileActions()
 
-    expect(mod.fileActionsFor('file').map((a) => a.id)).toEqual(['open', 'open-as-text', 'open-as-binary', 'copy-absolute', 'copy-relative'])
-    expect(mod.fileActionsFor('directory').map((a) => a.id)).toEqual(['copy-absolute', 'copy-relative'])
+    expect(mod.fileActionsFor('file').map((a) => a.id)).toEqual([
+      'open', 'open-as-text', 'open-as-binary', 'copy-absolute', 'copy-relative',
+      'rename', 'move', 'copy', 'delete',
+    ])
+    expect(mod.fileActionsFor('directory').map((a) => a.id)).toEqual([
+      'copy-absolute', 'copy-relative', 'rename', 'move', 'copy', 'delete',
+      'new-file', 'new-folder',
+    ])
   })
 
   test('built-in actions invoke the correct helper', async () => {

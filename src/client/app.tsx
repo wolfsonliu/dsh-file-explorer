@@ -237,7 +237,16 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       await navigator.clipboard.writeText(path)
     }, [])
 
-    const helpers: FileActionHelpers = { openFile, openFileAsText, openFileAsBinary, copyAbsolutePath, copyRelativePath }
+    // File-operation dialogs are wired in a later task; the prompt* helpers are
+    // placeholders so the FileActionHelpers interface is satisfied in the interim.
+    const promptRename = useCallback((_entry: BrowserEntry) => {}, [])
+    const promptDelete = useCallback((_entry: BrowserEntry) => {}, [])
+    const promptMove = useCallback((_entry: BrowserEntry) => {}, [])
+    const promptCopy = useCallback((_entry: BrowserEntry) => {}, [])
+    const promptNewFile = useCallback((_parentDir: string) => {}, [])
+    const promptNewFolder = useCallback((_parentDir: string) => {}, [])
+
+    const helpers: FileActionHelpers = { openFile, openFileAsText, openFileAsBinary, copyAbsolutePath, copyRelativePath, promptRename, promptDelete, promptMove, promptCopy, promptNewFile, promptNewFolder }
 
     useImperativeHandle(
       ref,

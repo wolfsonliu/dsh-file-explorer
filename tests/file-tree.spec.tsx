@@ -25,6 +25,12 @@ function makeHelpers(): FileActionHelpers {
     openFileAsBinary: vi.fn(),
     copyAbsolutePath: vi.fn().mockResolvedValue(undefined),
     copyRelativePath: vi.fn().mockResolvedValue(undefined),
+    promptRename: vi.fn(),
+    promptDelete: vi.fn(),
+    promptMove: vi.fn(),
+    promptCopy: vi.fn(),
+    promptNewFile: vi.fn(),
+    promptNewFolder: vi.fn(),
   }
 }
 
@@ -325,7 +331,7 @@ describe('FileTree', () => {
     }
   })
 
-  test('clicking the ellipsis button opens a menu with 5 items for a file row', async () => {
+  test('clicking the ellipsis button opens a menu with 9 items for a file row', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
     const helpers = makeHelpers()
 
@@ -343,15 +349,19 @@ describe('FileTree', () => {
     expect(menu).not.toBeNull()
 
     const items = menu!.querySelectorAll('[role="menuitem"]')
-    expect(items.length).toBe(5)
+    expect(items.length).toBe(9)
     expect(items[0].textContent).toContain('open')
     expect(items[1].textContent).toContain('openAsText')
     expect(items[2].textContent).toContain('openAsBinary')
     expect(items[3].textContent).toContain('copyAbsolutePath')
     expect(items[4].textContent).toContain('copyRelativePath')
+    expect(items[5].textContent).toContain('rename')
+    expect(items[6].textContent).toContain('moveTo')
+    expect(items[7].textContent).toContain('copyTo')
+    expect(items[8].textContent).toContain('delete')
   })
 
-  test('clicking the ellipsis button opens a menu with 2 items for a directory row', async () => {
+  test('clicking the ellipsis button opens a menu with 8 items for a directory row', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
     const helpers = makeHelpers()
 
@@ -369,9 +379,15 @@ describe('FileTree', () => {
     expect(menu).not.toBeNull()
 
     const items = menu!.querySelectorAll('[role="menuitem"]')
-    expect(items.length).toBe(2)
+    expect(items.length).toBe(8)
     expect(items[0].textContent).toContain('copyAbsolutePath')
     expect(items[1].textContent).toContain('copyRelativePath')
+    expect(items[2].textContent).toContain('rename')
+    expect(items[3].textContent).toContain('moveTo')
+    expect(items[4].textContent).toContain('copyTo')
+    expect(items[5].textContent).toContain('delete')
+    expect(items[6].textContent).toContain('newFile')
+    expect(items[7].textContent).toContain('newFolder')
   })
 
   test('clicking the open menu item calls helpers.openFile', async () => {

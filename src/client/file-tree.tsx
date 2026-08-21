@@ -196,6 +196,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
         id: a.id,
         label: a.label(t),
         icon: a.icon,
+        danger: a.danger,
         onSelect: () => a.onSelect(menuEntry, helpers),
       }))
     : []

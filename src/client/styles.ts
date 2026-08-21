@@ -160,6 +160,7 @@ export const PANEL_CSS = `
   font-size: 13px;
 }
 .dsh-fe-menu-item:hover { background: var(--fe-btn-hover); }
+.dsh-fe-menu-item--danger { color: var(--dsw-alias-state-danger, #c0392b); }
 .dsh-fe-preview-content { padding: 12px; }
 .dsh-fe-code {
   margin: 0;

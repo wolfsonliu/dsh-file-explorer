@@ -7,6 +7,8 @@ export interface FileContextMenuItem {
   label: string
   /** Optional leading icon. */
   icon?: ReactNode
+  /** Render this item with the danger color. */
+  danger?: boolean
   /** Called when the item is selected (before the menu closes). */
   onSelect: () => void
 }
@@ -59,7 +61,7 @@ export function FileContextMenu({ open, anchor, items, onClose }: FileContextMen
       {items.map((item) => (
         <div
           key={item.id}
-          className="dsh-fe-menu-item"
+          className={'dsh-fe-menu-item' + (item.danger ? ' dsh-fe-menu-item--danger' : '')}
           role="menuitem"
           onClick={() => {
             item.onSelect()

@@ -31,3 +31,5 @@ export declare function IconFullscreen(props: FeIconProps): import("react").JSX.
 export declare function IconFile(props: FeIconProps): import("react").JSX.Element;
 /** ic_ds_ellipsis_outline_16 — inlined from `IconEllipsisOutline16`. */
 export declare function IconEllipsis(props: FeIconProps): import("react").JSX.Element;
+/** ic_ds_search_outline_16 — magnifier ring + handle (inlined, fill-based). */
+export declare function IconSearch(props: FeIconProps): import("react").JSX.Element;

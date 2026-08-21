@@ -501,6 +501,10 @@ describe('rename', () => {
   test('rejects the workspace root source', async () => {
     await expect(rename(root, '', 'x')).rejects.toThrow('cannot operate on the workspace root')
   })
+
+  test('rejects a source path escaping the workspace', async () => {
+    await expect(rename(root, 'escape', 'x')).rejects.toThrow('path is outside the configured workspace')
+  })
 })
 
 describe('move', () => {
@@ -537,6 +541,10 @@ describe('move', () => {
     await write(root, 'not-a-dir.txt', 'y')
     await expect(move(root, 'move-file-src.txt', 'not-a-dir.txt')).rejects.toThrow('destination is not a directory')
   })
+
+  test('rejects a source path escaping the workspace', async () => {
+    await expect(move(root, 'escape', '')).rejects.toThrow('path is outside the configured workspace')
+  })
 })
 
 describe('copy', () => {
@@ -562,6 +570,10 @@ describe('copy', () => {
     await mkdir(root, 'self-copy')
     await mkdir(root, 'self-copy/sub')
     await expect(copy(root, 'self-copy', 'self-copy/sub')).rejects.toThrow('cannot copy a directory into itself')
+  })
+
+  test('rejects a source path escaping the workspace', async () => {
+    await expect(copy(root, 'escape', '')).rejects.toThrow('path is outside the configured workspace')
   })
 })
 

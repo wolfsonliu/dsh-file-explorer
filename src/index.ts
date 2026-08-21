@@ -1,6 +1,17 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createReadStream, type Stats } from 'node:fs'
-import { open, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises'
+import {
+  cp as fsCp,
+  mkdir as fsMkdir,
+  open,
+  readFile,
+  readdir,
+  realpath,
+  rename as fsRename,
+  rm as fsRm,
+  stat,
+  writeFile,
+} from 'node:fs/promises'
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import {
   FILE_EXPLORER_ROUTE,
@@ -277,6 +288,64 @@ async function raw(
 async function write(root: string, input: string, content: string): Promise<string> {
   const target = await inside(root, input, { allowMissing: true })
   await writeFile(target.absolute, content, 'utf8')
+  return target.path
+}
+
+// ---------------------------------------------------------------------------
+// Mutation guards shared by the file-operation actions.
+// ---------------------------------------------------------------------------
+
+/** Reject operating on the workspace root itself ('' or '.'). */
+function assertNotRoot(input: string): void {
+  if (input === '' || input === '.') throw new Error('cannot operate on the workspace root')
+}
+
+/** Reject an empty, dot, parent, or path-separator-containing final segment. */
+function assertValidName(name: string): void {
+  if (name === '' || name === '.' || name === '..' || name.includes('/') || name.includes('\\')) {
+    throw new Error('invalid name')
+  }
+}
+
+/** Whether a path exists (any file type). */
+async function exists(absolute: string): Promise<boolean> {
+  try {
+    await stat(absolute)
+    return true
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw err
+  }
+}
+
+/** Join a workspace-relative parent ('' = root) with a final segment. */
+function joinRel(parent: string, name: string): string {
+  return parent === '' ? name : `${parent}/${name}`
+}
+
+/** Reject moving/copying a directory into itself or one of its descendants. */
+function assertNotDescendant(kind: 'move' | 'copy', destPath: string, sourcePath: string): void {
+  if (sourcePath === '') return
+  if (destPath === sourcePath || destPath.startsWith(`${sourcePath}/`)) {
+    throw new Error(`cannot ${kind} a directory into itself`)
+  }
+}
+
+async function createFile(root: string, input: string): Promise<string> {
+  assertNotRoot(input)
+  assertValidName(input.split('/').at(-1) ?? '')
+  const target = await inside(root, input, { allowMissing: true })
+  if (await exists(target.absolute)) throw new Error('path already exists')
+  await writeFile(target.absolute, '', 'utf8')
+  return target.path
+}
+
+async function mkdir(root: string, input: string): Promise<string> {
+  assertNotRoot(input)
+  assertValidName(input.split('/').at(-1) ?? '')
+  const target = await inside(root, input, { allowMissing: true })
+  if (await exists(target.absolute)) throw new Error('path already exists')
+  await fsMkdir(target.absolute)
   return target.path
 }
 
@@ -626,4 +695,4 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 // ---------------------------------------------------------------------------
 // Exported for testing
 // ---------------------------------------------------------------------------
-export { capBytes, inside, invalidateListCache, list, preview, raw, serveStatic, write }
+export { capBytes, createFile, inside, invalidateListCache, list, mkdir, preview, raw, serveStatic, write }

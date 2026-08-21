@@ -1,10 +1,10 @@
 import { describe, expect, test, beforeAll, afterAll } from 'vitest'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { mkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
+import { mkdir as fsMkdir, mkdtemp, rm, writeFile, symlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { inside, list, preview, write, raw, apply, capBytes, invalidateListCache } from '../src/index.ts'
+import { inside, list, preview, write, raw, apply, capBytes, invalidateListCache, createFile, mkdir } from '../src/index.ts'
 import type { Config } from '../src/protocol.ts'
 
 let root: string
@@ -24,7 +24,7 @@ beforeAll(async () => {
   //     big.txt
   //     symlink -> a.txt
   //     escape -> tmpdir() (outside workspace)
-  await mkdir(join(root, 'subdir'))
+  await fsMkdir(join(root, 'subdir'))
   await writeFile(join(root, 'subdir', 'nested.txt'), 'nested')
   await writeFile(join(root, 'a.txt'), 'hello')
   await writeFile(join(root, 'b.txt'), 'world')
@@ -45,7 +45,7 @@ beforeAll(async () => {
   await symlink(tmpdir(), join(root, 'escape'))
   // Static-route fixtures.
   await writeFile(join(root, 'page.html'), '<h1>page</h1>')
-  await mkdir(join(root, 'site'))
+  await fsMkdir(join(root, 'site'))
   await writeFile(join(root, 'site', 'index.html'), '<html><body>Hi</body></html>')
   await writeFile(join(root, 'site', 'style.css'), 'body { color: red; }')
   await writeFile(join(root, 'site', 'unknown.xyz'), 'not-a-known-type')
@@ -395,6 +395,61 @@ describe('write', () => {
 
   test('rejects path escaping the workspace', async () => {
     await expect(write(root, '../outside.txt', 'x')).rejects.toThrow('path is outside the configured workspace')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// createFile / mkdir
+// ---------------------------------------------------------------------------
+describe('createFile', () => {
+  test('creates an empty file and returns its relative path', async () => {
+    const created = await createFile(root, 'created-file.txt')
+    expect(created).toBe('created-file.txt')
+    const info = await import('node:fs/promises').then(fs => fs.stat(join(root, 'created-file.txt')))
+    expect(info.isFile()).toBe(true)
+    expect(info.size).toBe(0)
+  })
+
+  test('creates a file inside an existing directory', async () => {
+    const created = await createFile(root, 'subdir/created-child.txt')
+    expect(created).toBe('subdir/created-child.txt')
+  })
+
+  test('rejects when the target already exists', async () => {
+    await expect(createFile(root, 'a.txt')).rejects.toThrow('path already exists')
+  })
+
+  test('rejects the workspace root', async () => {
+    await expect(createFile(root, '')).rejects.toThrow('cannot operate on the workspace root')
+    await expect(createFile(root, '.')).rejects.toThrow('cannot operate on the workspace root')
+  })
+
+  test('rejects an invalid final name segment', async () => {
+    await expect(createFile(root, 'subdir/.')).rejects.toThrow('invalid name')
+    await expect(createFile(root, 'subdir/..')).rejects.toThrow('invalid name')
+    await expect(createFile(root, 'subdir/bad\\name')).rejects.toThrow('invalid name')
+  })
+})
+
+describe('mkdir', () => {
+  test('creates a directory and returns its relative path', async () => {
+    const created = await mkdir(root, 'created-dir')
+    expect(created).toBe('created-dir')
+    const info = await import('node:fs/promises').then(fs => fs.stat(join(root, 'created-dir')))
+    expect(info.isDirectory()).toBe(true)
+  })
+
+  test('rejects when the target already exists', async () => {
+    await expect(mkdir(root, 'subdir')).rejects.toThrow('path already exists')
+  })
+
+  test('rejects a missing parent directory', async () => {
+    await expect(mkdir(root, 'no-such-parent/child')).rejects.toThrow()
+  })
+
+  test('rejects the workspace root and invalid names', async () => {
+    await expect(mkdir(root, '.')).rejects.toThrow('cannot operate on the workspace root')
+    await expect(mkdir(root, 'subdir/..')).rejects.toThrow('invalid name')
   })
 })
 

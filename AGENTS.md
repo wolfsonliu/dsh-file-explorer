@@ -9,9 +9,9 @@
 
 ```
 src/
-  index.ts            host half: Node HTTP route /file-explorer/api (list/preview/resolve-path/pdf/raw/write)
+  index.ts            host half: Node HTTP routes — /file-explorer/api (list/preview/resolve-path/pdf/raw/write) + /file-explorer/files prefix static route
   invariant.ts        no-op runtime-invariant companion plugin ("./invariant" export)
-  protocol.ts         wire types + FILE_EXPLORER_ROUTE/PDF_ACTION — the single contract between halves
+  protocol.ts         wire types + FILE_EXPLORER_ROUTE/PDF_ACTION/STATIC_FILES_ROUTE/BROWSER_OPEN_EXTS — the single contract between halves
   client/
     index.ts              browser half: reflects the fileExplorer service, registers built-ins,
                           injects PANEL_CSS + a React root, wires file-link interception & Ctrl/Cmd+Shift+E
@@ -78,6 +78,8 @@ npm run build     # tsc + tsdown → host ESM lib/index.js + client CJS bundle l
   | `raw` | GET | `application/octet-stream`; honors `Range` (200/206/416), capped per-read at `maxRawBytes` |
   | `write` | POST | `{ ok, saved }` after writing UTF-8 text (`body.content` required) |
 
+A second `kind: 'prefix'` route `/file-explorer/files/<sessionId>/<relative path…>` streams workspace files with browser-native MIME (`STATIC_MIME`), honors `Range` (200/206/416), serves a directory's `index.html`, and sets `nosniff`/`no-store` plus optional `inlineCsp` on html/xhtml/svg.
+
 - **Registrations are effects.** `registerPreview(ext, component, priority?)` and `registerFileAction(action)` return disposers. The client calls built-in registration at `apply` and exposes the same functions through the `fileExplorer` service; external plugins call them inside `ctx.effect()` and return the disposer so unload/HMR cleans up. For previews: higher priority wins; later registration wins ties; built-ins use priority `0`.
 
 - **Kind-aware routing.** `resolvePreviewFor(preview, ext)` routes on the discriminated `preview.kind` first: `image` → ImagePreview; `empty` → BinaryPreview (status); non-text (`binary`/`too-large`) → the extension-registered component or BinaryPreview when unregistered; `text` → the extension-registered component or TextPreview when unregistered (e.g. an extension-less file). Add a `FilePreview` variant by extending the union in `src/protocol.ts`, producing it in `src/index.ts`, and handling its `kind` in `resolvePreviewFor` plus the owning preview component.
@@ -101,6 +103,7 @@ npm run build     # tsc + tsdown → host ESM lib/index.js + client CJS bundle l
 | `maxBinaryBytes`|   64 KiB  | Max bytes of a binary file to hexdump                             |
 | `maxRawBytes`   |  100 MiB  | Per-read cap for the `raw` action / `readRawFile` (not total size)|
 | `showHidden`    |     false | Whether dot-prefixed (hidden) files are listed                    |
+| `inlineCsp`      |   (none)  | Optional CSP for inline html/xhtml/svg via the static route        |
 
 When adding or changing a cap, update `Config`, `cordis.patch.yml`, this table, and the README together.
 

@@ -18,7 +18,7 @@ A file explorer for DSH Web. A floating "Files" button opens a left drawer (work
 4. **Floating preview**: clicking a file floats a draggable/resizable/minimizable/closable preview box on the right.
 5. **Previewers**: built-in text (source), Markdown (rendered + source toggle + inline edit), image (data URL), and binary (hexdump) previews.
 6. **Extensible previews**: register previewers by extension through the `fileExplorer` service; unregistered extensions fall back to the `binary` preview. Add protein-structure (`.cif`/`.pdb` → Mol*), CSV, etc. previewers without touching the core.
-7. **PDF in a new tab**: clicking a `.pdf` file opens it in a new browser tab with the browser's native PDF viewer (no PDF previewer needed).
+7. **Open in the browser**: clicking a `.pdf` / `.html` / `.htm` / `.xhtml` file opens it in a new browser tab with the browser's native renderer; HTML pages load their same-directory assets (CSS/JS/images/fonts).
 8. **Row actions menu**: hover a file/directory row to reveal a "···" menu (Open / Copy absolute path / Copy relative path).
 9. **Shortcut**: `Ctrl/Cmd+Shift+E` toggles the file drawer.
 
@@ -80,6 +80,7 @@ The bundle enables the following defaults:
 | `maxBinaryBytes` |  64 KiB | Max bytes of a binary file to read for its hexdump |
 | `maxRawBytes`    | 100 MiB | Per-read cap for raw reads / readRawFile           |
 | `showHidden`     |    true | Whether to list dot-prefixed (hidden) files        |
+| `inlineCsp`      |    none | Optional Content-Security-Policy for inline html/xhtml/svg via the static route |
 
 ## Data layer
 
@@ -92,6 +93,8 @@ The host half registers a `/file-explorer/api` exact route via `ctx.webServer.re
 - `write`: writes UTF-8 text to a workspace file (POST body `{ path, content }`), returning the saved relative path.
 
 All paths pass a workspace-containment check (`inside(root, input)`, including `realpath` symlink resolution); out-of-workspace paths are rejected. Text/binary is detected by a NUL-byte scan; images map extensions to MIME and return a data URL. Binary previews return the first `maxBinaryBytes` as base64 (plus a `truncated` flag) for a `hexdump -C`-style hex dump.
+
+The host also registers a `kind: 'prefix'` route at `/file-explorer/files/<sessionId>/<relative path…>` that streams workspace files with a browser-native content type (`text/html`, `text/css`, `image/*`, `application/pdf`, web fonts, audio/video, and `application/octet-stream` for unknowns). It honors `Range`, serves a directory's `index.html`, and always sets `x-content-type-options: nosniff` + `cache-control: no-store`. This is the URL `.pdf`/`.html`/`.htm`/`.xhtml` open in a new tab.
 
 ## Model Experience
 

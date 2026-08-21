@@ -18,7 +18,7 @@ DSH Web 的文件浏览器。页面边缘有一个浮动「文件」按钮，点
 4. **悬浮预览框**：点文件在右侧浮出可拖拽/缩放/最小化/关闭的预览框。
 5. **文件预览**：内置文本（源码）、Markdown（渲染 + 源码切换 + 行内编辑）、图片（data URL）、二进制（hexdump）预览。
 6. **可扩展预览**：通过 `fileExplorer` 服务按扩展名注册预览器，未注册的扩展名回退到 `binary` 预览。新增蛋白质结构（`.cif`/`.pdb` → Mol*）、CSV 等预览器无需改动核心。
-7. **PDF 新标签页打开**：点击 `.pdf` 文件直接在新浏览器标签页用浏览器原生 PDF 阅读器打开（无需开发 PDF 预览器）。
+7. **浏览器打开**：点击 `.pdf` / `.html` / `.htm` / `.xhtml` 文件直接在新浏览器标签页用浏览器原生渲染打开；HTML 页面可加载同目录资源（CSS/JS/图片/字体）。
 8. **行操作菜单**：hover 文件/目录行末尾出现「···」菜单（打开 / 复制绝对路径 / 复制相对路径）。
 9. **快捷键**：`Ctrl/Cmd+Shift+E` 开关文件浏览器抽屉。
 
@@ -80,6 +80,7 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequenc
 | `maxBinaryBytes` | 64 KiB | 二进制文件 hexdump 读取的字节数上限    |
 | `maxRawBytes`    | 100 MiB | `raw` 动作 / `readRawFile` 单次读取上限（非总大小） |
 | `showHidden`     |    true | 是否列出以点开头（隐藏）的文件        |
+| `inlineCsp`      |    none | 可选：静态路由 inline html/xhtml/svg 响应的 Content-Security-Policy |
 
 ## 数据层
 
@@ -92,6 +93,8 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequenc
 - `write`：把 UTF-8 文本写入工作区文件（POST body `{ path, content }`），返回保存的相对路径。
 
 所有路径经 `inside(root, input)` 工作区包含校验（含 `realpath` 符号链接解析），越界路径一律拒绝。文本/二进制通过 NUL 字节扫描判别，图片按扩展名映射 MIME 并返回 data URL。二进制预览返回前 `maxBinaryBytes` 字节的 base64（附带 `truncated` 标志），用于 `hexdump -C` 风格的十六进制转储。
+
+宿主还注册了一条 `kind: 'prefix'` 路由 `/file-explorer/files/<sessionId>/<相对路径…>`，以浏览器原生内容类型（`text/html`、`text/css`、`image/*`、`application/pdf`、字体、音视频，未知类型回退 `application/octet-stream`）流式返回工作区文件；支持 `Range`，目录回退其 `index.html`，并始终携带 `x-content-type-options: nosniff` 与 `cache-control: no-store`。`.pdf`/`.html`/`.htm`/`.xhtml` 即在新标签页打开该 URL。
 
 ## Model Experience
 

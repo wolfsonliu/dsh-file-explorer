@@ -720,6 +720,12 @@ export function apply(ctx: HostContext, config: Config = {}): void {
             invalidateListCache()
             return json(res, 200, { ok: true, saved })
           }
+          if (
+            action === CREATE_FILE_ACTION || action === MKDIR_ACTION || action === RENAME_ACTION ||
+            action === MOVE_ACTION || action === COPY_ACTION || action === DELETE_ACTION
+          ) {
+            if (req.method !== 'POST') throw new Error('method not allowed')
+          }
           if (action === CREATE_FILE_ACTION) {
             const created = await createFile(root, path)
             invalidateListCache()

@@ -1005,6 +1005,24 @@ describe('apply / route handler', () => {
     expect(body.error).toBe('invalid name')
   })
 
+  test('rename route requires a name', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'rename', path: 'b.txt' }),
+    })
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.error).toBe('name is required')
+  })
+
+  test('mutation actions reject non-POST methods', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session&action=delete&path=b.txt`)
+    expect(res.status).toBe(400)
+    const body = await res.json() as any
+    expect(body.error).toBe('method not allowed')
+  })
+
   test('create-file route rejects an existing target with 400', async () => {
     const res = await fetch(`${baseUrl}/file-explorer/api?sessionId=test-session`, {
       method: 'POST',

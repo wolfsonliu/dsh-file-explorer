@@ -676,6 +676,52 @@ describe('apply / route handler', () => {
     expect(res.status).toBe(400)
   })
 
+  test('static route returns 416 for an out-of-bounds range', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/report.pdf`, { headers: { Range: 'bytes=500-600' } })
+    expect(res.status).toBe(416)
+  })
+
+  test('static route rejects an encoded slash in a path segment', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/a%2Fb.html`)
+    expect(res.status).toBe(400)
+  })
+
+  test('static route rejects an encoded backslash in a path segment', async () => {
+    const res = await fetch(`${baseUrl}/file-explorer/files/test-session/a%5Cb.html`)
+    expect(res.status).toBe(400)
+  })
+
+  test('static route emits inlineCsp only for html/xhtml/svg', async () => {
+    const server3 = createServer()
+    apply(
+      {
+        sessions: {
+          get(id: string) {
+            if (id === 'test-session') return { header: { cwd: root } }
+            return undefined
+          },
+        },
+        webServer: makeWebServer(server3),
+        effect(cb: () => () => void) { cb() },
+      },
+      { inlineCsp: "default-src 'none'" } as Config,
+    )
+    await new Promise<void>((resolve) => server3.listen(0, resolve))
+    const port = (server3.address() as AddressInfo).port
+    const base = `http://localhost:${port}`
+
+    const html = await fetch(`${base}/file-explorer/files/test-session/page.html`)
+    expect(html.headers.get('content-security-policy')).toBe("default-src 'none'")
+
+    const css = await fetch(`${base}/file-explorer/files/test-session/site/style.css`)
+    expect(css.headers.get('content-security-policy')).toBeNull()
+
+    const pdf = await fetch(`${base}/file-explorer/files/test-session/report.pdf`)
+    expect(pdf.headers.get('content-security-policy')).toBeNull()
+
+    await new Promise<void>((resolve) => server3.close(() => resolve()))
+  })
+
   test('preview action falls back for an invalid maxBinaryBytes config', async () => {
     const server2 = createServer()
     apply(

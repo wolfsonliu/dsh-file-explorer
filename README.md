@@ -14,7 +14,7 @@ A file explorer for DSH Web. A floating "Files" button opens a left drawer (work
 
 1. **Floating entry**: a "Files" button pinned to the left edge of the page. It stays collapsed into a small, low-profile handle — intentionally unobtrusive and out of the way — so it does not distract from the main workspace. Hover or click to expand it and toggle the file drawer.
 2. **Left drawer**: a full-height fixed drawer with a title bar (refresh + close buttons) holding the workspace file tree.
-3. **File browsing**: a lazy-loading directory tree that follows the current session's workspace root and refreshes on session switch.
+3. **File browsing**: a lazy-loading directory tree that follows the current session's workspace root and refreshes on session switch; a search box at the top filters already-loaded entries by name or path.
 4. **Floating preview**: clicking a file floats a draggable/resizable/minimizable/closable preview box on the right.
 5. **Previewers**: built-in text (source), Markdown (rendered + source toggle + inline edit), image (data URL), and binary (hexdump) previews.
 6. **Extensible previews**: register previewers by extension through the `fileExplorer` service; unregistered extensions fall back to the `binary` preview. Add protein-structure (`.cif`/`.pdb` → Mol*), CSV, etc. previewers without touching the core.
@@ -108,6 +108,7 @@ This plugin is a pure UI surface — it emits no session events and does not mod
 - **File-link interception is best-effort**: it relies on DSH's CSS class names (`_fileLink`, `data-produced-files-row`); update the selectors if the upstream UI changes.
 - **Large files**: large text files stream in pages (past `maxTextBytes` the preview pages via `readRawFile`); image reads are bounded by `maxImageBytes`, and binary hexdumps read only the first `maxBinaryBytes`.
 - **Hidden files are shown by default**: dot-prefixed files/directories are listed (the bundle sets `showHidden: true`); set `showHidden: false` in the bundle config to hide them.
+- **Client-side search**: the tree search box matches only already-loaded (expanded) entries — files inside collapsed directories are not found; there is no server-side recursive search.
 
 ## Developing extensions
 

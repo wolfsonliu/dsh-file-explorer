@@ -355,6 +355,9 @@ async function rename(root: string, input: string, name: string): Promise<string
   const target = await inside(root, input)
   const parent = target.path.includes('/') ? target.path.slice(0, target.path.lastIndexOf('/')) : ''
   const nextAbs = join(dirname(target.absolute), name)
+  // Best-effort guard for a clean message: fsRename has no portable
+  // "no-overwrite" flag, so a concurrent same-name mutation could still be
+  // overwritten on POSIX.
   if (await exists(nextAbs)) throw new Error('target already exists')
   await fsRename(target.absolute, nextAbs)
   return joinRel(parent, name)

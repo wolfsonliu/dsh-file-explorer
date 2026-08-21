@@ -475,6 +475,9 @@ describe('rename', () => {
     await mkdir(root, 'rename-dir-src')
     const renamed = await rename(root, 'rename-dir-src', 'rename-dir-dst')
     expect(renamed).toBe('rename-dir-dst')
+    const names = (await list(root, '')).map(e => e.name)
+    expect(names).toContain('rename-dir-dst')
+    expect(names).not.toContain('rename-dir-src')
   })
 
   test('rejects when the new name already exists', async () => {
@@ -486,6 +489,13 @@ describe('rename', () => {
   test('rejects an invalid name', async () => {
     await expect(rename(root, 'a.txt', 'bad/name')).rejects.toThrow('invalid name')
     await expect(rename(root, 'a.txt', '..')).rejects.toThrow('invalid name')
+    await expect(rename(root, 'a.txt', '')).rejects.toThrow('invalid name')
+    await expect(rename(root, 'a.txt', '.')).rejects.toThrow('invalid name')
+    await expect(rename(root, 'a.txt', 'bad\\name')).rejects.toThrow('invalid name')
+  })
+
+  test('renaming to the same name rejects with target already exists', async () => {
+    await expect(rename(root, 'a.txt', 'a.txt')).rejects.toThrow('target already exists')
   })
 
   test('rejects the workspace root source', async () => {

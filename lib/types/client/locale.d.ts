@@ -26,6 +26,9 @@ export declare const ZH: {
     readonly mdPreview: "预览";
     readonly saving: "保存中…";
     readonly saveFailed: "保存失败";
+    readonly searchPlaceholder: "搜索文件…";
+    readonly noSearchResults: "没有匹配的文件";
+    readonly clearSearch: "清除搜索";
 };
 export declare const EN: {
     readonly title: "File Explorer";
@@ -53,6 +56,9 @@ export declare const EN: {
     readonly mdPreview: "Preview";
     readonly saving: "Saving…";
     readonly saveFailed: "Save failed";
+    readonly searchPlaceholder: "Search files…";
+    readonly noSearchResults: "No matching files";
+    readonly clearSearch: "Clear search";
 };
 /** Register the plugin's dictionaries; returns a disposer for both locales. */
 export declare function registerFileExplorerLocale(ctx: {

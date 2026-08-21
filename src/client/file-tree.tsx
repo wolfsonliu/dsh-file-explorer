@@ -11,7 +11,8 @@ import type { Translate } from './locale.ts'
 import { VirtualList } from './virtual-list.tsx'
 import { FileContextMenu } from './context-menu.tsx'
 import { fileActionsFor, type FileActionHelpers } from './file-action.ts'
-import { IconChevronRight, IconEllipsis, IconFile, IconFolderClose, IconFolderOpen } from './icons.tsx'
+import { IconChevronRight, IconClose, IconEllipsis, IconFile, IconFolderClose, IconFolderOpen, IconSearch } from './icons.tsx'
+import { matchesSearch, parentPathOf } from './tree-search.ts'
 
 export interface FileTreeProps {
   /** Current session id; undefined means "no session". */
@@ -56,6 +57,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [refreshKey, setRefreshKey] = useState(0)
   const [menu, setMenu] = useState<MenuState>({ open: false, anchor: { x: 0, y: 0 }, entry: null })
+  const [query, setQuery] = useState('')
 
   const childrenRef = useRef(children)
   childrenRef.current = children
@@ -172,6 +174,11 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     setMenu((prev) => ({ ...prev, open: false }))
   }, [])
 
+  const handleResultSelect = useCallback((entry: BrowserEntry) => {
+    if (entry.kind === 'file') helpers.openFile(entry.path)
+    setQuery('')
+  }, [helpers])
+
   useImperativeHandle(ref, () => ({ refresh: handleRefresh }), [handleRefresh])
 
   // Empty state
@@ -194,24 +201,62 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     : []
 
   const flat = flattenVisible(entries, expanded, children)
+  const searching = query.trim() !== ''
+  const results = searching ? flat.filter((row) => matchesSearch(row.entry, query)) : []
 
   return (
     <div className="dsh-fe-tree">
-      <VirtualList
-        rowCount={flat.length}
-        rowHeight={TREE_ROW_HEIGHT}
-        rowKey={(i) => flat[i].path}
-        renderRow={(i) => (
-          <TreeRow
-            entry={flat[i].entry}
-            depth={flat[i].depth}
-            expanded={expanded}
-            onDisclosureClick={handleDisclosureClick}
-            helpers={helpers}
-            onOpenMenu={openMenu}
-          />
+      <div className="dsh-fe-search-bar">
+        <IconSearch size={14} />
+        <input
+          className="dsh-fe-search"
+          data-fe-search
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('searchPlaceholder')}
+        />
+        {searching && (
+          <button
+            type="button"
+            className="dsh-fe-search-clear"
+            data-fe-search-clear
+            onClick={() => setQuery('')}
+            title={t('clearSearch')}
+          >
+            <IconClose size={14} />
+          </button>
         )}
-      />
+      </div>
+      {searching ? (
+        results.length === 0 ? (
+          <div className="dsh-fe-tree-empty" data-fe-search-empty>{t('noSearchResults')}</div>
+        ) : (
+          <VirtualList
+            rowCount={results.length}
+            rowHeight={TREE_ROW_HEIGHT}
+            rowKey={(i) => results[i].path}
+            renderRow={(i) => (
+              <SearchResultRow entry={results[i].entry} onSelect={handleResultSelect} />
+            )}
+          />
+        )
+      ) : (
+        <VirtualList
+          rowCount={flat.length}
+          rowHeight={TREE_ROW_HEIGHT}
+          rowKey={(i) => flat[i].path}
+          renderRow={(i) => (
+            <TreeRow
+              entry={flat[i].entry}
+              depth={flat[i].depth}
+              expanded={expanded}
+              onDisclosureClick={handleDisclosureClick}
+              helpers={helpers}
+              onOpenMenu={openMenu}
+            />
+          )}
+        />
+      )}
       <FileContextMenu
         open={menu.open}
         anchor={menu.anchor}
@@ -306,6 +351,31 @@ function TreeRow({ entry, depth, expanded, onDisclosureClick, helpers, onOpenMen
           <IconEllipsis size={16} />
         </button>
       </span>
+    </div>
+  )
+}
+
+interface SearchResultRowProps {
+  entry: BrowserEntry
+  onSelect: (entry: BrowserEntry) => void
+}
+
+function SearchResultRow({ entry, onSelect }: SearchResultRowProps) {
+  const isDir = entry.kind === 'directory'
+  const parent = parentPathOf(entry.path)
+  return (
+    <div
+      className={'dsh-fe-search-result' + (isDir ? ' dsh-fe-search-result--dir' : '')}
+      data-fe-path={entry.path}
+      data-fe-kind={entry.kind}
+      data-fe-search-result
+      onClick={() => onSelect(entry)}
+    >
+      <span className="dsh-fe-icon">
+        {isDir ? <IconFolderClose size={16} /> : <IconFile size={16} />}
+      </span>
+      <span className="dsh-fe-name">{entry.name}</span>
+      {parent !== '' && <span className="dsh-fe-path-hint">{parent}</span>}
     </div>
   )
 }

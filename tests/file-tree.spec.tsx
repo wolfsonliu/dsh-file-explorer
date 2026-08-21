@@ -62,6 +62,16 @@ function actionButton(row: HTMLElement): HTMLElement {
   return btn
 }
 
+/** Set the search input's value and fire React's onChange. */
+function setSearch(container: HTMLElement, value: string): void {
+  const input = container.querySelector('[data-fe-search]') as HTMLInputElement
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+  act(() => {
+    setter.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
 const rootEntries: BrowserEntry[] = [
   { name: 'src', path: 'src', kind: 'directory' },
   { name: 'README.md', path: 'README.md', kind: 'file', size: 100 },
@@ -654,5 +664,134 @@ describe('FileTree', () => {
 
     expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(5)
     expect(fetchList).toHaveBeenCalledTimes(4)
+  })
+
+  // -------------------------------------------------------------------------
+  // Search box + client-side filtering
+  // -------------------------------------------------------------------------
+  test('renders a search box above the tree', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    const input = container.querySelector('[data-fe-search]') as HTMLInputElement
+    expect(input).toBeTruthy()
+    expect(input.getAttribute('placeholder')).toBe('searchPlaceholder')
+    expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(3)
+  })
+
+  test('typing filters the tree by name, case-insensitively', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    setSearch(container, 'README')
+    await flush()
+
+    const results = container.querySelectorAll('.dsh-fe-search-result')
+    expect(results.length).toBe(1)
+    expect(results[0].textContent).toContain('README.md')
+    // The normal tree is hidden while searching.
+    expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(0)
+  })
+
+  test('search matches already-expanded directory children by path', async () => {
+    const fetchList = vi
+      .fn()
+      .mockResolvedValueOnce(rootEntries)
+      .mockResolvedValueOnce(srcChildren)
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    const srcRow = rowNamed(container, 'src')
+    act(() => { (srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement).click() })
+    await flush()
+
+    setSearch(container, 'index')
+    await flush()
+
+    const results = container.querySelectorAll('.dsh-fe-search-result')
+    expect(results.length).toBe(1)
+    expect(results[0].textContent).toContain('index.ts')
+    expect(results[0].textContent).toContain('src') // path hint
+  })
+
+  test('empty query restores the full tree', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    setSearch(container, 'package')
+    await flush()
+    expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(0)
+
+    setSearch(container, '')
+    await flush()
+    expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(3)
+  })
+
+  test('no matches renders the empty state', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    setSearch(container, 'zzzzz')
+    await flush()
+
+    expect(container.querySelector('[data-fe-search-empty]')).toBeTruthy()
+    expect(container.textContent).toContain('noSearchResults')
+  })
+
+  test('clear button clears the query and restores the tree', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    setSearch(container, 'readme')
+    await flush()
+    const clear = container.querySelector('[data-fe-search-clear]') as HTMLElement
+    expect(clear).toBeTruthy()
+
+    act(() => { clear.click() })
+    await flush()
+
+    expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(3)
+  })
+
+  test('clicking a search result file opens it and clears the search', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />,
+    )
+    await flush()
+
+    setSearch(container, 'package')
+    await flush()
+
+    const result = container.querySelector('.dsh-fe-search-result') as HTMLElement
+    act(() => { result.click() })
+
+    expect(helpers.openFile).toHaveBeenCalledWith('package.json')
+    // Search cleared: tree restored.
+    expect(container.querySelectorAll('.dsh-fe-tree-row').length).toBe(3)
   })
 })

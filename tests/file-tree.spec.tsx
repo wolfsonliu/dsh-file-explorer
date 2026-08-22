@@ -143,6 +143,65 @@ describe('FileTree', () => {
     expect(rows[2].textContent).toContain('package.json')
   })
 
+  test('renders a trailing size meta on file rows', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    const container = render(<FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />)
+    await flush()
+    const readme = rowNamed(container, 'README.md')
+    const meta = readme.querySelector('.dsh-fe-row-meta') as HTMLElement
+    expect(meta).toBeTruthy()
+    expect(meta.textContent).toBe('100 B') // formatBytes(100)
+  })
+
+  test('renders a relative-time meta on directory rows that have mtimeMs', async () => {
+    const entries: BrowserEntry[] = [
+      { name: 'src', path: 'src', kind: 'directory', mtimeMs: Date.now() - 5000 },
+    ]
+    const fetchList = vi.fn().mockResolvedValue(entries)
+    const helpers = makeHelpers()
+    const container = render(<FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />)
+    await flush()
+    const meta = rowNamed(container, 'src').querySelector('.dsh-fe-row-meta') as HTMLElement
+    expect(meta).toBeTruthy()
+    expect(meta.textContent).toBeTruthy()
+  })
+
+  test('highlights the selected file row and tints its ancestor directory', async () => {
+    const fetchList = vi
+      .fn()
+      .mockResolvedValueOnce(rootEntries) // root
+      .mockResolvedValueOnce(srcChildren) // src children
+    const helpers = makeHelpers()
+    const container = render(
+      <FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} selectedPath="src/index.ts" />,
+    )
+    await flush()
+    const srcRow = rowNamed(container, 'src')
+    const disclosure = srcRow.querySelector('.dsh-fe-disclosure') as HTMLElement
+    act(() => {
+      disclosure.click()
+    })
+    await flush()
+
+    const selected = container.querySelector('[data-fe-selected="true"]') as HTMLElement
+    expect(selected).toBeTruthy()
+    expect(selected.textContent).toContain('index.ts')
+    expect(srcRow.querySelector('.dsh-fe-icon--active')).toBeTruthy()
+  })
+
+  test('search results render a two-line heading + parent meta', async () => {
+    const fetchList = vi.fn().mockResolvedValue(srcChildren)
+    const helpers = makeHelpers()
+    const container = render(<FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />)
+    await flush()
+    setSearch(container, 'index.ts')
+    await flush()
+    const result = container.querySelector('.dsh-fe-search-result') as HTMLElement
+    expect(result.querySelector('.dsh-fe-search-result-heading')).toBeTruthy()
+    expect(result.querySelector('.dsh-fe-search-result-meta')!.textContent).toBe('src')
+  })
+
   test('sort select reorders rows by size descending', async () => {
     const fetchList = vi.fn().mockResolvedValue(rootEntries)
     const helpers = makeHelpers()

@@ -14,12 +14,12 @@ A file explorer for DSH Web. A floating "Files" button opens a left drawer (work
 
 1. **Floating entry**: a "Files" button pinned to the left edge of the page. It stays collapsed into a small, low-profile handle — intentionally unobtrusive and out of the way — so it does not distract from the main workspace. Hover or click to expand it and toggle the file drawer.
 2. **Left drawer**: a full-height fixed drawer with a title bar (refresh + close buttons) holding the workspace file tree.
-3. **File browsing**: a lazy-loading directory tree that follows the current session's workspace root and refreshes on session switch; a search box at the top filters already-loaded entries by name or path.
+3. **File browsing**: a lazy-loading directory tree that follows the current session's workspace root and refreshes on session switch; a search box at the top filters already-loaded entries by name or path, and a sort selector reorders them by name / size / modified time (ascending or descending).
 4. **Floating preview**: clicking a file floats a draggable/resizable/minimizable/closable preview box on the right.
 5. **Previewers**: built-in text (source), Markdown (rendered + source toggle + inline edit), image (data URL, including SVG), CSV (read-only table), and binary (hexdump) previews.
 6. **Extensible previews**: register previewers by extension through the `fileExplorer` service; unregistered extensions fall back to the `binary` preview, and a higher-priority registration **overrides** the built-in preview for that extension. Add protein-structure (`.cif`/`.pdb` → Mol*), sequence, etc. previewers without touching the core.
 7. **Open in the browser**: clicking a `.pdf` / `.html` / `.htm` / `.xhtml` / `.json` file opens it in a new browser tab with the browser's native renderer; HTML pages load their same-directory assets (CSS/JS/images/fonts).
-8. **Row actions menu**: hover a file/directory row to reveal a "···" menu (Open / Copy absolute path / Copy relative path).
+8. **Row actions menu**: hover a row to reveal a "···" menu. File rows offer Open (or Open as text / Open as binary) and Copy absolute / relative path; both file and directory rows offer Rename, Move, Copy, and Delete, while directory rows add New file / New folder. A "＋ New" button in the drawer title bar creates a file or folder at the workspace root.
 9. **Shortcut**: `Ctrl/Cmd+Shift+E` toggles the file drawer.
 
 ## Preview behavior by file type

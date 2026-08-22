@@ -16,11 +16,32 @@ DSH Web 的文件浏览器。页面边缘有一个浮动「文件」按钮，点
 2. **左抽屉**：左侧全高抽屉（fixed），标题栏带刷新 + 关闭按钮，内含工作区文件树。
 3. **文件浏览**：懒加载目录树，跟随当前会话的工作区根目录，切换会话时自动刷新；树顶搜索框可按名称或路径即时过滤已加载的条目。
 4. **悬浮预览框**：点文件在右侧浮出可拖拽/缩放/最小化/关闭的预览框。
-5. **文件预览**：内置文本（源码）、Markdown（渲染 + 源码切换 + 行内编辑）、图片（data URL）、二进制（hexdump）预览。
-6. **可扩展预览**：通过 `fileExplorer` 服务按扩展名注册预览器，未注册的扩展名回退到 `binary` 预览。新增蛋白质结构（`.cif`/`.pdb` → Mol*）、CSV 等预览器无需改动核心。
-7. **浏览器打开**：点击 `.pdf` / `.html` / `.htm` / `.xhtml` 文件直接在新浏览器标签页用浏览器原生渲染打开；HTML 页面可加载同目录资源（CSS/JS/图片/字体）。
+5. **文件预览**：内置文本（源码）、Markdown（渲染 + 源码切换 + 行内编辑）、图片（data URL，含 SVG）、CSV（只读表格）、二进制（hexdump）预览。
+6. **可扩展预览**：通过 `fileExplorer` 服务按扩展名注册预览器，未注册的扩展名回退到 `binary` 预览；更高优先级的注册可**覆盖**该扩展名的内置预览。新增蛋白质结构（`.cif`/`.pdb` → Mol*）、序列等预览器无需改动核心。
+7. **浏览器打开**：点击 `.pdf` / `.html` / `.htm` / `.xhtml` / `.json` 文件直接在新浏览器标签页用浏览器原生渲染打开；HTML 页面可加载同目录资源（CSS/JS/图片/字体）。
 8. **行操作菜单**：hover 文件/目录行末尾出现「···」菜单（打开 / 复制绝对路径 / 复制相对路径）。
 9. **快捷键**：`Ctrl/Cmd+Shift+E` 开关文件浏览器抽屉。
+
+## 按文件类型的预览行为
+
+文件的打开方式取决于其扩展名及其被检测到的内容类型（文本 / 二进制）：
+
+| 类型 | 扩展名 | 默认行为 |
+| ---- | ------ | -------- |
+| 源码文本 | `.ts` `.tsx` `.js` `.jsx` `.css` `.py` `.yaml` `.yml` `.sh` `.go` `.rs` `.xml` `.sql` `.txt` … | 源码预览；大文件分页流式加载 |
+| Markdown | `.md` `.mdx` | 渲染后的 HTML，可切换源码并行内编辑 |
+| 图片 | `.png` `.jpg` `.jpeg` `.gif` `.webp` `.svg` | 图片预览（data URL） |
+| CSV | `.csv` | 只读表格（首行为表头） |
+| PDF | `.pdf` | 浏览器原生阅读器，新标签页 |
+| HTML | `.html` `.htm` `.xhtml` | 浏览器原生渲染，新标签页 |
+| JSON | `.json` | 浏览器原生查看，新标签页 |
+| 二进制 / 未注册 | — | 十六进制转储（`hexdump -C` 风格，读取前 `maxBinaryBytes` 字节） |
+
+文本与二进制由 NUL 字节扫描判别，图片按扩展名识别；空文件显示状态提示，超过大小上限的文件显示「文件过大」（文本改为分页而非报错）。任何文件还可在其「···」行菜单中强制「以文本打开」或「以二进制打开」，从而跳过上表的默认行为。
+
+### 覆盖内置预览器
+
+内置预览器以优先级 `0` 注册。由于 `registerPreview(ext, component, priority)` 按最高优先级优先解析，扩展可以为特定扩展名替换任意内置预览——例如更丰富的 Markdown 或 CSV 渲染器——而无需改动核心。
 
 ## 安装
 
@@ -87,7 +108,7 @@ dsh plugin --profile web add github:wolfsonliu/dsh-file-explorer-preview-sequenc
 宿主半部通过 `ctx.webServer.register()` 注册一个 `/file-explorer/api` 精确路由，动作（`action` 查询参数）：
 
 - `list`：列出一级目录（目录在前、按名称排序），返回 `BrowserEntry[]`。
-- `preview`：读取单个文件，返回判别式 `FilePreview`（`text` / `image` / `empty` / `binary` / `too-large`）。
+- `preview`：读取单个文件，返回判别式 `FilePreview`（`text` / `text-large` / `image` / `empty` / `binary` / `too-large`）。
 - `pdf`：以内联方式流式返回 `.pdf` 文件（`Content-Type: application/pdf`），由浏览器原生阅读器在新标签页渲染。
 - `resolve-path`：解析工作区相对路径为绝对路径与父路径。
 - `write`：把 UTF-8 文本写入工作区文件（POST body `{ path, content }`），返回保存的相对路径。

@@ -16,11 +16,40 @@ A file explorer for DSH Web. A floating "Files" button opens a left drawer (work
 2. **Left drawer**: a full-height fixed drawer with a title bar (refresh + close buttons) holding the workspace file tree.
 3. **File browsing**: a lazy-loading directory tree that follows the current session's workspace root and refreshes on session switch; a search box at the top filters already-loaded entries by name or path.
 4. **Floating preview**: clicking a file floats a draggable/resizable/minimizable/closable preview box on the right.
-5. **Previewers**: built-in text (source), Markdown (rendered + source toggle + inline edit), image (data URL), and binary (hexdump) previews.
-6. **Extensible previews**: register previewers by extension through the `fileExplorer` service; unregistered extensions fall back to the `binary` preview. Add protein-structure (`.cif`/`.pdb` → Mol*), CSV, etc. previewers without touching the core.
-7. **Open in the browser**: clicking a `.pdf` / `.html` / `.htm` / `.xhtml` file opens it in a new browser tab with the browser's native renderer; HTML pages load their same-directory assets (CSS/JS/images/fonts).
+5. **Previewers**: built-in text (source), Markdown (rendered + source toggle + inline edit), image (data URL, including SVG), CSV (read-only table), and binary (hexdump) previews.
+6. **Extensible previews**: register previewers by extension through the `fileExplorer` service; unregistered extensions fall back to the `binary` preview, and a higher-priority registration **overrides** the built-in preview for that extension. Add protein-structure (`.cif`/`.pdb` → Mol*), sequence, etc. previewers without touching the core.
+7. **Open in the browser**: clicking a `.pdf` / `.html` / `.htm` / `.xhtml` / `.json` file opens it in a new browser tab with the browser's native renderer; HTML pages load their same-directory assets (CSS/JS/images/fonts).
 8. **Row actions menu**: hover a file/directory row to reveal a "···" menu (Open / Copy absolute path / Copy relative path).
 9. **Shortcut**: `Ctrl/Cmd+Shift+E` toggles the file drawer.
+
+## Preview behavior by file type
+
+How a file opens depends on its extension and on how its bytes are detected
+(text vs binary):
+
+| Type | Extension(s) | Default behavior |
+| ---- | ------------ | ---------------- |
+| Source text | `.ts` `.tsx` `.js` `.jsx` `.css` `.py` `.yaml` `.yml` `.sh` `.go` `.rs` `.xml` `.sql` `.txt` … | Plain source preview; large files stream page by page |
+| Markdown | `.md` `.mdx` | Rendered HTML, with a source toggle and inline edit |
+| Image | `.png` `.jpg` `.jpeg` `.gif` `.webp` `.svg` | Image preview (data URL) |
+| CSV | `.csv` | Read-only table (first row is the header) |
+| PDF | `.pdf` | Browser's native viewer, new tab |
+| HTML | `.html` `.htm` `.xhtml` | Browser's native renderer, new tab |
+| JSON | `.json` | Browser's native viewer, new tab |
+| Binary / unregistered | — | Hexdump (`hexdump -C` style, first `maxBinaryBytes`) |
+
+Text versus binary is decided by a NUL-byte scan; images are recognized by
+extension. Empty files show a status note, and files past their size cap show
+"File too large" (text pages instead of failing). Any file can also be
+force-opened as text or as binary from its "···" row menu, bypassing the
+default above.
+
+### Overriding built-in previewers
+
+Built-in previewers register at priority `0`. Because `registerPreview(ext,
+component, priority)` resolves the highest priority first, an extension can
+replace any built-in preview for a specific extension — for example a richer
+Markdown or CSV renderer — without touching the core.
 
 ## Install
 
@@ -87,7 +116,7 @@ The bundle enables the following defaults:
 The host half registers a `/file-explorer/api` exact route via `ctx.webServer.register()`. Actions (`action` query param):
 
 - `list`: lists one directory level (directories first, by name), returning `BrowserEntry[]`.
-- `preview`: reads one file, returning a discriminated `FilePreview` (`text` / `image` / `empty` / `binary` / `too-large`).
+- `preview`: reads one file, returning a discriminated `FilePreview` (`text` / `text-large` / `image` / `empty` / `binary` / `too-large`).
 - `pdf`: streams a `.pdf` file inline (`Content-Type: application/pdf`) so the browser's native viewer renders it in a new tab.
 - `resolve-path`: resolves a workspace-relative path to an absolute path and parent path.
 - `write`: writes UTF-8 text to a workspace file (POST body `{ path, content }`), returning the saved relative path.

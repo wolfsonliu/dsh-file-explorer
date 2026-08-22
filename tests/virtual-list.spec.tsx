@@ -47,11 +47,15 @@ describe('VirtualList', () => {
 
   test('renders variable-height rows with cumulative offsets and total height', () => {
     const container = render(
-      <VirtualList rowCount={3} rowHeight={(i) => (i === 0 ? 34 : 32)} rowKey={(i) => i}
+      <VirtualList rowCount={3} rowHeight={[34, 32, 32]} rowKey={(i) => i}
         renderRow={(i) => <div className="row">{i}</div>} />,
     )
     const spacer = container.querySelector('.dsh-fe-virtual-list > div') as HTMLElement
     expect(spacer.style.height).toBe('98px') // 34 + 32 + 32
+    const wrappers = Array.from(container.querySelectorAll('.dsh-fe-virtual-list > div > div')) as HTMLElement[]
+    expect(wrappers.length).toBe(3)
+    expect(wrappers.map((w) => w.style.top)).toEqual(['0px', '34px', '66px'])
+    expect(wrappers.map((w) => w.style.height)).toEqual(['34px', '32px', '32px'])
     expect(container.querySelectorAll('.row').length).toBe(3) // unmeasured viewport renders all
   })
 })

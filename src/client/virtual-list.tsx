@@ -3,8 +3,8 @@ import type { ReactNode } from 'react'
 
 export interface VirtualListProps {
   rowCount: number
-  /** Constant height, or a per-index height for variable-height rows. */
-  rowHeight: number | ((index: number) => number)
+  /** Constant height, or a per-row heights array (index-aligned with rows). */
+  rowHeight: number | readonly number[]
   /** Stable identity per row index (used as the React key). */
   rowKey: (index: number) => string | number
   /** Extra rows rendered above/below the visible viewport. */
@@ -22,15 +22,12 @@ export function VirtualList({
   renderRow,
 }: VirtualListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [range, setRange] = useState({ start: 0, end: rowCount })
+  const [range, setRange] = useState({ start: 0, end: Math.min(rowCount, 50) })
 
-  const heights = useMemo(() => {
-    const hs: number[] = []
-    for (let i = 0; i < rowCount; i++) {
-      hs.push(typeof rowHeight === 'number' ? rowHeight : rowHeight(i))
-    }
-    return hs
-  }, [rowCount, rowHeight])
+  const heights = useMemo(
+    () => (typeof rowHeight === 'number' ? Array.from({ length: rowCount }, () => rowHeight) : rowHeight),
+    [rowCount, rowHeight],
+  )
 
   // Prefix sums so variable-height rows resolve to absolute offsets in O(log n).
   const offsets = useMemo(() => {

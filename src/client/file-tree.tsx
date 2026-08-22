@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -213,7 +214,11 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
       }))
     : []
 
-  const flat = flattenVisible(entries, expanded, children)
+  const flat = useMemo(() => flattenVisible(entries, expanded, children), [entries, expanded, children])
+  const flatHeights = useMemo(
+    () => flat.map((row) => (row.entry.kind === 'directory' ? DIR_ROW_HEIGHT : FILE_ROW_HEIGHT)),
+    [flat],
+  )
   const searching = query.trim() !== ''
   const results = searching ? flat.filter((row) => matchesSearch(row.entry, query)) : []
 
@@ -270,7 +275,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
       ) : (
         <VirtualList
           rowCount={flat.length}
-          rowHeight={(i) => (flat[i].entry.kind === 'directory' ? DIR_ROW_HEIGHT : FILE_ROW_HEIGHT)}
+          rowHeight={flatHeights}
           rowKey={(i) => flat[i].path}
           renderRow={(i) => (
             <TreeRow

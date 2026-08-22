@@ -110,8 +110,9 @@ export function FileContextMenu({ open, getAnchorRect, items, onClose }: FileCon
       style={{ position: 'fixed', ...(fixedPos ?? MEASURE_STYLE) }}
     >
       {items.map((item) => (
-        <div
+        <button
           key={item.id}
+          type="button"
           className={'dsh-fe-menu-item' + (item.danger ? ' dsh-fe-menu-item--danger' : '')}
           data-fe-menu-item={item.id}
           role="menuitem"
@@ -122,7 +123,7 @@ export function FileContextMenu({ open, getAnchorRect, items, onClose }: FileCon
         >
           {item.icon !== undefined && <span className="dsh-fe-menu-item-icon">{item.icon}</span>}
           <span className="dsh-fe-menu-item-label">{item.label}</span>
-        </div>
+        </button>
       ))}
     </div>
   )

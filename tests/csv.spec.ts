@@ -18,6 +18,10 @@ describe('parseCsv', () => {
     expect(parseCsv('a,b\r\nc,d\n')).toEqual([['a', 'b'], ['c', 'd']])
   })
 
+  test('preserves a quoted empty field', () => {
+    expect(parseCsv('""')).toEqual([['']])
+  })
+
   test('returns an empty list for empty input', () => {
     expect(parseCsv('')).toEqual([])
   })

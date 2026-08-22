@@ -4,6 +4,31 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-08-22
+
+### Changed
+
+- File-tree rows now align with the dsh web workspace/session lists: rows use
+  variable heights (directories 34px, files 32px) and a trailing meta — the
+  file size for files, a relative modified time for directories — with the
+  selected row highlighted and its ancestor directory tinted.
+- Search results now render as two-line rows (heading + parent path) like the
+  dsh web search.
+- The file-operation dialogs (new file/folder, rename, delete, move, copy) are
+  restyled to match the dsh web dialog: blurred backdrop, 24px radius, a title
+  header with a close (×) button, and dsh `button` styling (confirm = primary,
+  delete = danger text with a hover tint).
+- The "move" row action now uses a right-arrow icon instead of the download
+  icon.
+
+### Fixed
+
+- The file-operation dialog rendered with a transparent card — like the earlier
+  row-menu bug, its styles read panel-scoped tokens that are undefined at the
+  dialog's render location. It now renders an opaque dsh-web-style dialog.
+- Directory trailing-time metadata no longer shows "0y" for entries 360–364
+  days old (the months-to-years boundary now clamps at 11 months).
+
 ## [0.6.2] - 2026-08-22
 
 ### Fixed

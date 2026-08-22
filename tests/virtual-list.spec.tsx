@@ -44,4 +44,14 @@ describe('VirtualList', () => {
     expect(rows).toBeGreaterThan(0)
     expect(rows).toBeLessThan(100)
   })
+
+  test('renders variable-height rows with cumulative offsets and total height', () => {
+    const container = render(
+      <VirtualList rowCount={3} rowHeight={(i) => (i === 0 ? 34 : 32)} rowKey={(i) => i}
+        renderRow={(i) => <div className="row">{i}</div>} />,
+    )
+    const spacer = container.querySelector('.dsh-fe-virtual-list > div') as HTMLElement
+    expect(spacer.style.height).toBe('98px') // 34 + 32 + 32
+    expect(container.querySelectorAll('.row').length).toBe(3) // unmeasured viewport renders all
+  })
 })

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 export interface VirtualListProps {
   rowCount: number
-  rowHeight: number
+  /** Constant height, or a per-index height for variable-height rows. */
+  rowHeight: number | ((index: number) => number)
   /** Stable identity per row index (used as the React key). */
   rowKey: (index: number) => string | number
   /** Extra rows rendered above/below the visible viewport. */
@@ -21,7 +22,39 @@ export function VirtualList({
   renderRow,
 }: VirtualListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [range, setRange] = useState({ start: 0, end: Math.min(rowCount, 50) })
+  const [range, setRange] = useState({ start: 0, end: rowCount })
+
+  const heights = useMemo(() => {
+    const hs: number[] = []
+    for (let i = 0; i < rowCount; i++) {
+      hs.push(typeof rowHeight === 'number' ? rowHeight : rowHeight(i))
+    }
+    return hs
+  }, [rowCount, rowHeight])
+
+  // Prefix sums so variable-height rows resolve to absolute offsets in O(log n).
+  const offsets = useMemo(() => {
+    const off: number[] = new Array(rowCount + 1)
+    off[0] = 0
+    for (let i = 0; i < rowCount; i++) off[i + 1] = off[i] + heights[i]
+    return off
+  }, [heights, rowCount])
+
+  const totalHeight = offsets[rowCount]
+
+  const indexAt = useCallback(
+    (y: number): number => {
+      let lo = 0
+      let hi = rowCount
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1
+        if (offsets[mid + 1] <= y) lo = mid + 1
+        else hi = mid
+      }
+      return lo
+    },
+    [offsets, rowCount],
+  )
 
   const updateRange = useCallback(() => {
     const el = containerRef.current
@@ -32,10 +65,10 @@ export function VirtualList({
       setRange((prev) => (prev.start === 0 && prev.end === rowCount ? prev : { start: 0, end: rowCount }))
       return
     }
-    const start = Math.max(0, Math.floor(el.scrollTop / rowHeight) - overscan)
-    const end = Math.min(rowCount, Math.ceil((el.scrollTop + viewport) / rowHeight) + overscan)
+    const start = Math.max(0, indexAt(el.scrollTop) - overscan)
+    const end = Math.min(rowCount, indexAt(el.scrollTop + viewport) + overscan)
     setRange({ start, end })
-  }, [rowHeight, overscan, rowCount])
+  }, [indexAt, overscan, rowCount])
 
   useEffect(() => {
     updateRange()
@@ -47,7 +80,6 @@ export function VirtualList({
     updateRange()
   }, [updateRange])
 
-  const totalHeight = rowCount * rowHeight
   const visible: number[] = []
   const end = Math.min(range.end, rowCount)
   for (let i = range.start; i < end; i++) visible.push(i)
@@ -62,7 +94,7 @@ export function VirtualList({
         {visible.map((i) => (
           <div
             key={rowKey(i)}
-            style={{ position: 'absolute', top: i * rowHeight, left: 0, right: 0, height: rowHeight }}
+            style={{ position: 'absolute', top: offsets[i], left: 0, right: 0, height: heights[i] }}
           >
             {renderRow(i)}
           </div>

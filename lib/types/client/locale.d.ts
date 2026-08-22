@@ -51,6 +51,12 @@ export declare const ZH: {
     readonly sortSizeDesc: "大小 大→小";
     readonly sortMtimeAsc: "修改时间 旧→新";
     readonly sortMtimeDesc: "修改时间 新→旧";
+    readonly timeNow: "刚刚";
+    readonly timeMinutes: "{n}分钟";
+    readonly timeHours: "{n}小时";
+    readonly timeDays: "{n}天";
+    readonly timeMonths: "{n}个月";
+    readonly timeYears: "{n}年";
     readonly csvTruncated: "仅显示前 {rows} 行";
     readonly csvTruncatedCols: "仅显示前 {cols} 列";
 };
@@ -105,6 +111,12 @@ export declare const EN: {
     readonly sortSizeDesc: "Size descending";
     readonly sortMtimeAsc: "Modified oldest first";
     readonly sortMtimeDesc: "Modified newest first";
+    readonly timeNow: "now";
+    readonly timeMinutes: "{n}min";
+    readonly timeHours: "{n}h";
+    readonly timeDays: "{n}d";
+    readonly timeMonths: "{n}mo";
+    readonly timeYears: "{n}y";
     readonly csvTruncated: "Showing first {rows} rows";
     readonly csvTruncatedCols: "Showing first {cols} columns";
 };

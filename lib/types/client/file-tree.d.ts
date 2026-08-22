@@ -12,6 +12,8 @@ export interface FileTreeProps {
     t: Translate;
     /** When true, periodically refresh loaded directories (while visible). */
     autoRefresh?: boolean;
+    /** The currently-open (preview) file's workspace-relative path, if any. */
+    selectedPath?: string | null;
 }
 /** Imperative handle exposed by FileTree. */
 export interface FileTreeHandle {

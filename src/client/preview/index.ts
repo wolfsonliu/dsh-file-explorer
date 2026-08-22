@@ -58,7 +58,9 @@ export function resolvePreviewFor(
   ext: string,
   readRawFile?: ReadRawFile,
 ): ComponentType<PreviewProps> {
-  if (preview.kind === 'image') return ImagePreview
+  if (preview.kind === 'image') {
+    return previewKeyOf(ext) === 'binary' ? ImagePreview : resolvePreview(ext)
+  }
   if (preview.kind === 'empty') return BinaryPreview
   if (preview.kind === 'text-large') {
     return previewKeyOf(ext) === 'binary' ? makeTextPagedPreview(readRawFile) : resolvePreview(ext)

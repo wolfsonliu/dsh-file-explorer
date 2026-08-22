@@ -88,8 +88,8 @@ type FilePreview =
 `resolvePreviewFor(preview, ext)` 决定哪个组件渲染文件：
 
 ```
-preview.kind === 'image'      → ImagePreview（内置）
-preview.kind === 'empty'      → BinaryPreview（状态页）
+preview.kind === 'image'      → 你注册的组件，或 ImagePreview（回退）
+preview.kind === 'empty'      → BinaryPreview（状态页）——永不覆盖
 preview.kind === 'text'       → 你注册的组件，或 TextPreview（回退）
 preview.kind === 'binary'     → 你注册的组件，或 BinaryPreview（回退）
 preview.kind === 'too-large'  → 你注册的组件，或 BinaryPreview（回退）
@@ -98,7 +98,8 @@ preview.kind === 'text-large' → 你注册的组件，或内置的分页文本�
 
 关键变化（dsh-file-explorer v0.1.0+）：`too-large` 和 `binary` 类型的预览现在会
 **转发到已注册的扩展组件**，而非硬路由到状态页。这意味着你的扩展可以通过调用
-`readRawFile` 来处理大文件和二进制格式。
+`readRawFile` 来处理大文件和二进制格式。`image` 类型的预览同样会转发到为该扩展名
+注册的组件；未注册时回退到内置 `ImagePreview`。
 
 - 如果你为扩展名 `cif` 注册了预览组件，一个 `too-large` 的 `.cif` 文件会被路由到
   你的组件——你调用 `readRawFile` 获取字节。

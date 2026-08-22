@@ -91,8 +91,8 @@ type FilePreview =
 `resolvePreviewFor(preview, ext)` decides which component renders a file:
 
 ```
-preview.kind === 'image'   → ImagePreview (built-in)
-preview.kind === 'empty'   → BinaryPreview (status page)
+preview.kind === 'image'   → your registered component, or ImagePreview (fallback)
+preview.kind === 'empty'   → BinaryPreview (status page) — never overridden
 preview.kind === 'text'    → your registered component, or TextPreview (fallback)
 preview.kind === 'binary'  → your registered component, or BinaryPreview (fallback)
 preview.kind === 'too-large' → your registered component, or BinaryPreview (fallback)
@@ -102,7 +102,9 @@ preview.kind === 'text-large' → your registered component, or the built-in pag
 The key change (dsh-file-explorer v0.1.0+): `too-large` and `binary` previews are now
 **forwarded to registered extension components** instead of being hard-routed to the
 status page. This means your extension can handle large files and binary formats by
-calling `readRawFile`.
+calling `readRawFile`. `image` previews are likewise forwarded to your registered
+component when one is registered for the file's extension; otherwise they fall back to
+the built-in `ImagePreview`.
 
 - If your extension is registered for extension `cif`, a `too-large` `.cif` file is
   routed to your component — you call `readRawFile` to get the bytes.

@@ -298,6 +298,26 @@ describe('resolvePreviewFor', () => {
     expect(comp).toBe(ImagePreview)
   })
 
+  test('image kind with registered extension routes to that extension component', () => {
+    registerBuiltinPreviews()
+    const dispose = registerPreview('pic', TextPreview, 10)
+    const comp = resolvePreviewFor(
+      { kind: 'image', name: 'x.pic', mime: 'image/png', dataUrl: 'data:image/png;base64,', size: 1 },
+      'pic',
+    )
+    expect(comp).toBe(TextPreview) // routes to registered component, not ImagePreview
+    dispose()
+  })
+
+  test('image kind with unregistered extension falls back to ImagePreview', () => {
+    registerBuiltinPreviews()
+    const comp = resolvePreviewFor(
+      { kind: 'image', name: 'x.dat', mime: 'image/png', dataUrl: 'data:image/png;base64,', size: 1 },
+      'dat',
+    )
+    expect(comp).toBe(ImagePreview)
+  })
+
   test('binary kind uses BinaryPreview', () => {
     registerBuiltinPreviews()
     const comp = resolvePreviewFor({ kind: 'binary', name: 'x.bin', size: 4 }, '')

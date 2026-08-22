@@ -17,6 +17,9 @@ export const ZH = {
   create: '创建', moveHere: '移动到这里', copyHere: '复制到这里',
   selectDestination: '选择目标目录', workspaceRoot: '工作区根目录',
   confirm: '确定', opFailed: '操作失败',
+  sortBy: '排序', sortNameAsc: '名称 A→Z', sortNameDesc: '名称 Z→A',
+  sortSizeAsc: '大小 小→大', sortSizeDesc: '大小 大→小',
+  sortMtimeAsc: '修改时间 旧→新', sortMtimeDesc: '修改时间 新→旧',
 } as const
 export const EN = {
   title: 'File Explorer', file: 'Files', refresh: 'Refresh', close: 'Close',
@@ -34,6 +37,9 @@ export const EN = {
   create: 'Create', moveHere: 'Move here', copyHere: 'Copy here',
   selectDestination: 'Select destination', workspaceRoot: 'Workspace root',
   confirm: 'OK', opFailed: 'Operation failed',
+  sortBy: 'Sort', sortNameAsc: 'Name A→Z', sortNameDesc: 'Name Z→A',
+  sortSizeAsc: 'Size ascending', sortSizeDesc: 'Size descending',
+  sortMtimeAsc: 'Modified oldest first', sortMtimeDesc: 'Modified newest first',
 } as const
 
 /** Register the plugin's dictionaries; returns a disposer for both locales. */

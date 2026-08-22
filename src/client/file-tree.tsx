@@ -13,6 +13,7 @@ import { FileContextMenu } from './context-menu.tsx'
 import { fileActionsFor, type FileActionHelpers } from './file-action.ts'
 import { IconChevronRight, IconClose, IconEllipsis, IconFile, IconFolderClose, IconFolderOpen, IconSearch } from './icons.tsx'
 import { matchesSearch, parentPathOf } from './tree-search.ts'
+import { parseSort, sortEntries, SORT_OPTIONS, type SortSpec } from './tree-sort.ts'
 
 export interface FileTreeProps {
   /** Current session id; undefined means "no session". */
@@ -33,14 +34,6 @@ export interface FileTreeHandle {
   refresh(): void
 }
 
-/** Stable sort: directories before files, then code-point order by name. */
-function sortEntries(entries: BrowserEntry[]): BrowserEntry[] {
-  return [...entries].sort((a, b) => {
-    if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1
-    return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
-  })
-}
-
 /** Per-row action-menu state. */
 interface MenuState {
   open: boolean
@@ -58,6 +51,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
   const [refreshKey, setRefreshKey] = useState(0)
   const [menu, setMenu] = useState<MenuState>({ open: false, anchor: { x: 0, y: 0 }, entry: null })
   const [query, setQuery] = useState('')
+  const [sort, setSort] = useState<SortSpec>({ key: 'name', dir: 'asc' })
 
   const childrenRef = useRef(children)
   childrenRef.current = children
@@ -70,7 +64,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
       fetchList(sessionId, path)
         .then((list) => {
           if (!mountedRef.current) return
-          const sorted = sortEntries(list)
+          const sorted = sortEntries(list, sort)
           if (isRoot) setEntries(sorted)
           else setChildren((prev) => ({ ...prev, [path]: sorted }))
         })
@@ -85,7 +79,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     void Promise.all(targets.map(([path, isRoot]) => reload(path, isRoot))).finally(() => {
       refreshingRef.current = false
     })
-  }, [sessionId, fetchList])
+  }, [sessionId, fetchList, sort])
 
   // Track mounted state to avoid setState after unmount
   const mountedRef = useRef(true)
@@ -103,7 +97,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     let cancelled = false
     fetchList(sessionId, '').then((list) => {
       if (cancelled || !mountedRef.current) return
-      setEntries(sortEntries(list))
+      setEntries(sortEntries(list, sort))
     })
 
     return () => {
@@ -116,6 +110,16 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     setChildren({})
     setExpanded({})
   }, [sessionId, refreshKey])
+
+  // Re-sort already-fetched entries and children when the sort changes.
+  useEffect(() => {
+    setEntries((prev) => sortEntries(prev, sort))
+    setChildren((prev) => {
+      const next: Record<string, BrowserEntry[]> = {}
+      for (const [path, list] of Object.entries(prev)) next[path] = sortEntries(list, sort)
+      return next
+    })
+  }, [sort])
 
   useEffect(() => {
     if (!autoRefresh || !sessionId) return
@@ -151,7 +155,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
           if (sessionId) {
             fetchList(sessionId, path).then((list) => {
               if (!mountedRef.current) return
-              setChildren((prev) => ({ ...prev, [path]: sortEntries(list) }))
+              setChildren((prev) => ({ ...prev, [path]: sortEntries(list, sort) }))
             })
           }
         }
@@ -159,7 +163,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
         return { ...prev, [path]: next }
       })
     },
-    [children, fetchList, sessionId],
+    [children, fetchList, sessionId, sort],
   )
 
   const handleRefresh = useCallback(() => {
@@ -227,6 +231,19 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
             <IconClose size={14} />
           </button>
         )}
+        <select
+          className="dsh-fe-sort"
+          data-fe-sort
+          value={`${sort.key}-${sort.dir}`}
+          onChange={(e) => setSort(parseSort(e.target.value))}
+          title={t('sortBy')}
+        >
+          {SORT_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {t(opt.localeKey)}
+            </option>
+          ))}
+        </select>
       </div>
       {searching ? (
         results.length === 0 ? (

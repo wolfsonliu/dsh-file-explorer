@@ -78,6 +78,16 @@ function setSearch(container: HTMLElement, value: string): void {
   })
 }
 
+/** Set the sort `<select>` value and fire React's onChange. */
+function setSort(container: HTMLElement, value: string): void {
+  const select = container.querySelector('[data-fe-sort]') as HTMLSelectElement
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!.set!
+  act(() => {
+    setter.call(select, value)
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+}
+
 const rootEntries: BrowserEntry[] = [
   { name: 'src', path: 'src', kind: 'directory' },
   { name: 'README.md', path: 'README.md', kind: 'file', size: 100 },
@@ -120,6 +130,20 @@ describe('FileTree', () => {
 
     // Third row: file "package.json"
     expect(rows[2].textContent).toContain('package.json')
+  })
+
+  test('sort select reorders rows by size descending', async () => {
+    const fetchList = vi.fn().mockResolvedValue(rootEntries)
+    const helpers = makeHelpers()
+    const container = render(<FileTree sessionId="s1" fetchList={fetchList} helpers={helpers} t={t} />)
+    await flush()
+
+    let names = Array.from(container.querySelectorAll('.dsh-fe-name')).map(n => n.textContent)
+    expect(names).toEqual(['src', 'README.md', 'package.json'])
+
+    setSort(container, 'size-desc')
+    names = Array.from(container.querySelectorAll('.dsh-fe-name')).map(n => n.textContent)
+    expect(names).toEqual(['src', 'package.json', 'README.md'])
   })
 
   test('clicking a file row calls helpers.openFile with the file path', async () => {

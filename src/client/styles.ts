@@ -300,6 +300,8 @@ export const PANEL_CSS = `
 .dsh-fe-search::placeholder { color: var(--dsw-alias-label-tertiary, #777); }
 .dsh-fe-search-clear { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: none; background: transparent; border-radius: 4px; cursor: pointer; color: var(--dsw-alias-label-secondary, #999); padding: 0; }
 .dsh-fe-search-clear:hover { background: var(--dsw-alias-interactive-bg-hover, #0000000d); }
+.dsh-fe-sort { border: none; outline: none; background: transparent; color: var(--dsw-alias-label-secondary, #999); font-size: 12px; cursor: pointer; max-width: 120px; }
+.dsh-fe-sort option { color: var(--dsw-alias-label-primary, #333); background: var(--dsw-alias-surface, #fff); }
 .dsh-fe-search-result { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; border-radius: 8px; cursor: pointer; user-select: none; color: var(--dsw-alias-label-primary, #333); box-sizing: border-box; }
 .dsh-fe-search-result:hover { background: var(--dsw-alias-interactive-bg-hover, #0000000d); }
 .dsh-fe-path-hint { margin-left: auto; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-tertiary, #777); font-size: 11px; }

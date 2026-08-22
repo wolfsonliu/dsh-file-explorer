@@ -20,6 +20,7 @@ export const ZH = {
   sortBy: '排序', sortNameAsc: '名称 A→Z', sortNameDesc: '名称 Z→A',
   sortSizeAsc: '大小 小→大', sortSizeDesc: '大小 大→小',
   sortMtimeAsc: '修改时间 旧→新', sortMtimeDesc: '修改时间 新→旧',
+  timeNow: '刚刚', timeMinutes: '{n}分钟', timeHours: '{n}小时', timeDays: '{n}天', timeMonths: '{n}个月', timeYears: '{n}年',
   csvTruncated: '仅显示前 {rows} 行',
   csvTruncatedCols: '仅显示前 {cols} 列',
 } as const
@@ -42,6 +43,7 @@ export const EN = {
   sortBy: 'Sort', sortNameAsc: 'Name A→Z', sortNameDesc: 'Name Z→A',
   sortSizeAsc: 'Size ascending', sortSizeDesc: 'Size descending',
   sortMtimeAsc: 'Modified oldest first', sortMtimeDesc: 'Modified newest first',
+  timeNow: 'now', timeMinutes: '{n}min', timeHours: '{n}h', timeDays: '{n}d', timeMonths: '{n}mo', timeYears: '{n}y',
   csvTruncated: 'Showing first {rows} rows',
   csvTruncatedCols: 'Showing first {cols} columns',
 } as const

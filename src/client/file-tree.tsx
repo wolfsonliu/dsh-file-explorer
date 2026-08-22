@@ -56,6 +56,8 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
   const childrenRef = useRef(children)
   childrenRef.current = children
   const refreshingRef = useRef(false)
+  const sortRef = useRef(sort)
+  sortRef.current = sort
 
   const refreshLoadedDirectories = useCallback(() => {
     if (!sessionId || refreshingRef.current) return
@@ -64,7 +66,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
       fetchList(sessionId, path)
         .then((list) => {
           if (!mountedRef.current) return
-          const sorted = sortEntries(list, sort)
+          const sorted = sortEntries(list, sortRef.current)
           if (isRoot) setEntries(sorted)
           else setChildren((prev) => ({ ...prev, [path]: sorted }))
         })
@@ -79,7 +81,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     void Promise.all(targets.map(([path, isRoot]) => reload(path, isRoot))).finally(() => {
       refreshingRef.current = false
     })
-  }, [sessionId, fetchList, sort])
+  }, [sessionId, fetchList])
 
   // Track mounted state to avoid setState after unmount
   const mountedRef = useRef(true)
@@ -97,7 +99,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     let cancelled = false
     fetchList(sessionId, '').then((list) => {
       if (cancelled || !mountedRef.current) return
-      setEntries(sortEntries(list, sort))
+      setEntries(sortEntries(list, sortRef.current))
     })
 
     return () => {
@@ -111,7 +113,9 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     setExpanded({})
   }, [sessionId, refreshKey])
 
-  // Re-sort already-fetched entries and children when the sort changes.
+  // Re-sort already-fetched entries and children when the sort changes. Async
+  // fetch callbacks read `sortRef.current` rather than capturing `sort`, so a
+  // fetch that resolves after a change still sorts by the current value.
   useEffect(() => {
     setEntries((prev) => sortEntries(prev, sort))
     setChildren((prev) => {
@@ -155,7 +159,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
           if (sessionId) {
             fetchList(sessionId, path).then((list) => {
               if (!mountedRef.current) return
-              setChildren((prev) => ({ ...prev, [path]: sortEntries(list, sort) }))
+              setChildren((prev) => ({ ...prev, [path]: sortEntries(list, sortRef.current) }))
             })
           }
         }
@@ -163,7 +167,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
         return { ...prev, [path]: next }
       })
     },
-    [children, fetchList, sessionId, sort],
+    [children, fetchList, sessionId],
   )
 
   const handleRefresh = useCallback(() => {
@@ -234,6 +238,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
         <select
           className="dsh-fe-sort"
           data-fe-sort
+          aria-label={t('sortBy')}
           value={`${sort.key}-${sort.dir}`}
           onChange={(e) => setSort(parseSort(e.target.value))}
           title={t('sortBy')}

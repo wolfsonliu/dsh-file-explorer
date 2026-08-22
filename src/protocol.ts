@@ -8,7 +8,7 @@ export const PDF_ACTION = 'pdf'
 export const STATIC_FILES_ROUTE = '/file-explorer/files'
 
 /** Extensions the client opens in a new browser tab on default open. */
-export const BROWSER_OPEN_EXTS = ['pdf', 'html', 'htm', 'xhtml'] as const
+export const BROWSER_OPEN_EXTS = ['pdf', 'html', 'htm', 'xhtml', 'json'] as const
 
 /** Mutation actions for the file-ops feature (all POST, workspace-contained). */
 export const CREATE_FILE_ACTION = 'create-file'

@@ -239,6 +239,22 @@ describe('FileExplorerApp', () => {
     expect(props.fetchPreview).not.toHaveBeenCalled()
   })
 
+  test('opening a JSON file opens a new browser tab with the static route', async () => {
+    const open = vi.fn().mockReturnValue({ opener: {} })
+    vi.stubGlobal('open', open)
+
+    const props = makeProps()
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('packages/data.json'))
+    await flush()
+
+    expect(open).toHaveBeenCalledTimes(1)
+    expect(String(open.mock.calls[0][0])).toBe('/file-explorer/files/s1/packages/data.json')
+    expect(props.fetchPreview).not.toHaveBeenCalled()
+  })
+
   test('opening a PDF falls back to the preview panel when the new tab is blocked', async () => {
     vi.stubGlobal('open', vi.fn().mockReturnValue(null))
 

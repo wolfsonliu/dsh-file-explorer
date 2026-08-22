@@ -8,7 +8,7 @@ import { registerPreview } from '../src/client/preview/registry.ts'
 import { makeTextPagedPreview } from '../src/client/preview/text-large.tsx'
 import type { PreviewProps } from '../src/client/preview/registry.ts'
 import { MarkdownPreview } from '../src/client/preview/markdown.tsx'
-import { registerBuiltinFileActions } from '../src/client/file-action.ts'
+import { registerBuiltinFileActions } from '../src/client/file-action.tsx'
 import type { BrowserEntry, FilePreview } from '../src/protocol.ts'
 
 // ---------------------------------------------------------------------------
@@ -75,17 +75,25 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  for (const root of roots) {
+    act(() => { root.unmount() })
+  }
+  roots.length = 0
+  document.body.innerHTML = ''
 })
 
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 
+const roots: Array<ReturnType<typeof createRoot>> = []
+
 /** Render a React element into a jsdom container and return the container. */
 function render(element: React.ReactElement): HTMLElement {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
+  roots.push(root)
   act(() => {
     root.render(element)
   })
@@ -336,9 +344,9 @@ describe('FileExplorerApp', () => {
     expect(btn).toBeTruthy()
     act(() => btn.click())
 
-    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
     expect(menu).not.toBeNull()
-    const openItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find(
+    const openItem = Array.from(menu.querySelectorAll('[data-fe-menu-item]')).find(
       (el) => el.textContent!.includes('open'),
     ) as HTMLElement
     expect(openItem).toBeTruthy()
@@ -368,8 +376,8 @@ describe('FileExplorerApp', () => {
     const btn = row.querySelector('[data-fe-action-button]') as HTMLElement
     act(() => btn.click())
 
-    const menu = container.querySelector('[role="menu"]') as HTMLElement
-    const item = Array.from(menu.querySelectorAll('[role="menuitem"]')).find(
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
+    const item = Array.from(menu.querySelectorAll('[data-fe-menu-item]')).find(
       (el) => el.textContent!.includes('openAsText'),
     ) as HTMLElement
     expect(item).toBeTruthy()
@@ -406,8 +414,8 @@ describe('FileExplorerApp', () => {
     const btn = row.querySelector('[data-fe-action-button]') as HTMLElement
     act(() => btn.click())
 
-    const menu = container.querySelector('[role="menu"]') as HTMLElement
-    const item = Array.from(menu.querySelectorAll('[role="menuitem"]')).find(
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
+    const item = Array.from(menu.querySelectorAll('[data-fe-menu-item]')).find(
       (el) => el.textContent!.includes('openAsBinary'),
     ) as HTMLElement
     expect(item).toBeTruthy()
@@ -445,8 +453,8 @@ describe('FileExplorerApp', () => {
     const btn = row.querySelector('[data-fe-action-button]') as HTMLElement
     act(() => btn.click())
 
-    const menu = container.querySelector('[role="menu"]') as HTMLElement
-    const copyAbsItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find(
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
+    const copyAbsItem = Array.from(menu.querySelectorAll('[data-fe-menu-item]')).find(
       (el) => el.textContent!.includes('copyAbsolutePath'),
     ) as HTMLElement
     expect(copyAbsItem).toBeTruthy()
@@ -479,8 +487,8 @@ describe('FileExplorerApp', () => {
     const btn = row.querySelector('[data-fe-action-button]') as HTMLElement
     act(() => btn.click())
 
-    const menu = container.querySelector('[role="menu"]') as HTMLElement
-    const copyRelItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find(
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
+    const copyRelItem = Array.from(menu.querySelectorAll('[data-fe-menu-item]')).find(
       (el) => el.textContent!.includes('copyRelativePath'),
     ) as HTMLElement
     expect(copyRelItem).toBeTruthy()

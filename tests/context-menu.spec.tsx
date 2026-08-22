@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React from 'react'
@@ -23,15 +23,32 @@ if (typeof PointerEvent === 'undefined') {
   ;(globalThis as any).PointerEvent = PointerEventPolyfill
 }
 
+const roots: Array<ReturnType<typeof createRoot>> = []
+
 /** Render a React element into a jsdom container and return the container. */
 function render(element: React.ReactElement): HTMLElement {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
+  roots.push(root)
   act(() => {
     root.render(element)
   })
   return container
+}
+
+afterEach(() => {
+  for (const root of roots) {
+    act(() => { root.unmount() })
+  }
+  roots.length = 0
+  document.body.innerHTML = ''
+})
+
+/** A stable anchor rect supplier at a fixed position. */
+function anchorRect(overrides: Partial<DOMRect> = {}): () => DOMRect {
+  return () =>
+    ({ left: 100, top: 190, right: 120, bottom: 200, ...overrides }) as DOMRect
 }
 
 // ---------------------------------------------------------------------------
@@ -39,23 +56,23 @@ function render(element: React.ReactElement): HTMLElement {
 // ---------------------------------------------------------------------------
 describe('FileContextMenu', () => {
   test('renders null when open is false', () => {
-    const container = render(
+    render(
       <FileContextMenu
         open={false}
-        anchor={{ x: 100, y: 200 }}
+        getAnchorRect={anchorRect()}
         items={[{ id: 'open', label: 'Open', onSelect: vi.fn() }]}
         onClose={vi.fn()}
       />,
     )
 
-    expect(container.querySelector('[role="menu"]')).toBeNull()
+    expect(document.body.querySelector('[data-fe-menu]')).toBeNull()
   })
 
   test('renders items with labels and custom icons when open', () => {
-    const container = render(
+    render(
       <FileContextMenu
         open={true}
-        anchor={{ x: 100, y: 200 }}
+        getAnchorRect={anchorRect()}
         items={[
           { id: 'open', label: 'Open', icon: <span data-test-icon="open" />, onSelect: vi.fn() },
           { id: 'copy', label: 'Copy', onSelect: vi.fn() },
@@ -64,38 +81,70 @@ describe('FileContextMenu', () => {
       />,
     )
 
-    const menu = container.querySelector('[role="menu"]')
+    const menu = document.body.querySelector('[data-fe-menu]')
     expect(menu).not.toBeNull()
 
-    const items = menu!.querySelectorAll('[role="menuitem"]')
+    const items = menu!.querySelectorAll('[data-fe-menu-item]')
     expect(items.length).toBe(2)
     expect(items[0].textContent).toContain('Open')
     expect(items[0].querySelector('[data-test-icon="open"]')).not.toBeNull()
     expect(items[1].textContent).toContain('Copy')
   })
 
-  test('menu is positioned at the anchor when open', () => {
+  test('portals the menu into document.body, outside the mount container', () => {
     const container = render(
       <FileContextMenu
         open={true}
-        anchor={{ x: 100, y: 200 }}
+        getAnchorRect={anchorRect()}
         items={[{ id: 'open', label: 'Open', onSelect: vi.fn() }]}
         onClose={vi.fn()}
       />,
     )
 
-    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
+    expect(menu).not.toBeNull()
+    expect(document.body.contains(menu)).toBe(true)
+    expect(container.contains(menu)).toBe(false)
+  })
+
+  test('menu is positioned from the anchor rect when open', () => {
+    render(
+      <FileContextMenu
+        open={true}
+        getAnchorRect={anchorRect()}
+        items={[{ id: 'open', label: 'Open', onSelect: vi.fn() }]}
+        onClose={vi.fn()}
+      />,
+    )
+
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
     expect(menu).not.toBeNull()
     expect(menu.style.position).toBe('fixed')
     expect(menu.style.left).toBe('100px')
-    expect(menu.style.top).toBe('200px')
+    // Opens below the anchor trigger: anchor.bottom + 4.
+    expect(menu.style.top).toBe('204px')
+  })
+
+  test('stays hidden when the anchor rect supplier returns null', () => {
+    render(
+      <FileContextMenu
+        open={true}
+        getAnchorRect={() => null}
+        items={[{ id: 'open', label: 'Open', onSelect: vi.fn() }]}
+        onClose={vi.fn()}
+      />,
+    )
+
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
+    expect(menu).not.toBeNull()
+    expect(menu.style.visibility).toBe('hidden')
   })
 
   test('renders a danger class on items flagged danger', () => {
-    const container = render(
+    render(
       <FileContextMenu
         open={true}
-        anchor={{ x: 0, y: 0 }}
+        getAnchorRect={anchorRect()}
         items={[
           { id: 'delete', label: 'Delete', danger: true, onSelect: vi.fn() },
           { id: 'rename', label: 'Rename', onSelect: vi.fn() },
@@ -103,7 +152,7 @@ describe('FileContextMenu', () => {
         onClose={vi.fn()}
       />,
     )
-    const items = container.querySelectorAll('[role="menuitem"]')
+    const items = document.body.querySelectorAll('[data-fe-menu-item]')
     expect(items[0].className).toContain('dsh-fe-menu-item--danger')
     expect(items[1].className).not.toContain('dsh-fe-menu-item--danger')
   })
@@ -112,16 +161,16 @@ describe('FileContextMenu', () => {
     const onSelect = vi.fn()
     const onClose = vi.fn()
 
-    const container = render(
+    render(
       <FileContextMenu
         open={true}
-        anchor={{ x: 0, y: 0 }}
+        getAnchorRect={anchorRect()}
         items={[{ id: 'open', label: 'Open', onSelect }]}
         onClose={onClose}
       />,
     )
 
-    const item = container.querySelector('[role="menuitem"]') as HTMLElement
+    const item = document.body.querySelector('[data-fe-menu-item]') as HTMLElement
     act(() => {
       item.click()
     })
@@ -140,7 +189,7 @@ describe('FileContextMenu', () => {
     render(
       <FileContextMenu
         open={true}
-        anchor={{ x: 100, y: 200 }}
+        getAnchorRect={anchorRect()}
         items={[{ id: 'open', label: 'Open', onSelect: vi.fn() }]}
         onClose={onClose}
       />,
@@ -158,16 +207,16 @@ describe('FileContextMenu', () => {
   test('pointerdown on the menu itself does NOT call onClose', () => {
     const onClose = vi.fn()
 
-    const container = render(
+    render(
       <FileContextMenu
         open={true}
-        anchor={{ x: 100, y: 200 }}
+        getAnchorRect={anchorRect()}
         items={[{ id: 'open', label: 'Open', onSelect: vi.fn() }]}
         onClose={onClose}
       />,
     )
 
-    const menu = container.querySelector('[role="menu"]') as HTMLElement
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
     act(() => {
       menu.dispatchEvent(
         new PointerEvent('pointerdown', { bubbles: true }),
@@ -175,5 +224,24 @@ describe('FileContextMenu', () => {
     })
 
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  test('pressing Escape calls onClose', () => {
+    const onClose = vi.fn()
+
+    render(
+      <FileContextMenu
+        open={true}
+        getAnchorRect={anchorRect()}
+        items={[{ id: 'open', label: 'Open', onSelect: vi.fn() }]}
+        onClose={onClose}
+      />,
+    )
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

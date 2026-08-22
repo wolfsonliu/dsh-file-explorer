@@ -24,7 +24,7 @@ src/
     tree-sort.ts          pure sort module (sortEntries / parseSort / SORT_OPTIONS)
     virtual-list.tsx      windowed VirtualList for large directories
     context-menu.tsx      generic anchored popup menu (the row "···" menu)
-    file-action.ts        row-action registry + built-ins (open / open-as-text / open-as-binary / copy-path ×2 / rename / move / copy / delete / new-file / new-folder)
+    file-action.tsx       row-action registry + built-ins (open / open-as-text / open-as-binary / copy-path ×2 / rename / move / copy / delete / new-file / new-folder)
     file-ops.ts           file-operation types + path helpers (FileOp / FileOps / joinRel / basenameOfRel)
     file-ops-modal.tsx    single modal for new / rename / delete / move / copy
     intercept.ts          capture-phase interception of tool-row file links & produced-file chips

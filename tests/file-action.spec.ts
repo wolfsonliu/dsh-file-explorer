@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
-import type { FileAction, FileActionHelpers } from '../src/client/file-action.ts'
-import { fileActionsFor, registerBuiltinFileActions, registerFileAction } from '../src/client/file-action.ts'
+import type { FileAction, FileActionHelpers } from '../src/client/file-action.tsx'
+import { fileActionsFor, registerBuiltinFileActions, registerFileAction } from '../src/client/file-action.tsx'
 import { EN, ZH } from '../src/client/locale.ts'
 import type { BrowserEntry } from '../src/protocol.ts'
 
@@ -55,7 +55,7 @@ describe('file-action registry', () => {
 
   test('registerBuiltinFileActions registers the file/dir actions in menu order', async () => {
     vi.resetModules()
-    const mod = await import('../src/client/file-action.ts')
+    const mod = await import('../src/client/file-action.tsx')
     mod.registerBuiltinFileActions()
 
     expect(mod.fileActionsFor('file').map((a) => a.id)).toEqual([
@@ -68,9 +68,28 @@ describe('file-action registry', () => {
     ])
   })
 
+  test('built-in actions carry a leading icon in menu order', async () => {
+    vi.resetModules()
+    const mod = await import('../src/client/file-action.tsx')
+    mod.registerBuiltinFileActions()
+
+    const file = mod.fileActionsFor('file')
+    const dir = mod.fileActionsFor('directory')
+    const seen = new Map<string, typeof file[0]>()
+    for (const action of file) seen.set(action.id, action)
+    for (const action of dir) if (!seen.has(action.id)) seen.set(action.id, action)
+
+    // Every built-in action renders an icon.
+    for (const action of seen.values()) {
+      expect(action.icon).toBeTruthy()
+    }
+    // Delete is the destructive action.
+    expect(seen.get('delete')!.danger).toBe(true)
+  })
+
   test('built-in actions invoke the correct helper', async () => {
     vi.resetModules()
-    const mod = await import('../src/client/file-action.ts')
+    const mod = await import('../src/client/file-action.tsx')
     mod.registerBuiltinFileActions()
     const byId = new Map(mod.fileActionsFor('file').map((a) => [a.id, a]))
 

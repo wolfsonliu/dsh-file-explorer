@@ -10,7 +10,7 @@ import type { BrowserEntry } from '../protocol.ts'
 import type { Translate } from './locale.ts'
 import { VirtualList } from './virtual-list.tsx'
 import { FileContextMenu } from './context-menu.tsx'
-import { fileActionsFor, type FileActionHelpers } from './file-action.ts'
+import { fileActionsFor, type FileActionHelpers } from './file-action.tsx'
 import { IconChevronRight, IconClose, IconEllipsis, IconFile, IconFolderClose, IconFolderOpen, IconSearch } from './icons.tsx'
 import { matchesSearch, parentPathOf } from './tree-search.ts'
 import { parseSort, sortEntries, SORT_OPTIONS, type SortSpec } from './tree-sort.ts'
@@ -37,7 +37,7 @@ export interface FileTreeHandle {
 /** Per-row action-menu state. */
 interface MenuState {
   open: boolean
-  anchor: { x: number; y: number }
+  getAnchorRect: (() => DOMRect | null) | null
   entry: BrowserEntry | null
 }
 
@@ -49,7 +49,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
   const [children, setChildren] = useState<Record<string, BrowserEntry[]>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [refreshKey, setRefreshKey] = useState(0)
-  const [menu, setMenu] = useState<MenuState>({ open: false, anchor: { x: 0, y: 0 }, entry: null })
+  const [menu, setMenu] = useState<MenuState>({ open: false, getAnchorRect: null, entry: null })
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortSpec>({ key: 'name', dir: 'asc' })
 
@@ -174,8 +174,8 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
     setRefreshKey((k) => k + 1)
   }, [])
 
-  const openMenu = useCallback((entry: BrowserEntry, anchor: { x: number; y: number }) => {
-    setMenu({ open: true, anchor, entry })
+  const openMenu = useCallback((entry: BrowserEntry, getAnchorRect: () => DOMRect | null) => {
+    setMenu({ open: true, getAnchorRect, entry })
   }, [])
 
   const closeMenu = useCallback(() => {
@@ -282,7 +282,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
       )}
       <FileContextMenu
         open={menu.open}
-        anchor={menu.anchor}
+        getAnchorRect={menu.getAnchorRect ?? (() => null)}
         items={menuItems}
         onClose={closeMenu}
       />
@@ -321,7 +321,7 @@ interface TreeRowProps {
   expanded: Record<string, boolean>
   onDisclosureClick: (entry: BrowserEntry) => void
   helpers: FileActionHelpers
-  onOpenMenu: (entry: BrowserEntry, anchor: { x: number; y: number }) => void
+  onOpenMenu: (entry: BrowserEntry, getAnchorRect: () => DOMRect | null) => void
 }
 
 function TreeRow({ entry, depth, expanded, onDisclosureClick, helpers, onOpenMenu }: TreeRowProps) {
@@ -367,8 +367,8 @@ function TreeRow({ entry, depth, expanded, onDisclosureClick, helpers, onOpenMen
           data-fe-action-button
           onClick={(e) => {
             e.stopPropagation()
-            const rect = e.currentTarget.getBoundingClientRect()
-            onOpenMenu(entry, { x: rect.left, y: rect.bottom })
+            const el = e.currentTarget
+            onOpenMenu(entry, () => (el.isConnected ? el.getBoundingClientRect() : null))
           }}
         >
           <IconEllipsis size={16} />

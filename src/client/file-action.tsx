@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { BrowserEntry } from '../protocol.ts'
 import type { Translate } from './locale.ts'
+import { IconBrowse, IconCode, IconCopy, IconDownload, IconEdit, IconFolderOpen, IconListPen, IconPlus, IconTrash } from './icons.tsx'
 
 export interface FileActionHelpers {
   openFile(path: string): void
@@ -55,15 +56,15 @@ export function fileActionsFor(kind: 'file' | 'directory'): FileAction[] {
 export function registerBuiltinFileActions(): void {
   if (builtinsRegistered) return
   builtinsRegistered = true
-  registerFileAction({ id: 'open', label: t => t('open'), appliesTo: 'file', onSelect: (entry, h) => { h.openFile(entry.path) } })
-  registerFileAction({ id: 'open-as-text', label: t => t('openAsText'), appliesTo: 'file', onSelect: (entry, h) => { h.openFileAsText(entry.path) } })
-  registerFileAction({ id: 'open-as-binary', label: t => t('openAsBinary'), appliesTo: 'file', onSelect: (entry, h) => { h.openFileAsBinary(entry.path) } })
-  registerFileAction({ id: 'copy-absolute', label: t => t('copyAbsolutePath'), appliesTo: 'both', onSelect: (entry, h) => { void h.copyAbsolutePath(entry.path) } })
-  registerFileAction({ id: 'copy-relative', label: t => t('copyRelativePath'), appliesTo: 'both', onSelect: (entry, h) => { void h.copyRelativePath(entry.path) } })
-  registerFileAction({ id: 'rename', label: t => t('rename'), appliesTo: 'both', onSelect: (entry, h) => { h.promptRename(entry) } })
-  registerFileAction({ id: 'move', label: t => t('moveTo'), appliesTo: 'both', onSelect: (entry, h) => { h.promptMove(entry) } })
-  registerFileAction({ id: 'copy', label: t => t('copyTo'), appliesTo: 'both', onSelect: (entry, h) => { h.promptCopy(entry) } })
-  registerFileAction({ id: 'delete', label: t => t('delete'), appliesTo: 'both', danger: true, onSelect: (entry, h) => { h.promptDelete(entry) } })
-  registerFileAction({ id: 'new-file', label: t => t('newFile'), appliesTo: 'directory', onSelect: (entry, h) => { h.promptNewFile(entry.path) } })
-  registerFileAction({ id: 'new-folder', label: t => t('newFolder'), appliesTo: 'directory', onSelect: (entry, h) => { h.promptNewFolder(entry.path) } })
+  registerFileAction({ id: 'open', label: t => t('open'), icon: <IconBrowse />, appliesTo: 'file', onSelect: (entry, h) => { h.openFile(entry.path) } })
+  registerFileAction({ id: 'open-as-text', label: t => t('openAsText'), icon: <IconListPen />, appliesTo: 'file', onSelect: (entry, h) => { h.openFileAsText(entry.path) } })
+  registerFileAction({ id: 'open-as-binary', label: t => t('openAsBinary'), icon: <IconCode />, appliesTo: 'file', onSelect: (entry, h) => { h.openFileAsBinary(entry.path) } })
+  registerFileAction({ id: 'copy-absolute', label: t => t('copyAbsolutePath'), icon: <IconCopy />, appliesTo: 'both', onSelect: (entry, h) => { void h.copyAbsolutePath(entry.path) } })
+  registerFileAction({ id: 'copy-relative', label: t => t('copyRelativePath'), icon: <IconCopy />, appliesTo: 'both', onSelect: (entry, h) => { void h.copyRelativePath(entry.path) } })
+  registerFileAction({ id: 'rename', label: t => t('rename'), icon: <IconEdit />, appliesTo: 'both', onSelect: (entry, h) => { h.promptRename(entry) } })
+  registerFileAction({ id: 'move', label: t => t('moveTo'), icon: <IconDownload />, appliesTo: 'both', onSelect: (entry, h) => { h.promptMove(entry) } })
+  registerFileAction({ id: 'copy', label: t => t('copyTo'), icon: <IconCopy />, appliesTo: 'both', onSelect: (entry, h) => { h.promptCopy(entry) } })
+  registerFileAction({ id: 'delete', label: t => t('delete'), icon: <IconTrash />, danger: true, appliesTo: 'both', onSelect: (entry, h) => { h.promptDelete(entry) } })
+  registerFileAction({ id: 'new-file', label: t => t('newFile'), icon: <IconPlus />, appliesTo: 'directory', onSelect: (entry, h) => { h.promptNewFile(entry.path) } })
+  registerFileAction({ id: 'new-folder', label: t => t('newFolder'), icon: <IconFolderOpen />, appliesTo: 'directory', onSelect: (entry, h) => { h.promptNewFolder(entry.path) } })
 }

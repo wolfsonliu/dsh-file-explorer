@@ -1,23 +1,34 @@
 // @vitest-environment jsdom
-import { beforeAll, describe, expect, test, vi } from 'vitest'
+import { beforeAll, afterEach, describe, expect, test, vi } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React from 'react'
 import { FileOpsModal } from '../src/client/file-ops-modal.tsx'
 import { basenameOfRel, joinRel, type FileOp, type FileOps } from '../src/client/file-ops.ts'
 import { FileExplorerApp } from '../src/client/app.tsx'
-import { registerBuiltinFileActions } from '../src/client/file-action.ts'
+import { registerBuiltinFileActions } from '../src/client/file-action.tsx'
 import type { BrowserEntry, FilePreview } from '../src/protocol.ts'
 
 const t = (key: string) => key
+
+const roots: Array<ReturnType<typeof createRoot>> = []
 
 function render(element: React.ReactElement): HTMLElement {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
+  roots.push(root)
   act(() => { root.render(element) })
   return container
 }
+
+afterEach(() => {
+  for (const root of roots) {
+    act(() => { root.unmount() })
+  }
+  roots.length = 0
+  document.body.innerHTML = ''
+})
 
 async function flush(): Promise<void> {
   await act(async () => { await new Promise<void>((r) => setTimeout(r, 0)) })
@@ -80,7 +91,7 @@ function rowNamed(container: HTMLElement, name: string): HTMLElement {
 }
 
 function menuItemByText(container: HTMLElement, text: string): HTMLElement {
-  const item = Array.from(container.querySelectorAll('[role="menuitem"]')).find((el) =>
+  const item = Array.from(document.body.querySelectorAll('[data-fe-menu-item]')).find((el) =>
     el.textContent!.includes(text),
   ) as HTMLElement
   expect(item).toBeTruthy()
@@ -246,7 +257,7 @@ describe('FileExplorerApp file operations', () => {
     expect(newBtn).not.toBeNull()
     act(() => { newBtn.click() })
 
-    const items = container.querySelectorAll('[role="menuitem"]')
+    const items = document.body.querySelectorAll('[data-fe-menu-item]')
     expect(items.length).toBe(2)
     expect(items[0].textContent).toContain('newFile')
     expect(items[1].textContent).toContain('newFolder')

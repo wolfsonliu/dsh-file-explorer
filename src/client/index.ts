@@ -11,7 +11,7 @@ import {
 } from '../protocol.ts'
 import { registerBuiltinPreviews } from './preview/index.ts'
 import { registerPreview } from './preview/registry.ts'
-import { registerBuiltinFileActions, registerFileAction } from './file-action.ts'
+import { registerBuiltinFileActions, registerFileAction } from './file-action.tsx'
 import { FileExplorerApp, type FileExplorerAppHandle } from './app.tsx'
 import type { FileOps } from './file-ops.ts'
 import { interceptFileLinks } from './intercept.ts'

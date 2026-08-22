@@ -15,6 +15,12 @@ import {
   IconEllipsis,
   IconSearch,
   IconPlus,
+  IconBrowse,
+  IconCode,
+  IconEdit,
+  IconListPen,
+  IconDownload,
+  IconTrash,
 } from '../src/client/icons.tsx'
 
 /** Render a React element into a jsdom container and return the container. */
@@ -41,6 +47,12 @@ const ICONS: ReadonlyArray<readonly [string, (props: { size?: number; className?
   ['IconEllipsis', IconEllipsis],
   ['IconSearch', IconSearch],
   ['IconPlus', IconPlus],
+  ['IconBrowse', IconBrowse],
+  ['IconCode', IconCode],
+  ['IconEdit', IconEdit],
+  ['IconListPen', IconListPen],
+  ['IconDownload', IconDownload],
+  ['IconTrash', IconTrash],
 ]
 
 describe('icons', () => {

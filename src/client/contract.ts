@@ -1,10 +1,10 @@
 import type { ComponentType } from 'react'
 import type { PreviewProps } from './preview/registry.ts'
-import type { FileAction } from './file-action.ts'
+import type { FileAction } from './file-action.tsx'
 
 export type { PreviewProps } from './preview/registry.ts'
 export type { Translate } from './locale.ts'
-export type { FileAction, FileActionHelpers } from './file-action.ts'
+export type { FileAction, FileActionHelpers } from './file-action.tsx'
 
 /**
  * The service `dsh-file-explorer` provides under the name 'fileExplorer'.

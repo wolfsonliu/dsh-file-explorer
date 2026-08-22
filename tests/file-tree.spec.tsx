@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { describe, expect, test, vi, beforeAll } from 'vitest'
+import { describe, expect, test, vi, beforeAll, afterEach } from 'vitest'
 import { createRoot } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import React from 'react'
 import { FileTree, type FileTreeHandle } from '../src/client/file-tree.tsx'
-import { registerBuiltinFileActions } from '../src/client/file-action.ts'
-import type { FileActionHelpers } from '../src/client/file-action.ts'
+import { registerBuiltinFileActions } from '../src/client/file-action.tsx'
+import type { FileActionHelpers } from '../src/client/file-action.tsx'
 import type { BrowserEntry } from '../src/protocol.ts'
 
 /** Identity translator: renders the localization key as-is. */
@@ -15,6 +15,16 @@ const t = (key: string) => key
 // exactly once for this whole spec file.
 beforeAll(() => {
   registerBuiltinFileActions()
+})
+
+const roots: Array<ReturnType<typeof createRoot>> = []
+
+afterEach(() => {
+  for (const root of roots) {
+    act(() => { root.unmount() })
+  }
+  roots.length = 0
+  document.body.innerHTML = ''
 })
 
 /** File-action helpers with spy implementations. */
@@ -39,6 +49,7 @@ function render(element: React.ReactElement): HTMLElement {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
+  roots.push(root)
   act(() => {
     root.render(element)
   })
@@ -369,10 +380,10 @@ describe('FileTree', () => {
       actionButton(readmeRow).click()
     })
 
-    const menu = container.querySelector('[role="menu"]')
+    const menu = document.body.querySelector('[data-fe-menu]')
     expect(menu).not.toBeNull()
 
-    const items = menu!.querySelectorAll('[role="menuitem"]')
+    const items = menu!.querySelectorAll('[data-fe-menu-item]')
     expect(items.length).toBe(9)
     expect(items[0].textContent).toContain('open')
     expect(items[1].textContent).toContain('openAsText')
@@ -399,10 +410,10 @@ describe('FileTree', () => {
       actionButton(srcRow).click()
     })
 
-    const menu = container.querySelector('[role="menu"]')
+    const menu = document.body.querySelector('[data-fe-menu]')
     expect(menu).not.toBeNull()
 
-    const items = menu!.querySelectorAll('[role="menuitem"]')
+    const items = menu!.querySelectorAll('[data-fe-menu-item]')
     expect(items.length).toBe(8)
     expect(items[0].textContent).toContain('copyAbsolutePath')
     expect(items[1].textContent).toContain('copyRelativePath')
@@ -428,8 +439,8 @@ describe('FileTree', () => {
       actionButton(readmeRow).click()
     })
 
-    const menu = container.querySelector('[role="menu"]') as HTMLElement
-    const openItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find((el) =>
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
+    const openItem = Array.from(menu.querySelectorAll('[data-fe-menu-item]')).find((el) =>
       el.textContent!.includes('open'),
     ) as HTMLElement
     expect(openItem).toBeTruthy()
@@ -455,8 +466,8 @@ describe('FileTree', () => {
       actionButton(readmeRow).click()
     })
 
-    const menu = container.querySelector('[role="menu"]') as HTMLElement
-    const copyItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find((el) =>
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
+    const copyItem = Array.from(menu.querySelectorAll('[data-fe-menu-item]')).find((el) =>
       el.textContent!.includes('copyAbsolutePath'),
     ) as HTMLElement
     expect(copyItem).toBeTruthy()
@@ -482,8 +493,8 @@ describe('FileTree', () => {
       actionButton(readmeRow).click()
     })
 
-    const menu = container.querySelector('[role="menu"]') as HTMLElement
-    const copyItem = Array.from(menu.querySelectorAll('[role="menuitem"]')).find((el) =>
+    const menu = document.body.querySelector('[data-fe-menu]') as HTMLElement
+    const copyItem = Array.from(menu.querySelectorAll('[data-fe-menu-item]')).find((el) =>
       el.textContent!.includes('copyRelativePath'),
     ) as HTMLElement
     expect(copyItem).toBeTruthy()
@@ -516,7 +527,7 @@ describe('FileTree', () => {
       )
     })
 
-    expect(container.querySelector('[role="menu"]')).toBeNull()
+    expect(document.body.querySelector('[data-fe-menu]')).toBeNull()
   })
 
   // -------------------------------------------------------------------------

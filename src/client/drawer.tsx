@@ -24,8 +24,8 @@ export interface FileExplorerDrawerProps {
   title?: string
   /** Called when the refresh button is clicked; button hidden when omitted. */
   onRefresh?: () => void
-  /** Called with the button's bottom-left anchor when "＋ 新建" is clicked. */
-  onNew?: (anchor: { x: number; y: number }) => void
+  /** Called with an anchor-rect supplier when "＋ 新建" is clicked. */
+  onNew?: (getAnchorRect: () => DOMRect | null) => void
   /** Translator for localized UI copy. */
   t: Translate
   /** The file tree. */
@@ -56,6 +56,7 @@ export function FileExplorerDrawer({
   })
   const widthRef = useRef(width)
   widthRef.current = width
+  const newButtonRef = useRef<HTMLButtonElement>(null)
   const startRef = useRef({ x: 0, width: 0 })
   const downRef = useRef(false)
   const movedRef = useRef(false)
@@ -108,11 +109,11 @@ export function FileExplorerDrawer({
         <span className="dsh-fe-drawer-title-text">{title ?? t('title')}</span>
         {onNew && (
           <button
+            ref={newButtonRef}
             className="dsh-fe-new-button"
             data-fe-new-button
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect()
-              onNew({ x: rect.left, y: rect.bottom })
+            onClick={() => {
+              onNew(() => newButtonRef.current?.getBoundingClientRect() ?? null)
             }}
             title={t('new')}
           >

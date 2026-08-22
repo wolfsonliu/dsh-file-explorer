@@ -10,7 +10,7 @@ import React, {
 import { FILE_EXPLORER_ROUTE, STATIC_FILES_ROUTE, BROWSER_OPEN_EXTS, type BrowserEntry, type FilePreview, type PreviewMode } from '../protocol.ts'
 import { FileExplorerDrawer, FloatingFileButton } from './drawer.tsx'
 import { FileTree, type FileTreeHandle } from './file-tree.tsx'
-import type { FileActionHelpers } from './file-action.ts'
+import type { FileActionHelpers } from './file-action.tsx'
 import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
 import { BinaryPreview, MarkdownPreview, TextPreview, makeTextPagedPreview, resolvePreviewFor } from './preview/index.ts'
 import type { PreviewProps } from './preview/registry.ts'
@@ -99,7 +99,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
     const [saveError, setSaveError] = useState<string | null>(null)
     const [dirty, setDirty] = useState(false)
     const [fileOp, setFileOp] = useState<FileOp>({ kind: 'idle' })
-    const [newMenu, setNewMenu] = useState<{ open: boolean; anchor: { x: number; y: number } }>({ open: false, anchor: { x: 0, y: 0 } })
+    const [newMenu, setNewMenu] = useState<{ open: boolean; getAnchorRect: (() => DOMRect | null) | null }>({ open: false, getAnchorRect: null })
 
     const previewPanelRef = useRef<FileExplorerPanelHandle>(null)
     const treeRef = useRef<FileTreeHandle>(null)
@@ -276,8 +276,8 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
 
     const handleOpCancel = useCallback(() => { setFileOp({ kind: 'idle' }) }, [])
 
-    const openNewMenu = useCallback((anchor: { x: number; y: number }) => {
-      setNewMenu({ open: true, anchor })
+    const openNewMenu = useCallback((getAnchorRect: () => DOMRect | null) => {
+      setNewMenu({ open: true, getAnchorRect })
     }, [])
 
     const promptRename = useCallback((entry: BrowserEntry) => { setFileOp({ kind: 'rename', entry }) }, [])
@@ -404,7 +404,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
         </FileExplorerDrawer>
         <FileContextMenu
           open={newMenu.open}
-          anchor={newMenu.anchor}
+          getAnchorRect={newMenu.getAnchorRect ?? (() => null)}
           items={[
             { id: 'new-file', label: t('newFile'), onSelect: () => setFileOp({ kind: 'new-file', parentDir: '' }) },
             { id: 'new-folder', label: t('newFolder'), onSelect: () => setFileOp({ kind: 'new-folder', parentDir: '' }) },

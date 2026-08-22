@@ -400,6 +400,7 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
             helpers={helpers}
             t={t}
             autoRefresh={drawerOpen}
+            selectedPath={selectedPath}
           />
         </FileExplorerDrawer>
         <FileContextMenu

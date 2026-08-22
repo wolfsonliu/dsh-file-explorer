@@ -4,6 +4,25 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-22
+
+### Added
+
+- File-tree sorting: a sort selector at the top of the drawer reorders the
+  tree by name, size, or modified time, in ascending or descending order.
+  Directories always group before files, and name is the ascending tiebreak.
+  Already-loaded rows reorder immediately, and the choice also applies to rows
+  fetched afterwards.
+- A modified-time (`mtimeMs`) field on each listed entry, populated by the
+  host and used by the modified-time sort order (optional and additive — the
+  public service contract is unchanged).
+- Built-in CSV preview: `.csv` files render as a read-only table whose first
+  row is the header. Rendering is bounded to 1000 rows × 256 columns with a
+  truncation note; files over the text cap fall back to the paged text
+  renderer, and the parser is hand-rolled (no new dependency).
+- `.json` files now open in the browser's native viewer by default, alongside
+  the existing open-as-text action.
+
 ## [0.5.0] - 2026-08-22
 
 ### Added

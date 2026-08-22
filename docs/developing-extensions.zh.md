@@ -23,7 +23,7 @@ dsh-file-explorer-preview-<domain>（你的扩展）
   └─ apply：ctx.fileExplorer.registerPreview('ext', MyPreview, 10)
 ```
 
-核心以优先级 `0` 注册内置预览器（文本、Markdown、图片、二进制）。你的扩展以优先级
+核心以优先级 `0` 注册内置预览器（文本、Markdown、图片、CSV、二进制）。你的扩展以优先级
 `10` 注册来覆盖它们。优先级数值越大越优先；同优先级时后注册者胜。
 
 ## 契约

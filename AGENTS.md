@@ -9,7 +9,7 @@
 
 ```
 src/
-  index.ts            host half: Node HTTP routes — /file-explorer/api (list/preview/resolve-path/pdf/raw/write) + /file-explorer/files prefix static route
+  index.ts            host half: Node HTTP routes — /file-explorer/api (list/preview/resolve-path/pdf/raw/write + create-file/mkdir/rename/move/copy/delete) + /file-explorer/files prefix static route
   invariant.ts        no-op runtime-invariant companion plugin ("./invariant" export)
   protocol.ts         wire types + FILE_EXPLORER_ROUTE/PDF_ACTION/STATIC_FILES_ROUTE/BROWSER_OPEN_EXTS — the single contract between halves
   client/
@@ -19,9 +19,14 @@ src/
     app.tsx               FileExplorerApp — composes the three surfaces + the open-file / edit-save state machine
     drawer.tsx            FloatingFileButton + FileExplorerDrawer (left drawer, width resize + localStorage persistence)
     panel.tsx             FileExplorerPanel — draggable/resizable/maximizable preview box
-    file-tree.tsx         lazy directory tree (recursive disclosure; per-row action menu)
+    file-tree.tsx         lazy directory tree (recursive disclosure; search + sort; per-row action menu)
+    tree-search.ts        client-side tree search helpers (matchesSearch / parentPathOf)
+    tree-sort.ts          pure sort module (sortEntries / parseSort / SORT_OPTIONS)
+    virtual-list.tsx      windowed VirtualList for large directories
     context-menu.tsx      generic anchored popup menu (the row "···" menu)
-    file-action.ts        row-action registry + built-ins (open / open-as-text / open-as-binary / copy path ×2)
+    file-action.ts        row-action registry + built-ins (open / open-as-text / open-as-binary / copy-path ×2 / rename / move / copy / delete / new-file / new-folder)
+    file-ops.ts           file-operation types + path helpers (FileOp / FileOps / joinRel / basenameOfRel)
+    file-ops-modal.tsx    single modal for new / rename / delete / move / copy
     intercept.ts          capture-phase interception of tool-row file links & produced-file chips
     icons.tsx             inline DSH SVG icon components (fill="currentColor")
     locale.ts             ZH/EN dictionaries + locale registration (key sets must stay identical)
@@ -30,8 +35,11 @@ src/
       registry.ts         registerPreview / resolvePreview / previewKeyOf — priority; 'binary' fallback key
       index.ts            built-in registration + resolvePreviewFor (kind-aware routing)
       text.tsx            TextPreview
+      text-large.tsx      makeTextPagedPreview + ReadRawFile (paged text for large files)
       markdown.tsx        MarkdownPreview (marked + DOMPurify sanitize)
       image.tsx           ImagePreview
+      csv.tsx             makeCsvPreview (CsvTable) — read-only CSV table
+      csv-parse.ts        hand-rolled RFC-4180 parseCsv (no dependency)
       binary.tsx          BinaryPreview (hexdump)
       status.tsx          StatusPreview + formatBytes
       hexdump.ts          hand-rolled `hexdump -C`-style formatter (no dependency)
@@ -77,6 +85,14 @@ npm run build     # tsc + tsdown → host ESM lib/index.js + client CJS bundle l
   | `pdf` | GET | streams the file inline (`Content-Type: application/pdf`), whitelisted extension `.pdf` only |
   | `raw` | GET | `application/octet-stream`; honors `Range` (200/206/416), capped per-read at `maxRawBytes` |
   | `write` | POST | `{ ok, saved }` after writing UTF-8 text (`body.content` required) |
+  | `create-file` | POST | `{ ok, path }` — creates an empty file (no-clobber) |
+  | `mkdir` | POST | `{ ok, path }` — creates a directory (no-clobber) |
+  | `rename` | POST | `{ ok, path }` — renames (target must not exist) |
+  | `move` | POST | `{ ok, path }` — moves (rejects overwrite / self-or-descendant target) |
+  | `copy` | POST | `{ ok, path }` — copies (rejects overwrite / self-or-descendant target) |
+  | `delete` | POST | `{ ok, path }` — deletes |
+
+The six mutation actions (`create-file`/`mkdir`/`rename`/`move`/`copy`/`delete`) are POST-only, `inside()`-contained, and invalidate the directory-list cache on success.
 
 A second `kind: 'prefix'` route `/file-explorer/files/<sessionId>/<relative path…>` streams workspace files with browser-native MIME (`STATIC_MIME`), honors `Range` (200/206/416), serves a directory's `index.html`, and sets `nosniff`/`no-store` plus optional `inlineCsp` on html/xhtml/svg.
 
@@ -144,6 +160,12 @@ When adding or changing a cap, update `Config`, `cordis.patch.yml`, this table, 
   | `intercept.spec.tsx` | file-link / produced-file chip interception |
   | `icons.spec.tsx` | icon components render |
   | `hexdump.spec.ts` | hexdump formatting (pure) |
+  | `csv.spec.ts` | `parseCsv` — quoting / escaping / newlines / CRLF (pure) |
+  | `file-ops.spec.tsx` | file-operation helpers (`joinRel` / `basenameOfRel`) + ops modal flow |
+  | `text-large.spec.tsx` | paged text preview — chunk loading, Load more, error, fallbacks |
+  | `tree-search.spec.ts` | client search — `matchesSearch` / `parentPathOf` |
+  | `tree-sort.spec.ts` | sort module — `sortEntries` orderings, `parseSort`, tiebreak |
+  | `virtual-list.spec.tsx` | `VirtualList` windowing + spacer |
   | `locale.spec.ts` | ZH/EN key parity |
 
 ## Developing extensions

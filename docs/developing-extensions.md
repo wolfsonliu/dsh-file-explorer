@@ -25,7 +25,7 @@ dsh-file-explorer-preview-<domain> (your extension)
   └─ apply: ctx.fileExplorer.registerPreview('ext', MyPreview, 10)
 ```
 
-The core registers built-in previewers at priority `0` (text, markdown, image, binary).
+The core registers built-in previewers at priority `0` (text, markdown, image, CSV, binary).
 Your extension registers at priority `10` to override them. Higher priority wins; equal
 priority: later registration wins.
 

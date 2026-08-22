@@ -7,6 +7,7 @@ import { ImagePreview } from './image.tsx'
 import { BinaryPreview } from './binary.tsx'
 import { makeTextPagedPreview } from './text-large.tsx'
 import type { ReadRawFile } from './text-large.tsx'
+import { makeCsvPreview } from './csv.tsx'
 import type { FilePreview } from '../../protocol.ts'
 
 export { TextPreview } from './text.tsx'
@@ -15,6 +16,7 @@ export { ImagePreview } from './image.tsx'
 export { BinaryPreview } from './binary.tsx'
 export { formatBytes, StatusPreview } from './status.tsx'
 export { makeTextPagedPreview } from './text-large.tsx'
+export { makeCsvPreview } from './csv.tsx'
 export type { ReadRawFile } from './text-large.tsx'
 
 const TEXT_EXTS = [
@@ -37,6 +39,7 @@ export function registerBuiltinPreviews(readRawFile?: ReadRawFile): void {
   for (const ext of IMAGE_EXTS) {
     registerPreview(ext, ImagePreview)
   }
+  registerPreview('csv', makeCsvPreview(readRawFile))
   registerPreview('binary', BinaryPreview)
 }
 

@@ -12,6 +12,7 @@ import {
   resolvePreviewFor,
   makeTextPagedPreview,
 } from '../src/client/preview/index.ts'
+import { makeCsvPreview } from '../src/client/preview/csv.tsx'
 import { resolvePreview, registerPreview } from '../src/client/preview/registry.ts'
 import type { PreviewProps } from '../src/client/preview/registry.ts'
 import type { FilePreview } from '../src/protocol.ts'
@@ -262,6 +263,12 @@ describe('registerBuiltinPreviews', () => {
     expect(comp).toBe(ImagePreview)
   })
 
+  test('resolvePreview("csv") returns the CSV preview component', () => {
+    const readRawFile = vi.fn()
+    registerBuiltinPreviews(readRawFile)
+    expect(resolvePreview('csv')).toBe(makeCsvPreview(readRawFile))
+  })
+
   test('resolvePreview("unknown") returns binary component', () => {
     registerBuiltinPreviews()
     const comp = resolvePreview('unknown')
@@ -354,5 +361,36 @@ describe('resolvePreviewFor', () => {
     )
     expect(comp).toBe(TextPreview)
     dispose()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// CsvPreview
+// ---------------------------------------------------------------------------
+describe('CsvPreview', () => {
+  test('renders a table with header and rows from CSV text', () => {
+    const p = props({
+      kind: 'text',
+      name: 'data.csv',
+      extension: 'csv',
+      content: 'id,name\n1,alice\n2,bob',
+      size: 20,
+    })
+    const CsvComp = makeCsvPreview(vi.fn())
+    const container = render(<CsvComp {...p} />)
+    const table = container.querySelector('table.dsh-fe-table')
+    expect(table).toBeTruthy()
+    const headers = Array.from(table!.querySelectorAll('thead th')).map(th => th.textContent)
+    expect(headers).toEqual(['id', 'name'])
+    const cells = Array.from(table!.querySelectorAll('tbody td')).map(td => td.textContent)
+    expect(cells).toEqual(['1', 'alice', '2', 'bob'])
+  })
+
+  test('falls back to a status view for non-text previews', () => {
+    const p = props({ kind: 'too-large', name: 'big.csv', size: 1048576 })
+    const CsvComp = makeCsvPreview(vi.fn())
+    const container = render(<CsvComp {...p} />)
+    expect(container.querySelector('[data-fe-csv]')).toBeNull()
+    expect(container.textContent).toContain('tooLarge')
   })
 })

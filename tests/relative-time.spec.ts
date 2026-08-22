@@ -21,6 +21,14 @@ describe('relativeTime', () => {
     expect(relativeTime(now + 1000, now)).toEqual({ unit: 'now', n: 0 })
   })
 
+  test('months bucket clamps at 11 before rolling to years', () => {
+    const now = 1_000_000_000
+    expect(relativeTime(now - 359 * DAY, now)).toEqual({ unit: 'months', n: 11 })
+    expect(relativeTime(now - 360 * DAY, now)).toEqual({ unit: 'months', n: 11 })
+    expect(relativeTime(now - 364 * DAY, now)).toEqual({ unit: 'months', n: 11 })
+    expect(relativeTime(now - 365 * DAY, now)).toEqual({ unit: 'years', n: 1 })
+  })
+
   test('formats through the translator with interpolation', () => {
     const t = (key: string, params?: Record<string, unknown>) =>
       params === undefined ? key : `${key}:${String(params.n)}`

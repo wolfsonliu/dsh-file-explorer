@@ -393,4 +393,36 @@ describe('CsvPreview', () => {
     expect(container.querySelector('[data-fe-csv]')).toBeNull()
     expect(container.textContent).toContain('tooLarge')
   })
+
+  test('delegates text-large to the paged text renderer', () => {
+    const readRawFile = vi.fn().mockResolvedValue(new ArrayBuffer(0))
+    const p = props({ kind: 'text-large', name: 'big.csv', extension: 'csv', size: 6000000 })
+    const CsvComp = makeCsvPreview(readRawFile)
+    const container = render(<CsvComp {...p} />)
+    expect(container.querySelector('[data-fe-text-large]')).toBeTruthy()
+    expect(container.querySelector('[data-fe-csv]')).toBeNull()
+  })
+
+  test('truncates to 1000 body rows with a note', () => {
+    const body = Array.from({ length: 1001 }, () => '1,2').join('\n')
+    const p = props({ kind: 'text', name: 'big.csv', extension: 'csv', content: 'a,b\n' + body, size: 2000 })
+    const CsvComp = makeCsvPreview(vi.fn())
+    const container = render(<CsvComp {...p} />)
+    expect(container.querySelectorAll('tbody tr').length).toBe(1000)
+    const note = container.querySelector('[data-fe-csv-truncated]')
+    expect(note).toBeTruthy()
+    expect(note!.textContent).toContain('csvTruncated')
+  })
+
+  test('truncates to 256 columns with a note', () => {
+    const header = Array.from({ length: 300 }, (_, i) => `c${i}`).join(',')
+    const row = Array.from({ length: 300 }, () => 'x').join(',')
+    const p = props({ kind: 'text', name: 'wide.csv', extension: 'csv', content: header + '\n' + row, size: 2000 })
+    const CsvComp = makeCsvPreview(vi.fn())
+    const container = render(<CsvComp {...p} />)
+    expect(container.querySelectorAll('thead th').length).toBe(256)
+    const note = container.querySelector('[data-fe-csv-truncated]')
+    expect(note).toBeTruthy()
+    expect(note!.textContent).toContain('csvTruncatedCols')
+  })
 })

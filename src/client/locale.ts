@@ -21,6 +21,7 @@ export const ZH = {
   sortSizeAsc: '大小 小→大', sortSizeDesc: '大小 大→小',
   sortMtimeAsc: '修改时间 旧→新', sortMtimeDesc: '修改时间 新→旧',
   csvTruncated: '仅显示前 {rows} 行',
+  csvTruncatedCols: '仅显示前 {cols} 列',
 } as const
 export const EN = {
   title: 'File Explorer', file: 'Files', refresh: 'Refresh', close: 'Close',
@@ -42,6 +43,7 @@ export const EN = {
   sortSizeAsc: 'Size ascending', sortSizeDesc: 'Size descending',
   sortMtimeAsc: 'Modified oldest first', sortMtimeDesc: 'Modified newest first',
   csvTruncated: 'Showing first {rows} rows',
+  csvTruncatedCols: 'Showing first {cols} columns',
 } as const
 
 /** Register the plugin's dictionaries; returns a disposer for both locales. */

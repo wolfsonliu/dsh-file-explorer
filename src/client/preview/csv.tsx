@@ -5,6 +5,7 @@ import { StatusPreview } from './status.tsx'
 import { makeTextPagedPreview, type ReadRawFile } from './text-large.tsx'
 
 const CSV_MAX_ROWS = 1000
+const CSV_MAX_COLS = 256
 
 const cache = new Map<ReadRawFile | undefined, ComponentType<PreviewProps>>()
 
@@ -37,28 +38,38 @@ function CsvTable({ content, t }: { content: string; t: PreviewProps['t'] }) {
   if (rows.length === 0) {
     return <div className="dsh-fe-preview-empty" data-fe-csv-empty>{t('emptyFile')}</div>
   }
-  const [header, ...body] = rows
-  const shown = body.slice(0, CSV_MAX_ROWS)
-  const truncated = body.length > CSV_MAX_ROWS
+  const header = rows[0]
+  const body = rows.slice(1)
+  const rowsShown = body.slice(0, CSV_MAX_ROWS)
+  const rowsTruncated = body.length > CSV_MAX_ROWS
+  const maxCols = Math.max(header.length, ...rowsShown.map((r) => r.length))
+  const colsTruncated = maxCols > CSV_MAX_COLS
+  const cols = Math.min(maxCols, CSV_MAX_COLS)
+  const pad = (cells: string[]): string[] => {
+    const out = cells.slice(0, cols)
+    while (out.length < cols) out.push('')
+    return out
+  }
   return (
     <div className="dsh-fe-csv" data-fe-csv>
       <div className="dsh-fe-csv-scroll">
         <table className="dsh-fe-table">
           <thead>
-            <tr>{header.map((cell, col) => <th key={col}>{cell}</th>)}</tr>
+            <tr>{pad(header).map((cell, col) => <th key={col} scope="col">{cell}</th>)}</tr>
           </thead>
           <tbody>
-            {shown.map((row, rowIndex) => (
+            {rowsShown.map((row, rowIndex) => (
               <tr key={rowIndex}>
-                {row.map((cell, col) => <td key={col}>{cell}</td>)}
+                {pad(row).map((cell, col) => <td key={col}>{cell}</td>)}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {truncated && (
+      {(rowsTruncated || colsTruncated) && (
         <div className="dsh-fe-csv-truncated" data-fe-csv-truncated>
-          {t('csvTruncated', { rows: CSV_MAX_ROWS })}
+          {rowsTruncated && <span>{t('csvTruncated', { rows: CSV_MAX_ROWS })}</span>}
+          {colsTruncated && <span>{t('csvTruncatedCols', { cols: CSV_MAX_COLS })}</span>}
         </div>
       )}
     </div>

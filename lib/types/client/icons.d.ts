@@ -43,7 +43,7 @@ export declare function IconCode(props: FeIconProps): import("react").JSX.Elemen
 export declare function IconEdit(props: FeIconProps): import("react").JSX.Element;
 /** ic_ds_List_Pen_outline_16 — inlined from `IconListPenOutline16`. */
 export declare function IconListPen(props: FeIconProps): import("react").JSX.Element;
-/** ic_ds_download_outline_16 — inlined from `IconDownloadOutline16`. */
-export declare function IconDownload(props: FeIconProps): import("react").JSX.Element;
+/** A simple right-arrow glyph for the move action (16×16 outline style). */
+export declare function IconMove(props: FeIconProps): import("react").JSX.Element;
 /** ic_ds_trash_outline_16 — inlined from `IconTrashOutline16`. */
 export declare function IconTrash(props: FeIconProps): import("react").JSX.Element;

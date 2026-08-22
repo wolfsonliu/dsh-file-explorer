@@ -4,6 +4,7 @@ import React, {
   useImperativeHandle,
   useRef,
   useState,
+  type ComponentType,
   type ReactNode,
 } from 'react'
 import { FILE_EXPLORER_ROUTE, STATIC_FILES_ROUTE, BROWSER_OPEN_EXTS, type BrowserEntry, type FilePreview, type PreviewMode } from '../protocol.ts'
@@ -11,7 +12,7 @@ import { FileExplorerDrawer, FloatingFileButton } from './drawer.tsx'
 import { FileTree, type FileTreeHandle } from './file-tree.tsx'
 import type { FileActionHelpers } from './file-action.ts'
 import { FileExplorerPanel, type FileExplorerPanelHandle } from './panel.tsx'
-import { BinaryPreview, MarkdownPreview, makeTextPagedPreview, resolvePreviewFor } from './preview/index.ts'
+import { BinaryPreview, MarkdownPreview, TextPreview, makeTextPagedPreview, resolvePreviewFor } from './preview/index.ts'
 import type { PreviewProps } from './preview/registry.ts'
 import type { Translate } from './locale.ts'
 import { FileOpsModal } from './file-ops-modal.tsx'
@@ -299,73 +300,85 @@ export const FileExplorerApp = forwardRef<FileExplorerAppHandle, FileExplorerApp
       [openDrawer, closeDrawer, toggleDrawer, openFile],
     )
 
-    // Built-in markdown editing only: a plugin overriding 'md' resolves to a
-    // different component, so the edit affordance is hidden in that case.
-    const isEditableMarkdown =
-      writeFile !== undefined &&
-      viewMode === 'auto' &&
-      previewData !== null &&
-      previewData.kind === 'text' &&
-      resolvePreviewFor(previewData, extensionOf(selectedPath ?? '')) === MarkdownPreview
-
-    let previewChildren: ReactNode
-    if (previewData === null) {
-      previewChildren = <div className="dsh-fe-placeholder">{t('selectFile')}</div>
-    } else if (isEditableMarkdown) {
-      previewChildren = (
-        <div className="dsh-fe-md">
-          <div className="dsh-fe-md-toolbar">
-            {editing ? (
-              <>
-                <button className="dsh-fe-md-btn" data-fe-edit="cancel" onClick={cancelEditing} disabled={saving}>
-                  {t('cancel')}
-                </button>
-                <button className="dsh-fe-md-btn" data-fe-edit="save" onClick={handleSave} disabled={saving}>
-                  {saving ? t('saving') : t('save')}
-                </button>
-                <button className="dsh-fe-md-btn" data-fe-edit="preview" onClick={() => { void previewEditing() }} disabled={saving}>
-                  {t('mdPreview')}
-                </button>
-              </>
-            ) : (
-              <button className="dsh-fe-md-btn" data-fe-edit="edit" onClick={startEditing}>
-                {t('edit')}
-              </button>
-            )}
-          </div>
-          {saveError !== null && (
-            <div className="dsh-fe-md-error">{t('saveFailed')}: {saveError}</div>
-          )}
-          {editing ? (
-            <textarea
-              className="dsh-fe-md-editor"
-              data-fe-edit="textarea"
-              value={draft}
-              disabled={saving}
-              onChange={(e) => {
-                setDraft(e.target.value)
-                setDirty(true)
-              }}
-            />
-          ) : (
-            <MarkdownPreview preview={previewData} filePath={selectedPath ?? ''} activeView="preview" t={t} />
-          )}
-        </div>
-      )
-    } else {
-      const PreviewComponent =
+    // Resolve the component that renders the current preview exactly once, so
+    // the edit-affordance gate and the render branch agree on the same one.
+    let resolvedComponent: ComponentType<PreviewProps> | null = null
+    if (previewData !== null) {
+      resolvedComponent =
         viewMode === 'text'
           ? makeTextPagedPreview(readRawFile)
           : viewMode === 'binary'
             ? BinaryPreview
             : resolvePreviewFor(previewData, extensionOf(selectedPath ?? ''), readRawFile)
-      const previewProps: PreviewProps = {
-        preview: previewData,
-        filePath: selectedPath ?? '',
-        activeView: 'preview',
-        t,
+    }
+
+    // Built-in text editing: show the edit affordance only when the resolved
+    // component is a built-in text renderer. A plugin that claims this
+    // extension at higher priority resolves to a different component, so the
+    // built-in editor is hidden and the extension takes over editing.
+    const isMarkdown = resolvedComponent === MarkdownPreview
+    const isEditableText =
+      writeFile !== undefined &&
+      viewMode === 'auto' &&
+      previewData !== null &&
+      previewData.kind === 'text' &&
+      (resolvedComponent === TextPreview ||
+        resolvedComponent === makeTextPagedPreview(readRawFile) ||
+        isMarkdown)
+
+    let previewChildren: ReactNode
+    if (previewData === null) {
+      previewChildren = <div className="dsh-fe-placeholder">{t('selectFile')}</div>
+    } else {
+      const PreviewComponent = resolvedComponent!
+      if (isEditableText) {
+        previewChildren = (
+          <div className="dsh-fe-md">
+            <div className="dsh-fe-md-toolbar">
+              {editing ? (
+                <>
+                  <button className="dsh-fe-md-btn" data-fe-edit="cancel" onClick={cancelEditing} disabled={saving}>
+                    {t('cancel')}
+                  </button>
+                  <button className="dsh-fe-md-btn" data-fe-edit="save" onClick={handleSave} disabled={saving}>
+                    {saving ? t('saving') : t('save')}
+                  </button>
+                  {isMarkdown && (
+                    <button className="dsh-fe-md-btn" data-fe-edit="preview" onClick={() => { void previewEditing() }} disabled={saving}>
+                      {t('mdPreview')}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button className="dsh-fe-md-btn" data-fe-edit="edit" onClick={startEditing}>
+                  {t('edit')}
+                </button>
+              )}
+            </div>
+            {saveError !== null && (
+              <div className="dsh-fe-md-error">{t('saveFailed')}: {saveError}</div>
+            )}
+            {editing ? (
+              <textarea
+                className="dsh-fe-md-editor"
+                data-fe-edit="textarea"
+                value={draft}
+                disabled={saving}
+                onChange={(e) => {
+                  setDraft(e.target.value)
+                  setDirty(true)
+                }}
+              />
+            ) : (
+              <PreviewComponent preview={previewData} filePath={selectedPath ?? ''} activeView="preview" t={t} />
+            )}
+          </div>
+        )
+      } else {
+        previewChildren = (
+          <PreviewComponent preview={previewData} filePath={selectedPath ?? ''} activeView="preview" t={t} />
+        )
       }
-      previewChildren = <PreviewComponent {...previewProps} />
     }
 
     const panelTitle = previewData?.name ?? (selectedPath ? basenameOf(selectedPath) : undefined)

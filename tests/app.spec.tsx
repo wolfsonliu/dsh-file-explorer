@@ -5,6 +5,7 @@ import { act } from 'react-dom/test-utils'
 import React, { createRef } from 'react'
 import { FileExplorerApp, type FileExplorerAppHandle, type FileExplorerAppProps } from '../src/client/app.tsx'
 import { registerPreview } from '../src/client/preview/registry.ts'
+import { makeTextPagedPreview } from '../src/client/preview/text-large.tsx'
 import type { PreviewProps } from '../src/client/preview/registry.ts'
 import { MarkdownPreview } from '../src/client/preview/markdown.tsx'
 import { registerBuiltinFileActions } from '../src/client/file-action.ts'
@@ -522,6 +523,64 @@ describe('FileExplorerApp', () => {
     await flush()
 
     expect(container.querySelector('[data-fe-edit="edit"]')).toBeNull()
+  })
+
+  test('an extension-less text file is editable in a plain textarea and saves', async () => {
+    const licensePreview: FilePreview = {
+      kind: 'text',
+      name: 'LICENSE',
+      extension: '',
+      content: 'MIT License',
+      size: 11,
+    }
+    const props = makeProps({ fetchPreview: vi.fn().mockResolvedValue(licensePreview) })
+    const ref = createRef<FileExplorerAppHandle>()
+    const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+    act(() => ref.current!.openFile('LICENSE'))
+    await flush()
+
+    const editBtn = container.querySelector('[data-fe-edit="edit"]') as HTMLElement
+    expect(editBtn).not.toBeNull()
+
+    act(() => editBtn.click())
+    const textarea = container.querySelector('[data-fe-edit="textarea"]') as HTMLTextAreaElement
+    expect(textarea).not.toBeNull()
+    expect(textarea.value).toBe('MIT License')
+    // 纯文本没有「预览/源码」切换按钮。
+    expect(container.querySelector('[data-fe-edit="preview"]')).toBeNull()
+
+    setTextarea(container, 'MIT License v2')
+    act(() => (container.querySelector('[data-fe-edit="save"]') as HTMLElement).click())
+    await flush()
+
+    expect(props.writeFile).toHaveBeenCalledWith('LICENSE', 'MIT License v2')
+    // 仍在编辑态（与 markdown 保存行为一致）。
+    expect(container.querySelector('[data-fe-edit="textarea"]')).not.toBeNull()
+  })
+
+  test('a built-in paged text file is editable when no extension claims it', async () => {
+    const pyPreview: FilePreview = {
+      kind: 'text',
+      name: 'script.py',
+      extension: 'py',
+      content: 'print("hi")',
+      size: 11,
+    }
+    // 模拟 production 里 registerBuiltinPreviews 对 TEXT_EXTS 的注册（本套件未调用该函数）。
+    const dispose = registerPreview('py', makeTextPagedPreview(undefined))
+    try {
+      const props = makeProps({ fetchPreview: vi.fn().mockResolvedValue(pyPreview) })
+      const ref = createRef<FileExplorerAppHandle>()
+      const container = render(<FileExplorerApp ref={ref} {...props} />)
+
+      act(() => ref.current!.openFile('script.py'))
+      await flush()
+
+      expect(container.querySelector('[data-fe-edit="edit"]')).not.toBeNull()
+    } finally {
+      dispose()
+    }
   })
 
   test('markdown preview has no edit button when writeFile is absent', async () => {

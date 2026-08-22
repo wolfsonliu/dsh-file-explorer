@@ -1,6 +1,6 @@
 import type { BrowserEntry } from '../protocol.ts';
 import type { Translate } from './locale.ts';
-import { type FileActionHelpers } from './file-action.ts';
+import { type FileActionHelpers } from './file-action.tsx';
 export interface FileTreeProps {
     /** Current session id; undefined means "no session". */
     sessionId: string | undefined;

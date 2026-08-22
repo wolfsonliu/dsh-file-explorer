@@ -14,14 +14,20 @@ export interface FileContextMenuItem {
 export interface FileContextMenuProps {
     /** Whether the menu is shown. */
     open: boolean;
-    /** Menu anchor position (viewport coordinates). */
-    anchor: {
-        x: number;
-        y: number;
-    };
+    /**
+     * Anchor trigger rect supplier, re-read on scroll/resize while open.
+     * Return null to skip placement for that frame (keeps the last position).
+     */
+    getAnchorRect: () => DOMRect | null;
     /** The menu items, in render order. */
     items: Array<FileContextMenuItem>;
     onClose: () => void;
 }
-/** A generic anchored popup menu listing arbitrary items. */
-export declare function FileContextMenu({ open, anchor, items, onClose }: FileContextMenuProps): React.JSX.Element | null;
+/**
+ * A generic anchored popup menu listing arbitrary items.
+ *
+ * Renders into document.body via a portal and fixed-positions itself from the
+ * anchor rect, clamped to a 12px viewport margin, re-placing on scroll/resize.
+ * Closes on outside pointerdown or Escape.
+ */
+export declare function FileContextMenu({ open, getAnchorRect, items, onClose }: FileContextMenuProps): React.ReactPortal | null;

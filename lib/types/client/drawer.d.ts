@@ -7,11 +7,8 @@ export interface FileExplorerDrawerProps {
     title?: string;
     /** Called when the refresh button is clicked; button hidden when omitted. */
     onRefresh?: () => void;
-    /** Called with the button's bottom-left anchor when "＋ 新建" is clicked. */
-    onNew?: (anchor: {
-        x: number;
-        y: number;
-    }) => void;
+    /** Called with an anchor-rect supplier when "＋ 新建" is clicked. */
+    onNew?: (getAnchorRect: () => DOMRect | null) => void;
     /** Translator for localized UI copy. */
     t: Translate;
     /** The file tree. */

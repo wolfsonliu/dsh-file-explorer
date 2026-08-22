@@ -35,3 +35,15 @@ export declare function IconEllipsis(props: FeIconProps): import("react").JSX.El
 export declare function IconSearch(props: FeIconProps): import("react").JSX.Element;
 /** ic_ds_plus_outline_16 — a simple plus glyph. */
 export declare function IconPlus(props: FeIconProps): import("react").JSX.Element;
+/** ic_ds_browse_outline_16 — inlined from `IconBrowseOutline16`. */
+export declare function IconBrowse(props: FeIconProps): import("react").JSX.Element;
+/** ic_ds_code_outline_16 — inlined from `IconCodeOutline16`. */
+export declare function IconCode(props: FeIconProps): import("react").JSX.Element;
+/** ic_ds_edit_outline_16 — inlined from `IconEditOutline16`. */
+export declare function IconEdit(props: FeIconProps): import("react").JSX.Element;
+/** ic_ds_List_Pen_outline_16 — inlined from `IconListPenOutline16`. */
+export declare function IconListPen(props: FeIconProps): import("react").JSX.Element;
+/** ic_ds_download_outline_16 — inlined from `IconDownloadOutline16`. */
+export declare function IconDownload(props: FeIconProps): import("react").JSX.Element;
+/** ic_ds_trash_outline_16 — inlined from `IconTrashOutline16`. */
+export declare function IconTrash(props: FeIconProps): import("react").JSX.Element;

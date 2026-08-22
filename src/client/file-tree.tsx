@@ -14,6 +14,8 @@ import { fileActionsFor, type FileActionHelpers } from './file-action.tsx'
 import { IconChevronRight, IconClose, IconEllipsis, IconFile, IconFolderClose, IconFolderOpen, IconSearch } from './icons.tsx'
 import { matchesSearch, parentPathOf } from './tree-search.ts'
 import { parseSort, sortEntries, SORT_OPTIONS, type SortSpec } from './tree-sort.ts'
+import { formatRelativeTime } from './relative-time.ts'
+import { formatBytes } from './preview/status.tsx'
 
 export interface FileTreeProps {
   /** Current session id; undefined means "no session". */
@@ -26,6 +28,8 @@ export interface FileTreeProps {
   t: Translate
   /** When true, periodically refresh loaded directories (while visible). */
   autoRefresh?: boolean
+  /** The currently-open (preview) file's workspace-relative path, if any. */
+  selectedPath?: string | null
 }
 
 /** Imperative handle exposed by FileTree. */
@@ -42,7 +46,7 @@ interface MenuState {
 }
 
 export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileTree(
-  { sessionId, helpers, fetchList, t, autoRefresh },
+  { sessionId, helpers, fetchList, t, autoRefresh, selectedPath },
   ref,
 ) {
   const [entries, setEntries] = useState<BrowserEntry[]>([])
@@ -256,7 +260,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
         ) : (
           <VirtualList
             rowCount={results.length}
-            rowHeight={TREE_ROW_HEIGHT}
+            rowHeight={SEARCH_ROW_HEIGHT}
             rowKey={(i) => results[i].path}
             renderRow={(i) => (
               <SearchResultRow entry={results[i].entry} onSelect={handleResultSelect} />
@@ -266,7 +270,7 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
       ) : (
         <VirtualList
           rowCount={flat.length}
-          rowHeight={TREE_ROW_HEIGHT}
+          rowHeight={(i) => (flat[i].entry.kind === 'directory' ? DIR_ROW_HEIGHT : FILE_ROW_HEIGHT)}
           rowKey={(i) => flat[i].path}
           renderRow={(i) => (
             <TreeRow
@@ -276,6 +280,9 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
               onDisclosureClick={handleDisclosureClick}
               helpers={helpers}
               onOpenMenu={openMenu}
+              selected={selectedPath === flat[i].entry.path}
+              active={isAncestorDir(selectedPath, flat[i].entry)}
+              t={t}
             />
           )}
         />
@@ -290,7 +297,9 @@ export const FileTree = forwardRef<FileTreeHandle, FileTreeProps>(function FileT
   )
 })
 
-const TREE_ROW_HEIGHT = 28
+const DIR_ROW_HEIGHT = 34
+const FILE_ROW_HEIGHT = 32
+const SEARCH_ROW_HEIGHT = 48
 
 interface FlatRow {
   path: string
@@ -315,22 +324,39 @@ function flattenVisible(
   return out
 }
 
+/** Whether a directory entry contains the currently selected (open) path. */
+function isAncestorDir(selectedPath: string | null | undefined, entry: BrowserEntry): boolean {
+  if (selectedPath === null || selectedPath === undefined || entry.kind !== 'directory') return false
+  return selectedPath.startsWith(entry.path + '/')
+}
+
 interface TreeRowProps {
   entry: BrowserEntry
   depth: number
   expanded: Record<string, boolean>
+  selected: boolean
+  active: boolean
+  t: Translate
   onDisclosureClick: (entry: BrowserEntry) => void
   helpers: FileActionHelpers
   onOpenMenu: (entry: BrowserEntry, getAnchorRect: () => DOMRect | null) => void
 }
 
-function TreeRow({ entry, depth, expanded, onDisclosureClick, helpers, onOpenMenu }: TreeRowProps) {
+function TreeRow({ entry, depth, expanded, selected, active, t, onDisclosureClick, helpers, onOpenMenu }: TreeRowProps) {
   const isDir = entry.kind === 'directory'
+  const className =
+    'dsh-fe-tree-row' +
+    (isDir ? ' dsh-fe-tree-row--dir' : ' dsh-fe-tree-row--file') +
+    (selected ? ' dsh-fe-tree-row--selected' : '')
+  const meta = isDir
+    ? (entry.mtimeMs !== undefined ? formatRelativeTime(t, entry.mtimeMs, Date.now()) : '')
+    : (entry.size !== undefined ? formatBytes(entry.size) : '')
   return (
     <div
-      className={'dsh-fe-tree-row' + (isDir ? ' dsh-fe-tree-row--dir' : ' dsh-fe-tree-row--file')}
+      className={className}
       data-fe-path={entry.path}
       data-fe-kind={entry.kind}
+      data-fe-selected={selected ? 'true' : undefined}
       style={{ paddingLeft: `${depth * 16 + 4}px` }}
       onClick={() => {
         if (!isDir) helpers.openFile(entry.path)
@@ -352,7 +378,7 @@ function TreeRow({ entry, depth, expanded, onDisclosureClick, helpers, onOpenMen
       ) : (
         <span className="dsh-fe-spacer" />
       )}
-      <span className="dsh-fe-icon">
+      <span className={'dsh-fe-icon' + (active ? ' dsh-fe-icon--active' : '')}>
         {isDir ? (
           expanded[entry.path] ? <IconFolderOpen size={16} /> : <IconFolderClose size={16} />
         ) : (
@@ -360,6 +386,7 @@ function TreeRow({ entry, depth, expanded, onDisclosureClick, helpers, onOpenMen
         )}
       </span>
       <span className="dsh-fe-name">{entry.name}</span>
+      {meta !== '' && <span className="dsh-fe-row-meta">{meta}</span>}
       <span className="dsh-fe-row-actions">
         <button
           type="button"
@@ -394,11 +421,13 @@ function SearchResultRow({ entry, onSelect }: SearchResultRowProps) {
       data-fe-search-result
       onClick={() => onSelect(entry)}
     >
-      <span className="dsh-fe-icon">
-        {isDir ? <IconFolderClose size={16} /> : <IconFile size={16} />}
-      </span>
-      <span className="dsh-fe-name">{entry.name}</span>
-      {parent !== '' && <span className="dsh-fe-path-hint">{parent}</span>}
+      <div className="dsh-fe-search-result-heading">
+        <span className="dsh-fe-icon">
+          {isDir ? <IconFolderClose size={16} /> : <IconFile size={16} />}
+        </span>
+        <span className="dsh-fe-name">{entry.name}</span>
+      </div>
+      {parent !== '' && <span className="dsh-fe-search-result-meta">{parent}</span>}
     </div>
   )
 }

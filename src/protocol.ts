@@ -24,6 +24,8 @@ export interface BrowserEntry {
   path: string
   kind: 'file' | 'directory'
   size?: number
+  /** Last-modified timestamp in milliseconds since the Unix epoch. */
+  mtimeMs?: number
 }
 
 export type FilePreview =

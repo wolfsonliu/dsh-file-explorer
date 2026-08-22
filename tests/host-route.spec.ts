@@ -193,6 +193,14 @@ describe('list', () => {
     expect(aFile?.size).toBe(5) // 'hello' = 5 bytes
   })
 
+  test('returns mtimeMs for files and directories', async () => {
+    const entries = await list(root, '')
+    const aFile = entries.find(e => e.name === 'a.txt')
+    const subdir = entries.find(e => e.name === 'subdir')
+    expect(typeof aFile?.mtimeMs).toBe('number')
+    expect(typeof subdir?.mtimeMs).toBe('number')
+  })
+
   test('hides dotfile entries by default', async () => {
     const entries = await list(root, '')
     const names = entries.map(e => e.name)

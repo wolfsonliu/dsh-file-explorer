@@ -169,11 +169,11 @@ async function list(root: string, input: string, showHidden = false): Promise<Br
       .filter(child => !child.isSymbolicLink() && (showHidden || !child.name.startsWith('.')))
       .map(async child => {
         const childPath = target.path === '' ? child.name : `${target.path}/${child.name}`
-        if (child.isDirectory()) {
-          return { name: child.name, path: childPath, kind: 'directory' as const }
-        }
         const info = await stat(resolve(target.absolute, child.name))
-        return { name: child.name, path: childPath, kind: 'file' as const, size: info.size }
+        if (child.isDirectory()) {
+          return { name: child.name, path: childPath, kind: 'directory' as const, mtimeMs: info.mtimeMs }
+        }
+        return { name: child.name, path: childPath, kind: 'file' as const, size: info.size, mtimeMs: info.mtimeMs }
       }),
   )
   const sorted = entries.sort((a, b) =>

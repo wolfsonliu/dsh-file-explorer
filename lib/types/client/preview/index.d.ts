@@ -8,6 +8,7 @@ export { ImagePreview } from './image.tsx';
 export { BinaryPreview } from './binary.tsx';
 export { formatBytes, StatusPreview } from './status.tsx';
 export { makeTextPagedPreview } from './text-large.tsx';
+export { makeCsvPreview } from './csv.tsx';
 export type { ReadRawFile } from './text-large.tsx';
 /** Register all built-in preview components. */
 export declare function registerBuiltinPreviews(readRawFile?: ReadRawFile): void;

@@ -44,6 +44,15 @@ export declare const ZH: {
     readonly workspaceRoot: "工作区根目录";
     readonly confirm: "确定";
     readonly opFailed: "操作失败";
+    readonly sortBy: "排序";
+    readonly sortNameAsc: "名称 A→Z";
+    readonly sortNameDesc: "名称 Z→A";
+    readonly sortSizeAsc: "大小 小→大";
+    readonly sortSizeDesc: "大小 大→小";
+    readonly sortMtimeAsc: "修改时间 旧→新";
+    readonly sortMtimeDesc: "修改时间 新→旧";
+    readonly csvTruncated: "仅显示前 {rows} 行";
+    readonly csvTruncatedCols: "仅显示前 {cols} 列";
 };
 export declare const EN: {
     readonly title: "File Explorer";
@@ -89,6 +98,15 @@ export declare const EN: {
     readonly workspaceRoot: "Workspace root";
     readonly confirm: "OK";
     readonly opFailed: "Operation failed";
+    readonly sortBy: "Sort";
+    readonly sortNameAsc: "Name A→Z";
+    readonly sortNameDesc: "Name Z→A";
+    readonly sortSizeAsc: "Size ascending";
+    readonly sortSizeDesc: "Size descending";
+    readonly sortMtimeAsc: "Modified oldest first";
+    readonly sortMtimeDesc: "Modified newest first";
+    readonly csvTruncated: "Showing first {rows} rows";
+    readonly csvTruncatedCols: "Showing first {cols} columns";
 };
 /** Register the plugin's dictionaries; returns a disposer for both locales. */
 export declare function registerFileExplorerLocale(ctx: {

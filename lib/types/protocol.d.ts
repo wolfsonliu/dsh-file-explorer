@@ -5,7 +5,7 @@ export declare const PDF_ACTION = "pdf";
 /** Prefix route that serves workspace files for browser-native rendering. */
 export declare const STATIC_FILES_ROUTE = "/file-explorer/files";
 /** Extensions the client opens in a new browser tab on default open. */
-export declare const BROWSER_OPEN_EXTS: readonly ["pdf", "html", "htm", "xhtml"];
+export declare const BROWSER_OPEN_EXTS: readonly ["pdf", "html", "htm", "xhtml", "json"];
 /** Mutation actions for the file-ops feature (all POST, workspace-contained). */
 export declare const CREATE_FILE_ACTION = "create-file";
 export declare const MKDIR_ACTION = "mkdir";
@@ -19,6 +19,8 @@ export interface BrowserEntry {
     path: string;
     kind: 'file' | 'directory';
     size?: number;
+    /** Last-modified timestamp in milliseconds since the Unix epoch. */
+    mtimeMs?: number;
 }
 export type FilePreview = {
     kind: 'text';

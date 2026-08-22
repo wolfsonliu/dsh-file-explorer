@@ -4,6 +4,27 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-08-22
+
+### Fixed
+
+- The file-list "···" menu had a transparent background — its styles read
+  panel-scoped tokens that are undefined at the menu's render location, so menu
+  text overlapped whatever sat behind it. The menu now renders as an opaque,
+  dsh-web-style dropdown card.
+
+### Changed
+
+- The row menu now matches the dsh web `Menu` design (solid surface, 12px
+  radius, level-3 shadow, standard-density rows, leading icon slot, danger
+  color) and behavior: it portals to `<body>`, clamps to the viewport, closes
+  on Escape, and repositions on scroll/resize.
+- Built-in row actions now display leading icons.
+- Panel theme tokens corrected: `--dsw-alias-state-danger` →
+  `--dsw-alias-state-error-primary`, `--dsw-alias-divider` →
+  `--dsw-alias-border-l2`, `--dsw-alias-surface` → `--dsw-alias-bg-base`; panel
+  shadows and font now use the dsh web token set.
+
 ## [0.6.1] - 2026-08-22
 
 ### Added

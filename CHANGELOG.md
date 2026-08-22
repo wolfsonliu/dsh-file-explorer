@@ -4,6 +4,34 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-22
+
+### Added
+
+- Client-side file-tree search: a search box at the top of the drawer filters
+  already-loaded entries by name or path (case-insensitive). Search is
+  client-side only — files inside collapsed directories are not matched (no
+  server-side recursive search).
+- File operations on the workspace tree: a "＋ New" button in the drawer title
+  bar opens a new-file / new-folder menu; the row "···" menu gains rename,
+  move, copy, and delete (delete is rendered in a danger color; directory rows
+  also gain new-file / new-folder).
+- A single modal handles every file operation: a text input for new/rename, a
+  confirmation for delete, and a recursive destination picker for move/copy
+  that lists directories and excludes the target directory and its
+  descendants. Renaming or moving the open file re-paths the preview; deleting
+  it clears the preview.
+- Six workspace-contained host mutation actions (`create-file`, `mkdir`,
+  `rename`, `move`, `copy`, `delete`), POST-only and guarded by `inside()`
+  (realpath containment). They reject `..`, invalid names, self-or-descendant
+  move/copy targets, and non-directory destinations, and invalidate the
+  directory-list cache on success.
+- New i18n keys for the file-operation UI (ZH and EN, key sets identical).
+- Extension authors: `FileAction` gains an optional `danger` flag, and
+  `FileActionHelpers` gains `promptRename` / `promptDelete` / `promptMove` /
+  `promptCopy` / `promptNewFile` / `promptNewFolder` (additive — the public
+  `fileExplorer` service shape is unchanged).
+
 ## [0.4.0] - 2026-08-21
 
 ### Added

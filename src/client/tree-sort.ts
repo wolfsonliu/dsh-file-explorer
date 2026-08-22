@@ -33,10 +33,21 @@ function nameCmp(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
+/** Primary comparison for the given key, before any asc/desc flip. */
+function compareKey(a: BrowserEntry, b: BrowserEntry, key: SortKey): number {
+  if (key === 'size') {
+    if (a.size !== undefined && b.size !== undefined) return a.size - b.size
+    return 0 // entries without a size tie, falling through to the name tiebreak
+  }
+  if (key === 'mtime') return (a.mtimeMs ?? 0) - (b.mtimeMs ?? 0)
+  return nameCmp(a.name, b.name)
+}
+
 /**
  * Stable sort: directories before files, then by `sort` within each group.
- * Directories have no `size`, so size comparisons fall back to name when
- * either operand is missing; a name tiebreak keeps the order deterministic.
+ * The key comparison flips with the direction; the name tiebreak (applied when
+ * the key comparison is equal, or when entries have no comparable size) stays
+ * ascending for deterministic ordering.
  */
 export function sortEntries(
   entries: BrowserEntry[],
@@ -44,17 +55,8 @@ export function sortEntries(
 ): BrowserEntry[] {
   return [...entries].sort((a, b) => {
     if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1
-    let cmp = 0
-    if (sort.key === 'size') {
-      cmp = (a.size ?? b.size) === undefined
-        ? nameCmp(a.name, b.name)
-        : (a.size ?? 0) - (b.size ?? 0)
-    } else if (sort.key === 'mtime') {
-      cmp = (a.mtimeMs ?? 0) - (b.mtimeMs ?? 0)
-    } else {
-      cmp = nameCmp(a.name, b.name)
-    }
-    if (cmp === 0) cmp = nameCmp(a.name, b.name)
-    return sort.dir === 'asc' ? cmp : -cmp
+    const cmp = compareKey(a, b, sort.key)
+    if (cmp !== 0) return sort.dir === 'asc' ? cmp : -cmp
+    return nameCmp(a.name, b.name)
   })
 }

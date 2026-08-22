@@ -13,11 +13,12 @@ export type { ReadRawFile } from './text-large.tsx';
 /** Register all built-in preview components. */
 export declare function registerBuiltinPreviews(readRawFile?: ReadRawFile): void;
 /**
- * Resolve the preview component by the preview's kind: images use
- * ImagePreview, empty files always use BinaryPreview, and non-text kinds
- * (binary/too-large) route to the extension-registered component — or fall
- * back to BinaryPreview when the extension is unregistered. Large text files
- * (`text-large`) route to the paged text renderer for unregistered
+ * Resolve the preview component by the preview's kind: images route to the
+ * extension-registered component, or fall back to ImagePreview when the
+ * extension is unregistered; empty files always use BinaryPreview; non-text
+ * kinds (binary/too-large) route to the extension-registered component — or
+ * fall back to BinaryPreview when the extension is unregistered. Large text
+ * files (`text-large`) route to the paged text renderer for unregistered
  * extensions, or to the extension-registered component when one exists. Text
  * kinds use the extension-registered component, or TextPreview when the
  * extension is unregistered (e.g. an extension-less file like LICENSE).

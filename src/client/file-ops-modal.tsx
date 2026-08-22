@@ -3,7 +3,7 @@ import type { BrowserEntry } from '../protocol.ts'
 import type { Translate } from './locale.ts'
 import { basenameOfRel, joinRel, type FileOp, type FileOps } from './file-ops.ts'
 import { parentPathOf } from './tree-search.ts'
-import { IconChevronRight, IconFolderClose } from './icons.tsx'
+import { IconChevronRight, IconClose, IconFolderClose } from './icons.tsx'
 
 export interface FileOpsModalProps {
   op: FileOp
@@ -161,7 +161,20 @@ export function FileOpsModal({ op, fileOps, fetchList, sessionId, t, onDone, onC
   return (
     <div className="dsh-fe-op-overlay" onClick={() => { if (!saving) onCancel() }}>
       <div className="dsh-fe-op-modal" data-fe-op={kind} onClick={(e) => e.stopPropagation()}>
-        <div className="dsh-fe-op-title">{title}</div>
+        <div className="dsh-fe-op-header">
+          <div className="dsh-fe-op-title">{title}</div>
+          <button
+            type="button"
+            className="dsh-fe-op-close"
+            data-fe-op-close
+            aria-label={t('close')}
+            title={t('close')}
+            disabled={saving}
+            onClick={onCancel}
+          >
+            <IconClose size={16} />
+          </button>
+        </div>
         <div className="dsh-fe-op-body">
           {isInput && (
             <input
@@ -212,7 +225,7 @@ export function FileOpsModal({ op, fileOps, fetchList, sessionId, t, onDone, onC
         <div className="dsh-fe-op-actions">
           <button className="dsh-fe-op-btn" data-fe-op-cancel disabled={saving} onClick={onCancel}>{t('cancel')}</button>
           <button
-            className={'dsh-fe-op-btn' + (kind === 'delete' ? ' dsh-fe-op-btn--danger' : '')}
+            className={'dsh-fe-op-btn ' + (kind === 'delete' ? 'dsh-fe-op-btn--danger' : 'dsh-fe-op-btn--primary')}
             data-fe-op-submit
             disabled={disabled}
             onClick={() => { void submit() }}

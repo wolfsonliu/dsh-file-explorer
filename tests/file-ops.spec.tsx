@@ -196,6 +196,18 @@ describe('FileOpsModal', () => {
     expect(onDone).not.toHaveBeenCalled()
     expect(container.textContent).toContain('boom')
   })
+
+  test('close button cancels the modal', () => {
+    const onCancel = vi.fn()
+    const op: FileOp = { kind: 'delete', entry: fileEntry }
+    const container = render(
+      <FileOpsModal op={op} fileOps={makeFileOps()} fetchList={vi.fn()} sessionId="s1" t={t} onDone={vi.fn()} onCancel={onCancel} />,
+    )
+    const close = container.querySelector('[data-fe-op-close]') as HTMLElement
+    expect(close).toBeTruthy()
+    act(() => { close.click() })
+    expect(onCancel).toHaveBeenCalled()
+  })
 })
 
 describe('FileExplorerApp file operations', () => {

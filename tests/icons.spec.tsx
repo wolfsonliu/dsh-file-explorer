@@ -19,7 +19,7 @@ import {
   IconCode,
   IconEdit,
   IconListPen,
-  IconDownload,
+  IconMove,
   IconTrash,
 } from '../src/client/icons.tsx'
 
@@ -51,7 +51,7 @@ const ICONS: ReadonlyArray<readonly [string, (props: { size?: number; className?
   ['IconCode', IconCode],
   ['IconEdit', IconEdit],
   ['IconListPen', IconListPen],
-  ['IconDownload', IconDownload],
+  ['IconMove', IconMove],
   ['IconTrash', IconTrash],
 ]
 

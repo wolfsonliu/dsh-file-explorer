@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { BrowserEntry } from '../protocol.ts'
 import type { Translate } from './locale.ts'
-import { IconBrowse, IconCode, IconCopy, IconDownload, IconEdit, IconFolderOpen, IconListPen, IconPlus, IconTrash } from './icons.tsx'
+import { IconBrowse, IconCode, IconCopy, IconEdit, IconFolderOpen, IconListPen, IconMove, IconPlus, IconTrash } from './icons.tsx'
 
 export interface FileActionHelpers {
   openFile(path: string): void
@@ -62,7 +62,7 @@ export function registerBuiltinFileActions(): void {
   registerFileAction({ id: 'copy-absolute', label: t => t('copyAbsolutePath'), icon: <IconCopy />, appliesTo: 'both', onSelect: (entry, h) => { void h.copyAbsolutePath(entry.path) } })
   registerFileAction({ id: 'copy-relative', label: t => t('copyRelativePath'), icon: <IconCopy />, appliesTo: 'both', onSelect: (entry, h) => { void h.copyRelativePath(entry.path) } })
   registerFileAction({ id: 'rename', label: t => t('rename'), icon: <IconEdit />, appliesTo: 'both', onSelect: (entry, h) => { h.promptRename(entry) } })
-  registerFileAction({ id: 'move', label: t => t('moveTo'), icon: <IconDownload />, appliesTo: 'both', onSelect: (entry, h) => { h.promptMove(entry) } })
+  registerFileAction({ id: 'move', label: t => t('moveTo'), icon: <IconMove />, appliesTo: 'both', onSelect: (entry, h) => { h.promptMove(entry) } })
   registerFileAction({ id: 'copy', label: t => t('copyTo'), icon: <IconCopy />, appliesTo: 'both', onSelect: (entry, h) => { h.promptCopy(entry) } })
   registerFileAction({ id: 'delete', label: t => t('delete'), icon: <IconTrash />, danger: true, appliesTo: 'both', onSelect: (entry, h) => { h.promptDelete(entry) } })
   registerFileAction({ id: 'new-file', label: t => t('newFile'), icon: <IconPlus />, appliesTo: 'directory', onSelect: (entry, h) => { h.promptNewFile(entry.path) } })

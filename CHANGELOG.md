@@ -4,6 +4,27 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-08-22
+
+### Added
+
+- Built-in lightweight text editing: beyond Markdown, the preview panel now
+  offers a plain `<textarea>` edit/save for any text file whose preview is not
+  claimed by a registered extension — for example extension-less files
+  (`LICENSE`, `.txt`) and code files when `preview-code` is not installed.
+  Editing reuses the existing save path (autosave on file switch and panel
+  close), and the edit affordance disappears automatically when an extension
+  registers the file's extension at higher priority, so extensions keep full
+  precedence. No new dependency.
+
+### Changed
+
+- Image previews now resolve through the same extension registry as text and
+  binary previews: a higher-priority `registerPreview` for an image extension
+  (e.g. `.png`, `.svg`) now overrides the built-in image preview, which was
+  previously hard-wired and could not be replaced. Empty (0-byte) files remain
+  a non-overridable status page.
+
 ## [0.6.0] - 2026-08-22
 
 ### Added

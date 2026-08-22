@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { parseCsv } from '../src/client/preview/csv.ts'
+import { parseCsv } from '../src/client/preview/csv-parse.ts'
 
 describe('parseCsv', () => {
   test('splits comma-separated fields', () => {

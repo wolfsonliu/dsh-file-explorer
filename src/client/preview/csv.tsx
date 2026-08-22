@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { parseCsv } from './csv.ts'
+import { parseCsv } from './csv-parse.ts'
 import type { PreviewProps } from './registry.ts'
 import { StatusPreview } from './status.tsx'
 import { makeTextPagedPreview, type ReadRawFile } from './text-large.tsx'
